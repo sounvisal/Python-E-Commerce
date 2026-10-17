@@ -26,6 +26,9 @@ import {
   ArrowLeft,
   ArrowUpRight,
   Send,
+  Link as LinkIcon,
+  Image as ImageIcon,
+  Quote,
   X
 } from 'lucide-vue-next'
 
@@ -899,9 +902,9 @@ const publishArticle = () => {
                 <button type="button" class="rte-btn">• List</button>
                 <button type="button" class="rte-btn">1. List</button>
                 <div class="rte-divider"></div>
-                <button type="button" class="rte-btn">🔗</button>
-                <button type="button" class="rte-btn">🖼</button>
-                <button type="button" class="rte-btn">❝ Quote</button>
+                <button type="button" class="rte-btn" title="Insert Link"><LinkIcon :size="13" /></button>
+                <button type="button" class="rte-btn" title="Insert Image"><ImageIcon :size="13" /></button>
+                <button type="button" class="rte-btn" title="Blockquote"><Quote :size="12" /> Quote</button>
               </div>
 
               <!-- In-Article Graphic Banner matching mockup -->
@@ -1754,10 +1757,20 @@ const publishArticle = () => {
 .rte-btn {
   background: none;
   border: none;
-  padding: 2px 6px;
+  padding: 3px 6px;
   font-size: 12px;
   color: #5C544E;
   cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  border-radius: 4px;
+  transition: all 0.15s ease;
+}
+
+.rte-btn:hover {
+  background: #EFE7E0;
+  color: #1A1817;
 }
 
 .in-article-banner-frame {

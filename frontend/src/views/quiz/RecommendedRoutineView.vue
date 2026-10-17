@@ -167,8 +167,9 @@
               </div>
 
               <button class="btn-add-all-cart" @click="addAllToCart">
-                <ShoppingBag :size="16" />
-                <span>{{ addedAll ? 'Added to Cart ✓' : 'Add All to Cart' }}</span>
+                <Check v-if="addedAll" :size="16" class="check-inline" />
+                <ShoppingBag v-else :size="16" />
+                <span>{{ addedAll ? 'Added to Cart' : 'Add All to Cart' }}</span>
               </button>
             </div>
           </div>
@@ -215,7 +216,8 @@
                     :class="{ 'is-added': isProductAdded(prod.id) }"
                     @click="addToCart(prod)"
                   >
-                    {{ isProductAdded(prod.id) ? 'Added ✓' : 'Add to Cart' }}
+                    <Check v-if="isProductAdded(prod.id)" :size="13" class="check-inline" />
+                    <span>{{ isProductAdded(prod.id) ? 'Added' : 'Add to Cart' }}</span>
                   </button>
                 </div>
               </div>
@@ -1012,7 +1014,15 @@ function addAllToCart() {
   font-size: 12.5px;
   font-weight: 600;
   cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
   transition: all 0.2s ease;
+}
+
+.check-inline {
+  flex-shrink: 0;
 }
 
 .btn-step-add:hover {

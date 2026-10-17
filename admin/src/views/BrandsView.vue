@@ -78,17 +78,17 @@ onMounted(async () => {
 
 // Countries list
 const countriesList = [
-  { name: 'Canada', code: 'CA', flag: '🇨🇦' },
-  { name: 'South Korea', code: 'KR', flag: '🇰🇷' },
-  { name: 'United States', code: 'US', flag: '🇺🇸' },
-  { name: 'France', code: 'FR', flag: '🇫🇷' },
-  { name: 'Japan', code: 'JP', flag: '🇯🇵' },
-  { name: 'United Kingdom', code: 'GB', flag: '🇬🇧' }
+  { name: 'Canada', code: 'CA' },
+  { name: 'South Korea', code: 'KR' },
+  { name: 'United States', code: 'US' },
+  { name: 'France', code: 'FR' },
+  { name: 'Japan', code: 'JP' },
+  { name: 'United Kingdom', code: 'GB' }
 ]
 
-const getCountryFlag = (countryName) => {
+const getCountryCode = (countryName) => {
   const match = countriesList.find(c => c.name.toLowerCase() === (countryName || '').toLowerCase())
-  return match ? match.flag : '🌐'
+  return match ? match.code : (countryName ? countryName.substring(0, 2).toUpperCase() : 'GL')
 }
 
 // Compute filtered brands
@@ -550,7 +550,7 @@ const brandProducts = computed(() => {
 
             <div class="showcase-meta-row">
               <div class="showcase-meta-item">
-                <span class="flag-icon">{{ getCountryFlag(activeBrand.country) }}</span>
+                <span class="country-pill">{{ getCountryCode(activeBrand.country) }}</span>
                 <span>{{ activeBrand.country }}</span>
               </div>
               <a :href="activeBrand.website" target="_blank" class="showcase-link">
@@ -1484,6 +1484,18 @@ const brandProducts = computed(() => {
   gap: 16px;
   font-size: 12.5px;
   color: #5C544E;
+}
+
+.country-pill {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  padding: 2px 7px;
+  border-radius: 4px;
+  background: #F4EBE3;
+  color: #84261B;
+  display: inline-block;
+  margin-right: 6px;
 }
 
 .showcase-link {

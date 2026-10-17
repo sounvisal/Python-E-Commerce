@@ -28,7 +28,8 @@ import {
   CreditCard,
   MapPin,
   ArrowUpRight,
-  ArrowDownRight
+  ArrowDownRight,
+  Check
 } from 'lucide-vue-next'
 
 const adminStore = useAdminStore()
@@ -945,28 +946,28 @@ const exportOrders = () => {
 
               <div class="timeline-events-list">
                 <div class="timeline-evt completed">
-                  <div class="evt-dot">✓</div>
+                  <div class="evt-dot"><Check :size="10" /></div>
                   <div class="evt-meta">
                     <strong>Order Placed</strong>
                     <span>Aug 31, 2025, 10:24 AM</span>
                   </div>
                 </div>
                 <div class="timeline-evt completed">
-                  <div class="evt-dot">✓</div>
+                  <div class="evt-dot"><Check :size="10" /></div>
                   <div class="evt-meta">
                     <strong>Payment Confirmed</strong>
                     <span>Aug 31, 2025, 10:25 AM</span>
                   </div>
                 </div>
                 <div class="timeline-evt completed">
-                  <div class="evt-dot">✓</div>
+                  <div class="evt-dot"><Check :size="10" /></div>
                   <div class="evt-meta">
                     <strong>Order Confirmed</strong>
                     <span>Aug 31, 2025, 11:05 AM</span>
                   </div>
                 </div>
                 <div class="timeline-evt active">
-                  <div class="evt-dot-active">●</div>
+                  <div class="evt-dot-active"><span class="active-pulse-dot"></span></div>
                   <div class="evt-meta">
                     <strong>Processing</strong>
                     <span>Aug 31, 2025, 02:30 PM</span>
@@ -2067,6 +2068,14 @@ const exportOrders = () => {
   display: flex;
   align-items: center;
   justify-content: center;
+}
+
+.active-pulse-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #C4623C;
+  display: inline-block;
 }
 
 .evt-dot-pending {

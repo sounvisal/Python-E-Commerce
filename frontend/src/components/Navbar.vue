@@ -198,6 +198,15 @@
           >
             Articles
           </router-link>
+          <router-link
+            to="/quiz"
+            class="nav-link nav-quiz-badge"
+            :class="{ 'is-active': route.path.startsWith('/quiz') || route.path === '/routine' }"
+            @click="closeMenu"
+          >
+            <Sparkles :size="13" class="quiz-badge-sparkle" />
+            <span>Skin Quiz</span>
+          </router-link>
         </nav>
 
         <!-- Center-Right: Compact Pill Search Bar with Icon on the Right -->
@@ -317,6 +326,11 @@
           <router-link to="/new-arrivals" class="mobile-nav-item" @click="closeMenu">New Arrivals</router-link>
           <router-link to="/deals" class="mobile-nav-item highlight-deals" @click="closeMenu">Special Offers &amp; Deals</router-link>
           <router-link to="/articles" class="mobile-nav-item" @click="closeMenu">Skincare Journal &amp; Articles</router-link>
+          <router-link to="/quiz" class="mobile-nav-item highlight-quiz" @click="closeMenu">
+            <Sparkles :size="16" class="mobile-quiz-sparkle" />
+            <span>Skin Diagnostic Quiz</span>
+          </router-link>
+          <router-link to="/returns/request" class="mobile-nav-item" @click="closeMenu">Returns &amp; Refunds</router-link>
           <router-link to="/concerns" class="mobile-nav-item" @click="closeMenu">Skin Concerns &amp; Types</router-link>
           <router-link to="/wishlist" class="mobile-nav-item" @click="closeMenu">My Saved Wishlist</router-link>
         </nav>
@@ -376,6 +390,7 @@ import {
   Menu,
   Search,
   ShoppingBag,
+  Sparkles,
   User,
   X
 } from 'lucide-vue-next'
@@ -559,6 +574,43 @@ function handleAccountSubmit() {
 .nav-link.highlight-deals {
   color: #8E4A3E;
   font-weight: 600;
+}
+
+.nav-link.nav-quiz-badge {
+  color: #8E4A3E;
+  font-weight: 600;
+  background: rgba(142, 74, 62, 0.08);
+  padding: 0.35rem 0.75rem;
+  border-radius: 999px;
+  border: 1px solid rgba(142, 74, 62, 0.2);
+  transition: all 0.2s ease;
+}
+
+.nav-link.nav-quiz-badge:hover,
+.nav-link.nav-quiz-badge.is-active {
+  background: #8E4A3E;
+  color: #FFFFFF;
+}
+
+.nav-link.nav-quiz-badge:hover .quiz-badge-sparkle,
+.nav-link.nav-quiz-badge.is-active .quiz-badge-sparkle {
+  color: #FFFFFF;
+}
+
+.quiz-badge-sparkle {
+  color: #8E4A3E;
+}
+
+.highlight-quiz {
+  display: flex !important;
+  align-items: center;
+  gap: 8px;
+  color: #8E4A3E !important;
+  font-weight: 600;
+}
+
+.mobile-quiz-sparkle {
+  color: #8E4A3E;
 }
 
 .caret-icon {

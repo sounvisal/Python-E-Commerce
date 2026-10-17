@@ -74,7 +74,7 @@
             />
             <div class="hero-soft-fade"></div>
             <div class="script-overlay">
-              <span class="script-text">Healthier<br>Happier<br>You. ♡</span>
+              <span class="script-text">Healthier<br>Happier<br>You. <Heart :size="20" class="script-heart-icon" /></span>
             </div>
           </div>
         </div>
@@ -403,6 +403,14 @@ import {
   line-height: 1.05;
   color: #9E3332;
   text-shadow: 0 2px 12px rgba(255, 255, 255, 0.95);
+}
+
+.script-heart-icon {
+  display: inline-block;
+  vertical-align: -3px;
+  margin-left: 4px;
+  color: #9E3332;
+  fill: #9E3332;
 }
 
 /* ================= TRUST VALUE BAR ================= */

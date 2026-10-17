@@ -148,8 +148,8 @@ const promotionsList = ref([
     end_date: 'Aug 31, 2025',
     status: 'Active',
     is_featured: true,
-    thumb: '🎁',
-    thumb_type: 'emoji'
+    thumb: 'gift',
+    thumb_type: 'icon'
   },
   {
     id: 4,
@@ -212,8 +212,8 @@ const promotionsList = ref([
     end_date: 'Dec 31, 2025',
     status: 'Active',
     is_featured: false,
-    thumb: '🚚',
-    thumb_type: 'emoji'
+    thumb: 'truck',
+    thumb_type: 'icon'
   },
   {
     id: 8,
@@ -260,8 +260,8 @@ const promotionsList = ref([
     end_date: 'Dec 31, 2025',
     status: 'Active',
     is_featured: false,
-    thumb: '🎂',
-    thumb_type: 'emoji'
+    thumb: 'sparkles',
+    thumb_type: 'icon'
   }
 ])
 
@@ -605,8 +605,11 @@ const deletePromo = (promo) => {
                 <span v-if="promo.thumb_type.includes('badge-text')" class="badge-text-thumb" :class="promo.thumb_type">
                   {{ promo.thumb }}
                 </span>
-                <span v-else-if="promo.thumb_type === 'emoji'" class="emoji-thumb">
-                  {{ promo.thumb }}
+                <span v-else-if="promo.thumb_type === 'icon'" class="icon-thumb">
+                  <Gift v-if="promo.thumb === 'gift'" :size="18" />
+                  <Truck v-else-if="promo.thumb === 'truck'" :size="18" />
+                  <Sparkles v-else-if="promo.thumb === 'sparkles'" :size="18" />
+                  <Tag v-else :size="18" />
                 </span>
                 <img
                   v-else
@@ -1267,8 +1270,16 @@ const deletePromo = (promo) => {
   color: #B25E00;
 }
 
-.emoji-thumb {
-  font-size: 20px;
+.icon-thumb {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  background: #FAF0E8;
+  color: #C4623C;
+  border-radius: 6px;
+  border: 1px solid #F1E2D8;
 }
 
 .promo-title-cell {

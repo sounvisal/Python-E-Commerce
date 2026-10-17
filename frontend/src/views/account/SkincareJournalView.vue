@@ -27,7 +27,7 @@
             />
           <div class="hero-fade-overlay"></div>
           <div class="banner-script-overlay">
-            <span>Small Steps<br>Real Changes. ♡</span>
+            <span>Small Steps<br>Real Changes. <Heart :size="16" class="script-heart-icon" /></span>
           </div>
 
           <div class="banner-cta-group">
@@ -560,6 +560,14 @@ function submitNewEntry() {
   line-height: 1.15;
   text-shadow: 0 2px 12px rgba(255, 255, 255, 0.95);
   pointer-events: none;
+}
+
+.script-heart-icon {
+  display: inline-block;
+  vertical-align: -2px;
+  margin-left: 4px;
+  color: #8E4A3E;
+  fill: #8E4A3E;
 }
 
 .banner-cta-group {

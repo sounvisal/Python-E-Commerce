@@ -163,7 +163,15 @@
                 </router-link>
                 <span class="row-volume">{{ item.volume || '50 ml' }}</span>
                 <div class="row-rating">
-                  <span class="stars">★★★★★</span>
+                  <span class="stars-wrap">
+                    <Star
+                      v-for="i in 5"
+                      :key="i"
+                      :size="11"
+                      class="star-icon"
+                      :class="{ filled: i <= Math.round(Number(item.rating || 5)) }"
+                    />
+                  </span>
                   <span class="rating-val">{{ item.rating || 4.8 }}</span>
                   <span class="review-count">({{ item.reviews || '1.2K' }})</span>
                 </div>
@@ -311,6 +319,7 @@ import {
   MoreHorizontal,
   ShoppingBag,
   ShoppingCart,
+  Star,
   Trash2
 } from 'lucide-vue-next'
 import { computed, ref } from 'vue'
@@ -972,8 +981,20 @@ function addAllToCart() {
   font-size: 0.7rem;
 }
 
-.row-rating .stars {
+.row-rating .stars-wrap {
+  display: inline-flex;
+  align-items: center;
+  gap: 1.5px;
+}
+
+.row-rating .star-icon {
+  color: #D6D3D1;
+  fill: transparent;
+}
+
+.row-rating .star-icon.filled {
   color: #D97706;
+  fill: #D97706;
 }
 
 .row-rating .rating-val {

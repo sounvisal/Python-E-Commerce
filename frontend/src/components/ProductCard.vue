@@ -50,7 +50,15 @@
       </p>
 
       <div class="product-rating-row" v-if="product.rating">
-        <span class="stars">★★★★★</span>
+        <span class="stars-wrap">
+          <Star
+            v-for="i in 5"
+            :key="i"
+            :size="11"
+            class="star-icon"
+            :class="{ filled: i <= Math.round(product.rating) }"
+          />
+        </span>
         <span class="score">{{ Number(product.rating).toFixed(1) }}</span>
         <span class="reviews-count" v-if="product.reviews">
           ({{ formatReviews(product.reviews) }})
@@ -85,7 +93,7 @@ import { computed, ref } from 'vue'
 import { useCartStore } from '@/stores/cart'
 import { useWishlistStore } from '@/stores/wishlist'
 import { useNotificationStore } from '@/stores/notification'
-import { Heart, ShoppingCart } from 'lucide-vue-next'
+import { Heart, ShoppingCart, Star } from 'lucide-vue-next'
 
 const props = defineProps({
   product: {
@@ -359,10 +367,20 @@ const handleAddToCart = () => {
   margin-bottom: 6px;
 }
 
-.stars {
+.stars-wrap {
+  display: inline-flex;
+  align-items: center;
+  gap: 1.5px;
+}
+
+.star-icon {
+  color: #D6D3D1;
+  fill: transparent;
+}
+
+.star-icon.filled {
   color: #F59E0B;
-  letter-spacing: 0.5px;
-  font-size: 0.68rem;
+  fill: #F59E0B;
 }
 
 .score {

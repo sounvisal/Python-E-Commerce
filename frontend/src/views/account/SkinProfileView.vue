@@ -27,7 +27,7 @@
             />
           <div class="hero-fade-overlay"></div>
           <div class="banner-script-overlay">
-            <span>Know Your Skin ♡<br>Love Your Skin ♡<br>Be Your Best You.</span>
+            <span>Know Your Skin <Heart :size="16" class="script-heart-icon" /><br>Love Your Skin <Heart :size="16" class="script-heart-icon" /><br>Be Your Best You.</span>
           </div>
 
           <div class="banner-cta-group">
@@ -531,6 +531,15 @@ function openEditModal(section) {
   line-height: 1.15;
   text-shadow: 0 2px 12px rgba(255, 255, 255, 0.95);
   pointer-events: none;
+}
+
+.script-heart-icon {
+  display: inline-block;
+  vertical-align: -2px;
+  margin-left: 3px;
+  margin-right: 3px;
+  color: #8E4A3E;
+  fill: #8E4A3E;
 }
 
 .banner-cta-group {

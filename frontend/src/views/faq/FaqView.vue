@@ -24,7 +24,7 @@
             <div class="hero-script-overlay">
               <span class="script-row">Real Answers.</span>
               <span class="script-row">A Brighter</span>
-              <span class="script-row">You. <span class="heart-symbol">♡</span></span>
+              <span class="script-row">You. <Heart :size="18" class="script-heart-icon" /></span>
             </div>
           </div>
         </div>
@@ -166,7 +166,8 @@ import {
   HeartHandshake,
   Gift,
   Leaf,
-  Layers
+  Layers,
+  Heart
 } from 'lucide-vue-next'
 
 const selectedCategory = ref('all')
@@ -410,9 +411,12 @@ function toggleItem(index) {
   text-shadow: 0 2px 8px rgba(255, 255, 255, 0.85);
 }
 
-.heart-symbol {
-  font-style: normal;
-  font-size: 1.4rem;
+.script-heart-icon {
+  display: inline-block;
+  vertical-align: -2px;
+  margin-left: 4px;
+  color: #C25E4D;
+  fill: #C25E4D;
 }
 
 /* 3-Column Layout */

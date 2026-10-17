@@ -29,7 +29,8 @@ import {
   ArrowRight,
   ShieldCheck,
   Globe,
-  Sliders
+  Sliders,
+  ChevronDown
 } from 'lucide-vue-next'
 
 const adminStore = useAdminStore()
@@ -278,9 +279,9 @@ function backupStoreData() {
                   <label class="field-label">Store Phone</label>
                   <div class="phone-input-wrap">
                     <div class="country-prefix">
-                      <span class="flag-icon">🇰🇭</span>
+                      <span class="country-code-pill">KH</span>
                       <span class="prefix-text">{{ form.phone_country_code }}</span>
-                      <span class="prefix-arrow">⌄</span>
+                      <ChevronDown :size="12" class="prefix-arrow-svg" />
                     </div>
                     <input v-model="form.store_phone" type="text" class="field-input phone-input" />
                   </div>
@@ -920,11 +921,25 @@ function backupStoreData() {
 .country-prefix {
   display: flex;
   align-items: center;
-  gap: 0.25rem;
+  gap: 0.35rem;
   padding: 0.55rem 0.65rem;
   border-right: 1px solid #E4D8CE;
   font-size: 0.8125rem;
   color: #2D2422;
+}
+
+.country-code-pill {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  padding: 1.5px 5px;
+  border-radius: 4px;
+  background: #F4EBE3;
+  color: #84261B;
+}
+
+.prefix-arrow-svg {
+  color: #8C847E;
 }
 
 .phone-input {

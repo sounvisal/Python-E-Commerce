@@ -25,7 +25,7 @@
               <span class="script-row">Skincare</span>
               <span class="script-row">Arrives</span>
               <span class="script-row">Happier</span>
-              <span class="script-row">Here. <span class="heart-symbol">♡</span></span>
+              <span class="script-row">Here. <Heart :size="18" class="script-heart-icon" /></span>
             </div>
           </div>
         </div>
@@ -234,7 +234,8 @@ import {
   Package,
   Home,
   ChevronDown,
-  Mail
+  Mail,
+  Heart
 } from 'lucide-vue-next'
 
 const trackingNumber = ref('')
@@ -416,9 +417,12 @@ function handleTrackOrder() {
   text-shadow: 0 2px 8px rgba(255, 255, 255, 0.85);
 }
 
-.heart-symbol {
-  font-style: normal;
-  font-size: 1.4rem;
+.script-heart-icon {
+  display: inline-block;
+  vertical-align: -2px;
+  margin-left: 4px;
+  color: #C25E4D;
+  fill: #C25E4D;
 }
 
 /* 4 Guarantees Strip with Vertical Dividers */

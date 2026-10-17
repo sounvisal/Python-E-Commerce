@@ -12,7 +12,7 @@ export const useJournalStore = defineStore('journal', () => {
       dayNum: 25,
       monthStr: 'Jun 2025',
       dayOfWeek: 'Wed',
-      title: 'Good Skin Day! ✨',
+      title: 'Good Skin Day!',
       notes: 'My skin feels smoother and less oily today. The new toner really helps. No breakouts, and my skin looks brighter.',
       tags: ['Less Oil', 'Brighter', 'No Breakouts'],
       productImages: [

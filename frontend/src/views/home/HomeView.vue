@@ -386,7 +386,7 @@
                 </button>
               </div>
               <div v-if="newsletterSubscribed" class="newsletter-success">
-                ✨ Thank you for subscribing! Check your inbox for your 10% welcome gift.
+                <Sparkles :size="15" class="newsletter-sparkle" /> Thank you for subscribing! Check your inbox for your 10% welcome gift.
               </div>
             </form>
           </div>
@@ -441,7 +441,11 @@
 
         <!-- Quiz Result -->
         <div v-else class="quiz-result-view">
-          <div class="result-check">✨</div>
+          <div class="result-check">
+            <div class="result-icon-circle">
+              <Sparkles :size="26" class="result-sparkle-icon" />
+            </div>
+          </div>
           <h3>Your Personalized Routine: {{ quizResultRoutine }}</h3>
           <p>Based on your profile, we recommend pairing <strong>SK-II Facial Treatment Essence</strong> with <strong>The Ordinary Niacinamide</strong> and <strong>LANEIGE Lip Mask</strong> for optimal barrier glow.</p>
 
@@ -2072,6 +2076,14 @@ function handleSubscribe() {
   font-size: 0.85rem;
   color: #15803D;
   font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.newsletter-sparkle {
+  color: #15803D;
+  flex-shrink: 0;
 }
 
 .newsletter-script-overlay {
@@ -2189,8 +2201,25 @@ function handleSubscribe() {
 }
 
 .result-check {
-  font-size: 2.5rem;
-  margin-bottom: 1rem;
+  display: flex;
+  justify-content: center;
+  margin-bottom: 1.25rem;
+}
+
+.result-icon-circle {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #FDF2EC 0%, #F5EFEB 100%);
+  border: 1px solid rgba(196, 98, 60, 0.25);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 6px 18px rgba(142, 74, 62, 0.16);
+}
+
+.result-sparkle-icon {
+  color: #8E4A3E;
 }
 
 .quiz-result-view h3 {

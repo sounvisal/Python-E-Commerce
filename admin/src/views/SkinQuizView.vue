@@ -28,6 +28,7 @@ import {
   Grid,
   Award,
   ChevronRight,
+  ChevronLeft,
   X,
   Sparkles
 } from 'lucide-vue-next'
@@ -515,10 +516,13 @@ function exportQuizzesCSV() {
         <div class="table-footer">
           <span class="footer-count">Showing 1 to {{ filteredQuizzes.length }} of {{ filteredQuizzes.length }} quizzes</span>
           <div class="pagination-bar">
-            <button class="btn-page-nav" disabled>&lt;</button>
+            <button class="btn-page-nav" disabled aria-label="Previous page"><ChevronLeft :size="13" /></button>
             <button class="btn-page-num active">1</button>
-            <button class="btn-page-nav" disabled>&gt;</button>
-            <span class="page-size-label">10 / page ⌄</span>
+            <button class="btn-page-nav" disabled aria-label="Next page"><ChevronRight :size="13" /></button>
+            <span class="page-size-label">
+              <span>10 / page</span>
+              <ChevronDown :size="12" class="page-size-arrow" />
+            </span>
           </div>
         </div>
       </div>
@@ -1440,6 +1444,23 @@ function exportQuizzesCSV() {
   background: #84261B;
   color: #FFFFFF;
   border-color: #84261B;
+}
+
+.page-size-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.75rem;
+  color: #6E635E;
+  margin-left: 0.5rem;
+  padding: 4px 8px;
+  border-radius: 6px;
+  border: 1px solid #E4D8CE;
+  background: #FFFFFF;
+}
+
+.page-size-arrow {
+  color: #6E635E;
 }
 
 /* Bottom Card */

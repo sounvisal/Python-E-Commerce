@@ -133,7 +133,7 @@ const directoryData = ref([
     email: 'sokha.meas@gmail.com',
     phone: '+855 12 345 678',
     country: 'Cambodia',
-    country_flag: '🇰🇭',
+    country_code: 'KH',
     orders_count: 12,
     total_spent: 248.50,
     group: 'VIP',
@@ -146,7 +146,7 @@ const directoryData = ref([
     email: 'dara.kim@gmail.com',
     phone: '+855 98 765 432',
     country: 'Cambodia',
-    country_flag: '🇰🇭',
+    country_code: 'KH',
     orders_count: 5,
     total_spent: 98.00,
     group: 'Regular',
@@ -159,7 +159,7 @@ const directoryData = ref([
     email: 'chanthy.norn@gmail.com',
     phone: '+855 16 234 567',
     country: 'Cambodia',
-    country_flag: '🇰🇭',
+    country_code: 'KH',
     orders_count: 18,
     total_spent: 412.00,
     group: 'VIP',
@@ -172,7 +172,7 @@ const directoryData = ref([
     email: 'visal.chhum@gmail.com',
     phone: '+855 70 123 456',
     country: 'Cambodia',
-    country_flag: '🇰🇭',
+    country_code: 'KH',
     orders_count: 3,
     total_spent: 56.00,
     group: 'Regular',
@@ -185,7 +185,7 @@ const directoryData = ref([
     email: 'sreypov.tep@gmail.com',
     phone: '+855 11 987 654',
     country: 'Cambodia',
-    country_flag: '🇰🇭',
+    country_code: 'KH',
     orders_count: 8,
     total_spent: 189.00,
     group: 'Gold',
@@ -198,7 +198,7 @@ const directoryData = ref([
     email: 'leap.meng@gmail.com',
     phone: '+855 93 456 789',
     country: 'Cambodia',
-    country_flag: '🇰🇭',
+    country_code: 'KH',
     orders_count: 2,
     total_spent: 32.00,
     group: 'Regular',
@@ -211,7 +211,7 @@ const directoryData = ref([
     email: 'takakvitya.tey@gmail.com',
     phone: '+855 81 222 333',
     country: 'Cambodia',
-    country_flag: '🇰🇭',
+    country_code: 'KH',
     orders_count: 10,
     total_spent: 276.00,
     group: 'Gold',
@@ -224,7 +224,7 @@ const directoryData = ref([
     email: 'put.sokchan@gmail.com',
     phone: '+855 17 444 555',
     country: 'Cambodia',
-    country_flag: '🇰🇭',
+    country_code: 'KH',
     orders_count: 1,
     total_spent: 24.00,
     group: 'Regular',
@@ -237,7 +237,7 @@ const directoryData = ref([
     email: 'keat.pichudom@gmail.com',
     phone: '+855 69 888 999',
     country: 'Cambodia',
-    country_flag: '🇰🇭',
+    country_code: 'KH',
     orders_count: 7,
     total_spent: 156.00,
     group: 'Regular',
@@ -250,7 +250,7 @@ const directoryData = ref([
     email: 'rathana.sor@gmail.com',
     phone: '+855 77 111 222',
     country: 'Cambodia',
-    country_flag: '🇰🇭',
+    country_code: 'KH',
     orders_count: 4,
     total_spent: 89.00,
     group: 'Regular',
@@ -560,7 +560,7 @@ const marketingPrefs = reactive({
               </td>
               <td>
                 <div class="location-cell">
-                  <span class="flag-icon">{{ cust.country_flag || '🇰🇭' }}</span>
+                  <span class="country-pill">{{ cust.country_code || 'KH' }}</span>
                   <span>{{ cust.country || 'Cambodia' }}</span>
                 </div>
               </td>
@@ -1457,8 +1457,15 @@ const marketingPrefs = reactive({
   gap: 6px;
 }
 
-.flag-icon {
-  font-size: 15px;
+.country-pill {
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  padding: 1.5px 5px;
+  border-radius: 4px;
+  background: #F4EBE3;
+  color: #84261B;
+  display: inline-block;
 }
 
 .orders-count-txt {

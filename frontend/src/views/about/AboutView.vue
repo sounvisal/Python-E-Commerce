@@ -28,7 +28,7 @@
               <span class="script-row">Real Care.</span>
               <span class="script-row">Real People.</span>
               <span class="script-row">A Brighter</span>
-              <span class="script-row">Tomorrow. <span class="heart-symbol">♡</span></span>
+              <span class="script-row">Tomorrow. <Heart :size="18" class="script-heart-icon" /></span>
             </div>
           </div>
         </div>
@@ -359,9 +359,12 @@ import { Leaf, Users, Heart, ShieldCheck, ShoppingBag, User, Truck } from 'lucid
   text-shadow: 0 2px 10px rgba(255, 255, 255, 0.9);
 }
 
-.heart-symbol {
-  font-style: normal;
-  font-size: 1.4rem;
+.script-heart-icon {
+  display: inline-block;
+  vertical-align: -2px;
+  margin-left: 4px;
+  color: #C25E4D;
+  fill: #C25E4D;
 }
 
 /* Philosophy Strip: Single white card with vertical dividers */

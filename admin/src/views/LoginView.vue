@@ -56,7 +56,7 @@ function handleDemoInstantLogin() {
       <!-- Brand Crest -->
       <div class="login-brand">
         <div class="brand-crest">
-          <span class="crest-icon">✦</span>
+          <Sparkles :size="20" class="crest-icon-svg" />
         </div>
         <h1 class="brand-title">LUMEA</h1>
         <p class="brand-subtitle">Atelier Administration & Curator Console</p>
@@ -204,10 +204,8 @@ function handleDemoInstantLogin() {
   box-shadow: 0 8px 24px rgba(194, 155, 56, 0.3);
 }
 
-.crest-icon {
+.crest-icon-svg {
   color: #0B0C10;
-  font-size: 1.5rem;
-  font-weight: 800;
 }
 
 .brand-title {

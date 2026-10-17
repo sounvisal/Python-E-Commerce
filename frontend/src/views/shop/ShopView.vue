@@ -278,7 +278,15 @@
                     @change="onFilterChange"
                   />
                   <span class="custom-checkbox"></span>
-                  <span class="stars-gold">{{ '★'.repeat(r.stars) }}{{ '☆'.repeat(5 - r.stars) }}</span>
+                  <span class="stars-gold-wrap">
+                    <Star
+                      v-for="i in 5"
+                      :key="i"
+                      :size="12"
+                      class="filter-star-icon"
+                      :class="{ filled: i <= r.stars }"
+                    />
+                  </span>
                   <span class="label-text">&amp; Up</span>
                 </label>
                 <button
@@ -447,6 +455,7 @@ import {
   ChevronRight,
   LayoutGrid,
   List,
+  Star,
   ArrowRight,
 } from 'lucide-vue-next'
 
@@ -1154,10 +1163,20 @@ watch(
   font-size: 0.75rem;
 }
 
-.stars-gold {
+.stars-gold-wrap {
+  display: inline-flex;
+  align-items: center;
+  gap: 1.5px;
+}
+
+.filter-star-icon {
+  color: #D6D3D1;
+  fill: transparent;
+}
+
+.filter-star-icon.filled {
   color: #F59E0B;
-  font-size: 0.75rem;
-  letter-spacing: 0.5px;
+  fill: #F59E0B;
 }
 
 .clear-rating-btn {

@@ -35,6 +35,7 @@
             <li><router-link to="/new-arrivals">New Arrivals</router-link></li>
             <li><router-link to="/best-sellers">Best Sellers</router-link></li>
             <li><router-link to="/deals">Deals</router-link></li>
+            <li><router-link to="/quiz">Skin Diagnostic Quiz</router-link></li>
           </ul>
         </div>
 
@@ -43,8 +44,9 @@
           <h4>Help</h4>
           <ul>
             <li><router-link to="/shipping">Shipping</router-link></li>
-            <li><router-link to="/returns">Returns</router-link></li>
-            <li><router-link to="/faq">FAQ</router-link></li>
+            <li><router-link to="/returns">Return Policy</router-link></li>
+            <li><router-link to="/returns/request">Request a Return</router-link></li>
+            <li><router-link to="/faq">FAQ Center</router-link></li>
             <li><router-link to="/contact">Contact Us</router-link></li>
           </ul>
         </div>

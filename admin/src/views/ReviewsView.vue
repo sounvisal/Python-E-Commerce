@@ -606,7 +606,7 @@ function exportReviewsCSV() {
                   <span class="recent-title">Amazing results!</span>
                   <span class="recent-sub">Brightening Face Serum</span>
                   <div class="recent-meta">
-                    <span class="recent-star-tag">5 ★</span>
+                    <span class="recent-star-tag">5 <Star :size="10" class="star-fill" /></span>
                     <span class="recent-date">Aug 28, 2025</span>
                   </div>
                 </div>
@@ -618,7 +618,7 @@ function exportReviewsCSV() {
                   <span class="recent-title">Good product</span>
                   <span class="recent-sub">Hydrating Moisturizer</span>
                   <div class="recent-meta">
-                    <span class="recent-star-tag">4 ★</span>
+                    <span class="recent-star-tag">4 <Star :size="10" class="star-fill" /></span>
                     <span class="recent-date">Aug 27, 2025</span>
                   </div>
                 </div>
@@ -630,7 +630,7 @@ function exportReviewsCSV() {
                   <span class="recent-title">Not for me</span>
                   <span class="recent-sub">Gentle Cleanser</span>
                   <div class="recent-meta">
-                    <span class="recent-star-tag">2 ★</span>
+                    <span class="recent-star-tag">2 <Star :size="10" class="star-fill" /></span>
                     <span class="recent-date">Aug 26, 2025</span>
                   </div>
                 </div>
@@ -1539,6 +1539,14 @@ function exportReviewsCSV() {
   font-size: 0.6875rem;
   color: #E58A2B;
   font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.recent-star-tag .star-fill {
+  fill: #E58A2B;
+  color: #E58A2B;
 }
 
 .recent-date {

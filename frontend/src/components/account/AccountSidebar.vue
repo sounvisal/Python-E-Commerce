@@ -78,8 +78,17 @@
         class="nav-item"
         :class="{ active: currentActive === 'profile' || route.path === '/account/profile' }"
       >
-        <Sparkles :size="18" class="nav-icon" />
+        <Smile :size="18" class="nav-icon" />
         <span>Beauty Profile</span>
+      </router-link>
+
+      <router-link
+        to="/routine"
+        class="nav-item"
+        :class="{ active: currentActive === 'routine' || route.path === '/routine' }"
+      >
+        <Sparkles :size="18" class="nav-icon" />
+        <span>My Skincare Routine</span>
       </router-link>
 
       <router-link
@@ -89,6 +98,15 @@
       >
         <BookOpen :size="18" class="nav-icon" />
         <span>Skincare Journal</span>
+      </router-link>
+
+      <router-link
+        to="/returns/request"
+        class="nav-item"
+        :class="{ active: currentActive === 'returns' || route.path.startsWith('/returns') }"
+      >
+        <RotateCcw :size="18" class="nav-icon" />
+        <span>Returns &amp; Refunds</span>
       </router-link>
 
       <button
@@ -144,7 +162,9 @@ import {
   BookOpen,
   Bell,
   Settings,
-  Headphones
+  Headphones,
+  RotateCcw,
+  Smile
 } from 'lucide-vue-next'
 
 const props = defineProps({

@@ -19,8 +19,8 @@
       <!-- Free Shipping Bar -->
       <div class="shipping-tracker">
         <div class="tracker-text">
-          <span v-if="cartStore.subtotal >= cartStore.freeShippingThreshold">
-            🎉 You have unlocked <strong>Free Complimentary Shipping!</strong>
+          <span v-if="cartStore.subtotal >= cartStore.freeShippingThreshold" class="shipping-unlocked">
+            <Sparkles :size="15" class="shipping-sparkle" /> You have unlocked <strong>Free Complimentary Shipping!</strong>
           </span>
           <span v-else>
             Add <strong>${{ Math.max(0, cartStore.freeShippingThreshold - cartStore.subtotal).toFixed(2) }}</strong> more for Free Shipping
@@ -146,7 +146,7 @@ import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useCartStore } from '@/stores/cart'
 import { useNotificationStore } from '@/stores/notification'
-import { X, Trash2, Plus, Minus, ShoppingBag, Check } from 'lucide-vue-next'
+import { X, Trash2, Plus, Minus, ShoppingBag, Check, Sparkles } from 'lucide-vue-next'
 
 const router = useRouter()
 const cartStore = useCartStore()
@@ -269,6 +269,17 @@ const goToCheckout = () => {
   font-size: 0.82rem;
   color: var(--text-secondary);
   margin-bottom: 0.5rem;
+}
+
+.shipping-unlocked {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.shipping-sparkle {
+  color: var(--color-primary);
+  flex-shrink: 0;
 }
 
 .progress-bar-bg {

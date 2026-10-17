@@ -25,7 +25,7 @@
               <span class="script-row">Real People.</span>
               <span class="script-row">Real Care.</span>
               <span class="script-row">A Brighter</span>
-              <span class="script-row">Tomorrow. <span class="heart-symbol">♡</span></span>
+              <span class="script-row">Tomorrow. <Heart :size="18" class="script-heart-icon" /></span>
             </div>
           </div>
         </div>
@@ -156,7 +156,7 @@
 
               <button type="submit" class="btn-send-rectangular" :disabled="submitted">
                 <span v-if="!submitted">Send Message <span class="arrow-right">→</span></span>
-                <span v-else>Message Sent Successfully! ✓</span>
+                <span v-else class="success-sent"><Check :size="15" class="sent-check" /> Message Sent Successfully!</span>
               </button>
             </form>
           </div>
@@ -208,7 +208,7 @@
                 <ChevronRight :size="16" class="topic-chevron" />
               </router-link>
 
-              <router-link to="/skin-quiz" class="topic-box-link">
+              <router-link to="/quiz" class="topic-box-link">
                 <div class="topic-meta-left">
                   <div class="topic-pink-box">
                     <Leaf :size="18" />
@@ -254,7 +254,9 @@ import {
   Leaf,
   Gift,
   ChevronRight,
-  ChevronDown
+  ChevronDown,
+  Check,
+  Heart
 } from 'lucide-vue-next'
 
 const form = reactive({
@@ -412,9 +414,23 @@ function handleSubmitMessage() {
   text-shadow: 0 2px 8px rgba(255, 255, 255, 0.85);
 }
 
-.heart-symbol {
-  font-style: normal;
-  font-size: 1.4rem;
+.script-heart-icon {
+  display: inline-block;
+  vertical-align: -2px;
+  margin-left: 4px;
+  color: #C25E4D;
+  fill: #C25E4D;
+}
+
+.success-sent {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+}
+
+.sent-check {
+  color: #10B981;
 }
 
 /* 3-Column Section */

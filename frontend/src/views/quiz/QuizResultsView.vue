@@ -27,7 +27,7 @@
             />
             <div class="hero-fade-overlay"></div>
             <div class="banner-script-overlay">
-              <span>Healthy Skin<br>Happier You. ♡</span>
+              <span>Healthy Skin<br>Happier You. <Heart :size="16" class="script-heart-icon" /></span>
             </div>
             <div class="hero-quote-box">
               <p class="quote-text">“Skincare that fits you, not the crowd.”</p>
@@ -568,6 +568,14 @@ function scrollSlider(direction) {
   text-shadow: 0 2px 10px rgba(255, 255, 255, 0.95);
   z-index: 2;
   pointer-events: none;
+}
+
+.script-heart-icon {
+  display: inline-block;
+  vertical-align: -2px;
+  margin-left: 4px;
+  color: #8E4A3E;
+  fill: #8E4A3E;
 }
 
 .hero-quote-box {

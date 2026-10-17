@@ -234,14 +234,22 @@
 
                 <!-- Secondary Helper Sub-Links -->
                 <div class="sub-links-row">
-                  <a
-                    v-if="order.statusType === 'delivered'"
-                    href="#"
-                    class="order-sub-link"
-                    @click.prevent="openReviewModal(order)"
-                  >
-                    Write a Review
-                  </a>
+                  <template v-if="order.statusType === 'delivered'">
+                    <a
+                      href="#"
+                      class="order-sub-link"
+                      @click.prevent="openReviewModal(order)"
+                    >
+                      Write a Review
+                    </a>
+                    <span class="sub-link-dot">•</span>
+                    <router-link
+                      :to="`/returns/request?order=${order.orderNumber}`"
+                      class="order-sub-link"
+                    >
+                      Request Return
+                    </router-link>
+                  </template>
                   <router-link
                     v-else
                     to="/contact"
@@ -828,6 +836,11 @@ function openReviewModal(order) {
 
 .order-sub-link:hover {
   color: #6C332A;
+}
+
+.sub-link-dot {
+  color: #D6CECE;
+  font-size: 0.75rem;
 }
 
 /* Empty Box */

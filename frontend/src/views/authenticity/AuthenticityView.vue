@@ -25,7 +25,7 @@
               <span class="script-row">Authentic</span>
               <span class="script-row">Skincare.</span>
               <span class="script-row">A Brighter</span>
-              <span class="script-row">You. <span class="heart-symbol">♡</span></span>
+              <span class="script-row">You. <Heart :size="18" class="script-heart-icon" /></span>
             </div>
           </div>
         </div>
@@ -317,9 +317,12 @@ import { ShieldCheck, Award, Truck, Leaf, Search, FileCheck, Heart } from 'lucid
   text-shadow: 0 2px 8px rgba(255, 255, 255, 0.85);
 }
 
-.heart-symbol {
-  font-style: normal;
-  font-size: 1.4rem;
+.script-heart-icon {
+  display: inline-block;
+  vertical-align: -2px;
+  margin-left: 4px;
+  color: #C25E4D;
+  fill: #C25E4D;
 }
 
 /* 4 Pillars Strip with Vertical Dividers */
