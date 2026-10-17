@@ -173,7 +173,7 @@
           <div class="routine-left">
             <h2 class="routine-heading">Find Your Beauty Routine.</h2>
             <p class="routine-desc">Skincare that fits your life, and your goals.</p>
-            <router-link to="/skin-quiz" class="btn-routine-quiz">
+            <router-link to="/quiz" class="btn-routine-quiz">
               Take the Skin Quiz <span class="arrow-right">→</span>
             </router-link>
           </div>

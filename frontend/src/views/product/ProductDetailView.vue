@@ -39,11 +39,11 @@
           <!-- Main Visual Stage Box -->
           <div class="main-stage-card">
             <div class="stage-top-badge">
-              <span class="gold-best-badge">#1<br />Best Seller<br />in Essence</span>
+              <span class="gold-best-badge">#1<br />Curated Pick<br />in {{ product.category_name || 'Beauty' }}</span>
             </div>
 
             <div class="stage-script-header">
-              <h3 class="stage-script-title">Iconic<br />Essence<br />for Crystal<br />Clear Skin.</h3>
+              <h3 class="stage-script-title">{{ product.category_name || 'Skincare' }}<br />Care for<br />Healthier<br />Skin.</h3>
             </div>
 
             <div class="stage-center-img-wrap">
@@ -84,7 +84,7 @@
           </div>
 
           <h1 class="pdp-product-title">{{ product.name }}</h1>
-          <p class="pdp-formula-sub">With PITERA™ for clear, smooth, radiant skin.</p>
+          <p class="pdp-formula-sub">{{ product.formula_tag || `Clinically proven ${product.category_name || 'skincare'} formulation for balanced radiance.` }}</p>
 
           <!-- Ratings Row -->
           <div class="pdp-rating-row">
@@ -99,7 +99,7 @@
 
           <div class="pdp-best-seller-tag">
             <span class="tag-hash">#1 Best Seller</span>
-            <span class="tag-cat">in Essences</span>
+            <span class="tag-cat">in {{ product.category_name || 'Skincare' }}</span>
           </div>
 
           <!-- Price -->
@@ -109,7 +109,7 @@
 
           <!-- Bio -->
           <p class="pdp-bio-paragraph">
-            A cult-favorite essence enriched with over 90% PITERA™ to help improve skin's natural renewal process for clearer, smoother, and more radiant skin.
+            {{ product.description || 'A dermatologically tested formulation crafted with potent actives to nourish, protect, and restore your skin barrier.' }}
           </p>
 
           <!-- Size Selector -->
@@ -117,11 +117,11 @@
             <span class="size-label">Size</span>
             <div class="size-options-grid">
               <button
-                v-for="size in sizeOptions"
+                v-for="(size, sIdx) in sizeOptions"
                 :key="size.label"
                 class="size-pill-card"
-                :class="{ active: selectedSize.label === size.label }"
-                @click="selectedSize = size"
+                :class="{ active: selectedSizeIdx === sIdx }"
+                @click="selectedSizeIdx = sIdx"
               >
                 <span class="size-name">{{ size.label }}</span>
                 <span class="size-cost">${{ size.price.toFixed(2) }}</span>
@@ -212,7 +212,7 @@
               <div class="store-info-text">
                 <span class="store-name-strong">{{ product.brand }}</span>
                 <p class="store-brief">
-                  Japanese luxury skincare brand known for PITERA™ and scientifically proven results.
+                  Official curated atelier collection from {{ product.brand }}. Sourced directly for guaranteed authenticity and optimal freshness.
                 </p>
                 <div class="store-internal-links">
                   <router-link :to="`/brand/${brandSlug}`" class="s-link">About the Brand →</router-link>
@@ -222,37 +222,29 @@
             </div>
           </div>
 
-          <!-- Guarantees Card matching format -->
+          <!-- Atelier Quality & Concierge Guarantees -->
           <div class="assurances-card">
             <div class="assurance-line">
               <ShieldCheck :size="18" class="assure-icon" />
               <div class="assure-text">
-                <strong>100% Authentic Products</strong>
-                <span>Sourced directly from official distributors</span>
+                <strong>Direct Brand Sourcing</strong>
+                <span>Official {{ product.brand }} supply chain</span>
               </div>
             </div>
 
             <div class="assurance-line">
               <Truck :size="18" class="assure-icon" />
               <div class="assure-text">
-                <strong>Free &amp; Fast Shipping</strong>
-                <span>On orders over $50</span>
-              </div>
-            </div>
-
-            <div class="assurance-line">
-              <RotateCcw :size="18" class="assure-icon" />
-              <div class="assure-text">
-                <strong>Easy Returns</strong>
-                <span>Hassle-free within 14 days</span>
+                <strong>Temperature-Controlled Transit</strong>
+                <span>Preserves botanical & active potency</span>
               </div>
             </div>
 
             <div class="assurance-line">
               <Headphones :size="18" class="assure-icon" />
               <div class="assure-text">
-                <strong>Expert Skincare Support</strong>
-                <span>Chat with our skincare specialists</span>
+                <strong>Atelier Esthetician Concierge</strong>
+                <span>Personalized routine pairing support</span>
               </div>
             </div>
           </div>
@@ -326,10 +318,10 @@
           <div class="pdp-about-col">
             <h3 class="panel-section-title">About This Product</h3>
             <p class="about-lead">
-              {{ product.description || 'SK-II Facial Treatment Essence is a lightweight, fast-absorbing essence formulated with over 90% PITERA™ — a naturally derived ingredient rich in vitamins, amino acids, minerals, and organic acids.' }}
+              {{ product.description || `${product.name} is a high-performance formulation designed to deliver concentrated active ingredients directly into the skin barrier.` }}
             </p>
             <p class="about-lead">
-              It helps improve skin's natural renewal process, leaving your skin clearer, smoother, firmer, and more radiant with regular use.
+              Formulated to support the natural cellular renewal cycle, leaving your complexion visibly clearer, smoother, firmer, and more resilient with regular use.
             </p>
 
             <div class="checklist-items">
@@ -452,7 +444,7 @@
               <div class="step-num-badge">03</div>
               <h4 class="step-name">Layer &amp; Lock</h4>
               <p class="step-desc">
-                Follow with your favorite Luméa serum and moisturizing cream to lock in the PITERA™ bio-nutrients.
+                Follow with your favorite Luméa serum and moisturizing cream to lock in the concentrated active bio-nutrients.
               </p>
             </div>
           </div>
@@ -873,17 +865,20 @@ const brandSlug = computed(() => {
   return product.value.brand.toLowerCase().replace(/[^a-z0-9]/g, '-')
 })
 
-// Thumbnails rail matching Product Details.png
-const productThumbs = [
-  { url: '/images/pdp-stage-sk2-hero.jpg', label: 'Main Bottle' },
-  { url: '/images/brand-store-sk2-hero.jpg', label: 'In Hand' },
-  { url: '/images/search-droplet-macro.jpg', label: 'Essence Droplet' },
-  { url: '/images/pdp-model-radiant.jpg', label: 'Radiant Skin' },
-  { url: '/images/feat-sk2-card.jpg', label: 'Routine Set' },
-]
+// Thumbnails rail dynamically including product packshot
+const productThumbs = computed(() => {
+  const mainImg = product.value?.image_url || '/images/pdp-stage-sk2-hero.jpg'
+  return [
+    { url: mainImg, label: 'Main Formulation' },
+    { url: '/images/pdp-model-radiant.jpg', label: 'Radiant Skin' },
+    { url: '/images/search-droplet-macro.jpg', label: 'Texture Macro' },
+    { url: '/images/brand-store-sk2-hero.jpg', label: 'Atelier Ritual' },
+  ]
+})
 
 const activeMainImage = computed(() => {
-  return productThumbs[activeThumbIdx.value]?.url || '/images/pdp-stage-sk2-hero.jpg'
+  const thumbs = productThumbs.value
+  return thumbs[activeThumbIdx.value]?.url || thumbs[0]?.url || '/images/pdp-stage-sk2-hero.jpg'
 })
 
 function selectThumb(idx) {
@@ -891,16 +886,20 @@ function selectThumb(idx) {
 }
 
 function nextThumb() {
-  activeThumbIdx.value = (activeThumbIdx.value + 1) % productThumbs.length
+  activeThumbIdx.value = (activeThumbIdx.value + 1) % productThumbs.value.length
 }
 
-// Size options matching Product Details.png
-const sizeOptions = [
-  { label: '75 ml', price: 99.00 },
-  { label: '160 ml', price: 185.00 },
-  { label: '230 ml', price: 245.00 },
-]
-const selectedSize = ref(sizeOptions[0])
+// Size options matching real product price
+const selectedSizeIdx = ref(0)
+const sizeOptions = computed(() => {
+  const base = Number(product.value?.price || 45)
+  return [
+    { label: 'Standard (Full Size)', price: base },
+    { label: 'Deluxe Atelier Edition', price: Math.round(base * 1.6) },
+    { label: 'Travel Size', price: Math.max(10, Math.round(base * 0.6)) },
+  ]
+})
+const selectedSize = computed(() => sizeOptions.value[selectedSizeIdx.value] || sizeOptions.value[0])
 
 function increaseQty() {
   qty.value++

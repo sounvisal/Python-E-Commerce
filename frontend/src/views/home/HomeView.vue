@@ -205,35 +205,36 @@
     </section>
 
     <!-- ================================================================= -->
-    <!-- 6. BROWSE BY BRAND                                               -->
+    <!-- 6. FEATURED BRAND FLAGSHIPS                                      -->
     <!-- ================================================================= -->
     <section class="browse-brands-section reveal-on-scroll">
       <div class="container">
         <div class="section-headline-row">
-          <h2 class="section-title-tag">BROWSE BY BRAND</h2>
-          <router-link to="/shop" class="view-all-link">
-            <span>View All Brands</span>
+          <h2 class="section-title-tag">FEATURED BRAND FLAGSHIPS</h2>
+          <router-link to="/brands" class="view-all-link">
+            <span>Explore All Brands A–Z</span>
             <ArrowRight :size="14" />
           </router-link>
         </div>
 
         <div class="brand-circles-row">
-          <div
+          <router-link
             v-for="(brand, idx) in brandCircles"
             :key="brand.name"
+            :to="`/brand/${brand.slug}`"
             class="brand-circle-item stagger-item"
             :style="{ transitionDelay: `${idx * 40}ms` }"
-            @click="filterByBrand(brand.name)"
           >
             <div class="brand-circle-badge">
               <BrandLogo :brand="brand.name" size="circle" />
             </div>
             <span class="brand-circle-label">{{ brand.name }}</span>
-          </div>
+            <span class="brand-origin-pill" v-if="brand.origin">{{ brand.origin }}</span>
+          </router-link>
 
-          <button class="brand-circle-arrow" @click="scrollBrands" aria-label="More Brands">
+          <router-link to="/brands" class="brand-circle-arrow" aria-label="Browse All Brands">
             <ChevronRight :size="18" />
-          </button>
+          </router-link>
         </div>
       </div>
     </section>
@@ -399,68 +400,8 @@
     </section>
 
     <!-- ================================================================= -->
-    <!-- MODALS: Skin Quiz, Brand Story, Article Reader                     -->
+    <!-- MODALS: Brand Story, Article Reader                               -->
     <!-- ================================================================= -->
-    <!-- Skin Quiz Modal -->
-    <div v-if="showQuizModal" class="modal-backdrop" @click.self="showQuizModal = false">
-      <div class="quiz-modal-card">
-        <div class="modal-top">
-          <span class="modal-badge">SKIN ROUTINE CONSULTANT</span>
-          <button class="modal-close-x" @click="showQuizModal = false"><X :size="20" /></button>
-        </div>
-
-        <div v-if="quizStep < 3">
-          <div class="quiz-progress-indicator">Step {{ quizStep }} of 2</div>
-          <h3 class="quiz-step-title" v-if="quizStep === 1">What is your primary skin type?</h3>
-          <h3 class="quiz-step-title" v-else>What is your top skincare goal?</h3>
-
-          <div class="quiz-options-list" v-if="quizStep === 1">
-            <button class="quiz-option-btn" @click="quizAnswers.skinType = 'dry'; quizStep = 2">
-              <strong>Dry / Dehydrated</strong> — Flaky, tight, seeks rich moisture
-            </button>
-            <button class="quiz-option-btn" @click="quizAnswers.skinType = 'oily'; quizStep = 2">
-              <strong>Oily / Combination</strong> — Shine in T-zone, enlarged pores
-            </button>
-            <button class="quiz-option-btn" @click="quizAnswers.skinType = 'sensitive'; quizStep = 2">
-              <strong>Sensitive</strong> — Prone to redness, seeks barrier calm
-            </button>
-          </div>
-
-          <div class="quiz-options-list" v-else>
-            <button class="quiz-option-btn" @click="finishQuiz('Luminous Glass Glow')">
-              <strong>Luminous Glass Skin</strong> — Radiance, tone clarity & hydration
-            </button>
-            <button class="quiz-option-btn" @click="finishQuiz('Barrier Repair & Calm')">
-              <strong>Barrier Repair</strong> — Soothing ceramides, moisture sealing
-            </button>
-            <button class="quiz-option-btn" @click="finishQuiz('Pore & Texture Refinement')">
-              <strong>Pore & Texture Care</strong> — Gentle smoothing, zinc & niacinamide
-            </button>
-          </div>
-        </div>
-
-        <!-- Quiz Result -->
-        <div v-else class="quiz-result-view">
-          <div class="result-check">
-            <div class="result-icon-circle">
-              <Sparkles :size="26" class="result-sparkle-icon" />
-            </div>
-          </div>
-          <h3>Your Personalized Routine: {{ quizResultRoutine }}</h3>
-          <p>Based on your profile, we recommend pairing <strong>SK-II Facial Treatment Essence</strong> with <strong>The Ordinary Niacinamide</strong> and <strong>LANEIGE Lip Mask</strong> for optimal barrier glow.</p>
-
-          <div class="result-actions">
-            <button class="btn btn-pill-dark btn-block" @click="addQuizBundleToCart">
-              Add Routine Bundle to Cart ($131.90)
-            </button>
-            <button class="btn btn-pill-outline btn-block" @click="showQuizModal = false">
-              Explore Store
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
-
     <!-- Brand Story Modal -->
     <div v-if="showStoryModal" class="modal-backdrop" @click.self="showStoryModal = false">
       <div class="story-modal-card">
@@ -552,10 +493,6 @@ const newsletterEmail = ref('')
 const newsletterSubscribed = ref(false)
 
 // Modals
-const showQuizModal = ref(false)
-const quizStep = ref(1)
-const quizAnswers = ref({ skinType: '', goal: '' })
-const quizResultRoutine = ref('')
 const showStoryModal = ref(false)
 const activeArticle = ref(null)
 
@@ -672,16 +609,16 @@ const bestSellersList = [
   },
 ]
 
-// 3. Brand Circles
+// 3. Brand Flagships
 const brandCircles = [
-  { name: 'SK-II' },
-  { name: 'The Ordinary.' },
-  { name: 'CeraVe' },
-  { name: 'LA ROCHE-POSAY' },
-  { name: 'BIODERMA' },
-  { name: 'innisfree' },
-  { name: 'COSRX' },
-  { name: 'anua' },
+  { name: 'SK-II', slug: 'sk-ii', origin: 'Japan' },
+  { name: 'The Ordinary', slug: 'the-ordinary', origin: 'Canada' },
+  { name: 'CeraVe', slug: 'cerave', origin: 'USA' },
+  { name: 'LA ROCHE-POSAY', slug: 'la-roche-posay', origin: 'France' },
+  { name: 'BIODERMA', slug: 'bioderma', origin: 'France' },
+  { name: 'innisfree', slug: 'innisfree', origin: 'Korea' },
+  { name: 'COSRX', slug: 'cosrx', origin: 'Korea' },
+  { name: 'Beauty of Joseon', slug: 'beauty-of-joseon', origin: 'Korea' },
 ]
 
 // 4. Value Props
@@ -798,20 +735,7 @@ function scrollBrands() {
   router.push('/shop')
 }
 
-// Quiz
-function finishQuiz(routineName) {
-  quizAnswers.value.goal = routineName
-  quizResultRoutine.value = routineName
-  quizStep.value = 3
-}
 
-function addQuizBundleToCart() {
-  cartStore.addItem(bestSellersList[0])
-  cartStore.addItem(bestSellersList[1])
-  cartStore.addItem(bestSellersList[2])
-  showQuizModal.value = false
-  cartStore.openDrawer()
-}
 
 // Newsletter
 function handleSubscribe() {
@@ -1665,6 +1589,17 @@ function handleSubscribe() {
 
 .brand-circle-item:hover .brand-circle-label {
   color: #1C1917;
+}
+
+.brand-origin-pill {
+  font-size: 0.68rem;
+  font-weight: 500;
+  color: #8E4A3E;
+  background: rgba(142, 74, 62, 0.08);
+  padding: 0.15rem 0.5rem;
+  border-radius: 999px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
 }
 
 .brand-circle-arrow {

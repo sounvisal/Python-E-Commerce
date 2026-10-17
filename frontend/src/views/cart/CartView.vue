@@ -34,9 +34,9 @@
       <div v-if="cartStore.items.length === 0" class="empty-cart-view">
         <ShoppingBag :size="48" class="empty-icon" />
         <h2>Your bag is currently empty</h2>
-        <p>Explore our collections to discover sculptural pieces and intentional objects.</p>
+        <p>Explore our atelier collections to discover dermatologically proven formulations for your skin.</p>
         <router-link to="/shop" class="btn btn-primary btn-lg">
-          Explore Collections
+          Explore Atelier Catalog
         </router-link>
       </div>
 
@@ -44,7 +44,7 @@
         <!-- Cart Items Table -->
         <div class="cart-items-section">
           <div class="cart-table-header">
-            <span class="col-product">Object</span>
+            <span class="col-product">Formulation</span>
             <span class="col-price">Price</span>
             <span class="col-qty">Quantity</span>
             <span class="col-total">Total</span>

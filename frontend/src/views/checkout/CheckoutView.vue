@@ -177,23 +177,38 @@
 
             <div v-if="form.payment_method === 'card'" class="card-inputs">
               <div class="form-group">
-                <label class="form-label">Card Number</label>
+                <label class="form-label" for="cardNum">Card Number</label>
                 <input
+                  id="cardNum"
                   type="text"
-                  placeholder="•••• •••• •••• 4242"
+                  placeholder="4242 •••• •••• 4242"
                   class="form-input"
-                  value="4242 •••• •••• 4242"
-                  readonly
+                  v-model="form.card_number"
+                  maxlength="19"
                 />
               </div>
               <div class="form-row">
                 <div class="form-group">
-                  <label class="form-label">Expiry</label>
-                  <input type="text" placeholder="MM/YY" class="form-input" value="12/28" readonly />
+                  <label class="form-label" for="cardExp">Expiry</label>
+                  <input
+                    id="cardExp"
+                    type="text"
+                    placeholder="MM/YY"
+                    class="form-input"
+                    v-model="form.card_expiry"
+                    maxlength="5"
+                  />
                 </div>
                 <div class="form-group">
-                  <label class="form-label">CVC</label>
-                  <input type="text" placeholder="CVC" class="form-input" value="888" readonly />
+                  <label class="form-label" for="cardCvc">CVC</label>
+                  <input
+                    id="cardCvc"
+                    type="text"
+                    placeholder="CVC"
+                    class="form-input"
+                    v-model="form.card_cvc"
+                    maxlength="4"
+                  />
                 </div>
               </div>
             </div>
@@ -294,6 +309,9 @@ const form = reactive({
   shipping_city: 'Stockholm',
   shipping_postal_code: '114 56',
   payment_method: 'card',
+  card_number: '4242 4242 4242 4242',
+  card_expiry: '12/28',
+  card_cvc: '888',
 })
 
 const handleSubmitOrder = async () => {

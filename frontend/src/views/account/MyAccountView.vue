@@ -93,13 +93,13 @@
               </div>
             </router-link>
 
-            <router-link to="/wishlist" class="stat-counter-card clickable">
+            <router-link to="/routine" class="stat-counter-card clickable">
               <div class="stat-icon-wrap">
-                <Bookmark :size="18" class="stat-icon" />
+                <Sparkles :size="18" class="stat-icon" />
               </div>
               <div class="stat-text-col">
-                <span class="stat-number">{{ authStore.user.savedForLaterCount || 3 }}</span>
-                <span class="stat-label">Saved for Later</span>
+                <span class="stat-number">Active</span>
+                <span class="stat-label">My Routine</span>
               </div>
             </router-link>
 
@@ -320,7 +320,8 @@ import {
   MapPin,
   Plus,
   MoreVertical,
-  Check
+  Check,
+  Sparkles
 } from 'lucide-vue-next'
 
 const authStore = useAuthStore()

@@ -98,7 +98,7 @@
             </div>
           </div>
 
-          <!-- Skin Concerns Dropdown -->
+          <!-- Skin Concerns & Types Dropdown -->
           <div
             class="nav-dropdown-item"
             @mouseenter="activeDropdown = 'concerns'"
@@ -110,13 +110,14 @@
               :class="{ 'is-active': route.path === '/concerns' }"
               @click="closeMenu"
             >
-              <span>Skin Concerns</span>
+              <span>Concerns &amp; Types</span>
               <ChevronDown :size="13" class="caret-icon" />
             </router-link>
             <div v-show="activeDropdown === 'concerns'" class="dropdown-menu">
               <router-link to="/concerns" class="dropdown-link featured-link" @click="closeMenu">
-                Explore All Skin Concerns &rarr;
+                Explore Full Diagnostic Matrix &rarr;
               </router-link>
+              <div class="dropdown-section-label">By Skin Concern</div>
               <router-link to="/concerns?concern=dryness" class="dropdown-link" @click="closeMenu">
                 Dryness &amp; Dehydration
               </router-link>
@@ -132,36 +133,11 @@
               <router-link to="/concerns?concern=sensitivity" class="dropdown-link" @click="closeMenu">
                 Redness &amp; Sensitive Barrier
               </router-link>
-              <router-link to="/concerns?concern=oiliness" class="dropdown-link" @click="closeMenu">
-                Excess Oil &amp; Pores
-              </router-link>
-            </div>
-          </div>
-
-          <!-- Skin Type Dropdown -->
-          <div
-            class="nav-dropdown-item"
-            @mouseenter="activeDropdown = 'type'"
-            @mouseleave="activeDropdown = null"
-          >
-            <router-link
-              to="/concerns"
-              class="nav-link"
-              :class="{ 'is-active': route.path === '/concerns' && route.query.type }"
-              @click="closeMenu"
-            >
-              <span>Skin Type</span>
-              <ChevronDown :size="13" class="caret-icon" />
-            </router-link>
-            <div v-show="activeDropdown === 'type'" class="dropdown-menu">
-              <router-link to="/concerns" class="dropdown-link featured-link" @click="closeMenu">
-                Browse All Skin Types &rarr;
-              </router-link>
+              <div class="dropdown-section-label">By Skin Type</div>
               <router-link to="/concerns?type=dry" class="dropdown-link" @click="closeMenu">Dry Skin</router-link>
               <router-link to="/concerns?type=oily" class="dropdown-link" @click="closeMenu">Oily Skin</router-link>
               <router-link to="/concerns?type=combination" class="dropdown-link" @click="closeMenu">Combination Skin</router-link>
               <router-link to="/concerns?type=sensitive" class="dropdown-link" @click="closeMenu">Sensitive Skin</router-link>
-              <router-link to="/concerns?type=normal" class="dropdown-link" @click="closeMenu">Normal Skin</router-link>
             </div>
           </div>
 
@@ -668,6 +644,17 @@ function handleAccountSubmit() {
   color: #8E4A3E;
   border-bottom: 1px solid rgba(28, 25, 23, 0.06);
   margin-bottom: 0.25rem;
+}
+
+.dropdown-section-label {
+  padding: 0.4rem 1.25rem 0.15rem;
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #8C877F;
+  border-top: 1px solid rgba(28, 25, 23, 0.05);
+  margin-top: 0.25rem;
 }
 
 /* 3. Center-Right: Search Pill Form (Icon on Right matching format) */

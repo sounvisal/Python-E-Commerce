@@ -228,13 +228,13 @@
             </div>
           </div>
 
-          <!-- 4-Column Product Grid matching Search Results.png -->
+          <!-- 4-Column Product Grid -->
           <div
-            v-if="displayedProducts.length > 0"
+            v-if="paginatedProducts.length > 0"
             :class="viewMode === 'list' ? 'search-list-container' : 'search-four-grid'"
           >
             <ProductCard
-              v-for="product in displayedProducts"
+              v-for="product in paginatedProducts"
               :key="product.id"
               :product="product"
               :view-mode="viewMode"
@@ -247,32 +247,34 @@
             <button @click="resetFilters" class="clear-all-link">Clear Filters</button>
           </div>
 
-          <!-- Pagination Bar matching Search Results.png -->
-          <div class="search-pagination-bar" v-if="displayedProducts.length > 0">
+          <!-- Real Interactive Pagination Bar -->
+          <div class="search-pagination-bar" v-if="totalPages > 1">
             <button class="page-arrow-btn" :disabled="currentPage === 1" @click="currentPage--">
               <ChevronLeft :size="16" />
             </button>
-            <button class="page-num-btn active">1</button>
-            <button class="page-num-btn">2</button>
-            <button class="page-num-btn">3</button>
-            <button class="page-num-btn">4</button>
-            <button class="page-num-btn">5</button>
-            <span class="page-dots">...</span>
-            <button class="page-num-btn">11</button>
-            <button class="page-arrow-btn" @click="currentPage++">
+            <button
+              v-for="p in totalPages"
+              :key="p"
+              class="page-num-btn"
+              :class="{ active: currentPage === p }"
+              @click="currentPage = p"
+            >
+              {{ p }}
+            </button>
+            <button class="page-arrow-btn" :disabled="currentPage === totalPages" @click="currentPage++">
               <ChevronRight :size="16" />
             </button>
           </div>
         </main>
 
-        <!-- 3. Right Column: 4 Sidebar Cards matching Search Results.png -->
+        <!-- 3. Right Column: 4 Dynamic Sidebar Cards -->
         <aside class="search-right-col">
           <!-- Card 1: Related Searches -->
           <div class="right-card related-searches-box">
             <h4 class="rc-title">Related Searches</h4>
             <div class="related-pills-wrap">
               <button
-                v-for="tag in relatedKeywords"
+                v-for="tag in dynamicRelatedKeywords"
                 :key="tag"
                 class="rel-pill-btn"
                 @click="searchTag(tag)"
@@ -282,30 +284,30 @@
             </div>
           </div>
 
-          <!-- Card 2: Editorial Banner (Brighten. Balance. Strengthen.) -->
+          <!-- Card 2: Dynamic Editorial Discovery Banner -->
           <div class="right-card promo-droplet-card">
             <div class="droplet-text-col">
-              <h4 class="droplet-slogan">Brighten.<br />Balance.<br />Strengthen.</h4>
-              <router-link to="/shop" class="droplet-cta-link">
-                <span>Explore Niacinamide<br />Products</span>
+              <h4 class="droplet-slogan">Curated.<br />Targeted.<br />Effective.</h4>
+              <router-link :to="`/shop?search=${encodeURIComponent(activeQuery)}`" class="droplet-cta-link">
+                <span>Explore All {{ activeQuery ? `“${activeQuery}”` : 'Skincare' }}<br />Formulations</span>
                 <ArrowRight :size="13" />
               </router-link>
             </div>
             <div class="droplet-img-col">
-              <img src="/images/search-gel-swatch.jpg" alt="Serum Swatch" class="droplet-macro-img" />
+              <img src="/images/search-gel-swatch.jpg" alt="Active Swatch" class="droplet-macro-img" />
             </div>
           </div>
 
-          <!-- Card 3: Popular Brands for Niacinamide matching Search Results.png -->
+          <!-- Card 3: Featured Atelier Brands -->
           <div class="right-card popular-brands-box">
             <div class="popular-brands-header">
-              <h4 class="rc-title">Popular Brands for Niacinamide</h4>
+              <h4 class="rc-title">Featured Brands</h4>
               <router-link to="/brands" class="rc-view-all">View All →</router-link>
             </div>
 
             <div class="pop-brands-grid">
               <router-link
-                v-for="b in popularNiacinamideBrands"
+                v-for="b in popularBrandsList"
                 :key="b.slug"
                 :to="`/brand/${b.slug}`"
                 class="pop-brand-circle-item"
@@ -318,37 +320,37 @@
             </div>
           </div>
 
-          <!-- Card 4: Helpful Articles matching Search Results.png -->
+          <!-- Card 4: Helpful Dermatological Articles -->
           <div class="right-card helpful-articles-box">
             <div class="helpful-header">
-              <h4 class="rc-title">Helpful Articles</h4>
-              <router-link to="/#articles" class="rc-view-all">View All →</router-link>
+              <h4 class="rc-title">Dermatological Guides</h4>
+              <router-link to="/articles" class="rc-view-all">View All →</router-link>
             </div>
 
             <div class="helpful-articles-list">
-              <div class="article-item-row">
-                <img src="/images/article-niacinamide-benefits.jpg" alt="Article 1" class="art-thumb" />
+              <router-link to="/articles" class="article-item-row">
+                <img src="/images/article-thumb-routine.jpg" alt="Article 1" class="art-thumb" />
                 <div class="art-meta">
-                  <span class="art-title">What Is Niacinamide? Benefits, Uses, and Who It's For</span>
+                  <span class="art-title">The Science of Skin Barrier: How to Restore &amp; Defend</span>
                   <span class="art-read-time">5 min read</span>
                 </div>
-              </div>
+              </router-link>
 
-              <div class="article-item-row">
-                <img src="/images/article-niacinamide-acne.jpg" alt="Article 2" class="art-thumb" />
+              <router-link to="/articles" class="article-item-row">
+                <img src="/images/article-thumb-niacinamide.jpg" alt="Article 2" class="art-thumb" />
                 <div class="art-meta">
-                  <span class="art-title">Niacinamide for Acne-Prone Skin: Does It Really Work?</span>
+                  <span class="art-title">Active Ingredients: Safe Layering for Acne &amp; Pores</span>
                   <span class="art-read-time">6 min read</span>
                 </div>
-              </div>
+              </router-link>
 
-              <div class="article-item-row">
-                <img src="/images/article-niacinamide-routine.jpg" alt="Article 3" class="art-thumb" />
+              <router-link to="/articles" class="article-item-row">
+                <img src="/images/article-thumb-centella.jpg" alt="Article 3" class="art-thumb" />
                 <div class="art-meta">
-                  <span class="art-title">How to Layer Niacinamide in Your Skincare Routine</span>
+                  <span class="art-title">Morning vs. Evening Regimen for Glass Skin</span>
                   <span class="art-read-time">4 min read</span>
                 </div>
-              </div>
+              </router-link>
             </div>
           </div>
         </aside>
@@ -358,7 +360,7 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import {
   ChevronRight,
@@ -407,24 +409,12 @@ const onSaleOnly = ref(false)
 const brandSearchInput = ref('')
 
 const activeQuery = computed(() => {
-  return (route.query.q || route.query.search || 'niacinamide').toString()
+  return (route.query.q || route.query.search || '').toString()
 })
 
-const allResultsCount = ref(126)
-const productsCount = ref(98)
-const brandsCount = ref(8)
-
-// Category Counts matching wireframe
-const categoryCounts = [
-  { name: 'Serums', count: 42 },
-  { name: 'Moisturizers', count: 18 },
-  { name: 'Cleansers', count: 10 },
-  { name: 'Toners', count: 8 },
-  { name: 'Masks', count: 6 },
-  { name: 'Sunscreens', count: 5 },
-  { name: 'Treatments', count: 5 },
-  { name: 'Kits & Sets', count: 4 },
-]
+onMounted(() => {
+  productStore.fetchProducts()
+})
 
 // Brand checklist matching wireframe
 const brandChecklist = [
@@ -436,6 +426,7 @@ const brandChecklist = [
   { name: 'innisfree', count: 6 },
   { name: 'COSRX', count: 5 },
   { name: 'Bioderma', count: 4 },
+  { name: 'Beauty of Joseon', count: 4 },
 ]
 
 const filteredBrandChecklist = computed(() => {
@@ -444,22 +435,28 @@ const filteredBrandChecklist = computed(() => {
   return brandChecklist.filter((b) => b.name.toLowerCase().includes(q))
 })
 
-// Related Searches pills matching wireframe
-const relatedKeywords = [
-  'niacinamide serum',
-  'niacinamide moisturizer',
-  'niacinamide for acne',
-  'niacinamide for dark spots',
-  'niacinamide cleanser',
-  'niacinamide toner',
-]
+// Dynamic related keywords based on actual search
+const dynamicRelatedKeywords = computed(() => {
+  const q = activeQuery.value.trim()
+  if (!q) {
+    return ['hydrating serum', 'barrier repair', 'mineral sunscreen', 'ceramide cream', 'gentle cleanser', 'vitamin c']
+  }
+  return [
+    `${q} serum`,
+    `${q} cleanser`,
+    `${q} for sensitive skin`,
+    `${q} moisturizer`,
+    `${q} toner`,
+    `best ${q} products`,
+  ]
+})
 
 function searchTag(tag) {
   router.push({ path: '/search', query: { q: tag } })
 }
 
 // 8 Popular Brands matching wireframe
-const popularNiacinamideBrands = [
+const popularBrandsList = [
   { name: 'The Ordinary', slug: 'the-ordinary' },
   { name: 'SK-II', slug: 'sk-ii' },
   { name: 'CeraVe', slug: 'cerave' },
@@ -467,159 +464,200 @@ const popularNiacinamideBrands = [
   { name: 'innisfree', slug: 'innisfree' },
   { name: 'COSRX', slug: 'cosrx' },
   { name: 'LANEIGE', slug: 'laneige' },
-  { name: 'Bioderma', slug: 'bioderma' },
+  { name: 'Beauty of Joseon', slug: 'beauty-of-joseon' },
 ]
 
-// 12 Products matching Search Results.png
-const displayedProducts = computed(() => {
-  let list = [
-    {
-      id: 202,
-      name: 'Niacinamide 10% + Zinc 1%',
-      brand: 'The Ordinary',
-      price: 8.90,
-      compare_at_price: null,
-      rating: 4.7,
-      reviews: '980',
-      badge: 'Best Seller',
-      badge_type: 'bestseller',
-      image_url: '/images/prod-ordinary.jpg',
-      slug: 'the-ordinary-niacinamide-10-zinc-1',
-    },
-    {
-      id: 201,
-      name: 'Facial Treatment Essence',
-      brand: 'SK-II',
-      price: 99.00,
-      compare_at_price: 125.00,
-      rating: 4.8,
-      reviews: '1.2K',
-      badge: '20% OFF',
-      badge_type: 'sale',
-      image_url: '/images/prod-sk2.jpg',
-      slug: 'sk-ii-facial-treatment-essence',
-    },
-    {
-      id: 221,
-      name: 'PM Facial Moisturizing Lotion',
-      brand: 'CeraVe',
-      price: 18.00,
-      compare_at_price: null,
-      rating: 4.6,
-      reviews: '1.1K',
-      badge: null,
-      image_url: '/images/prod-cerave.jpg',
-      slug: 'cerave-pm-facial-moisturizing-lotion',
-    },
-    {
-      id: 220,
-      name: 'Glow Serum (Propolis + Niacinamide)',
-      brand: 'Beauty of Joseon',
-      price: 17.00,
-      compare_at_price: null,
-      rating: 4.8,
-      reviews: '2.3K',
-      badge: null,
-      image_url: '/images/prod-boj.jpg',
-      slug: 'beauty-of-joseon-glow-serum-propolis-niacinamide',
-    },
-    {
-      id: 108,
-      name: 'Cream Skin Refiner',
-      brand: 'LANEIGE',
-      price: 24.00,
-      compare_at_price: null,
-      rating: 4.7,
-      reviews: '892',
-      badge: null,
-      image_url: '/images/prod-laneige.jpg',
-      slug: 'laneige-cream-skin-milk-cleanser',
-    },
-    {
-      id: 218,
-      name: 'Mela B3 Serum',
-      brand: 'La Roche-Posay',
-      price: 39.00,
-      compare_at_price: null,
-      rating: 4.6,
-      reviews: '743',
-      badge: null,
-      image_url: '/images/prod-laroche-effaclar.jpg',
-      slug: 'la-roche-posay-pure-niacinamide-10',
-    },
-    {
-      id: 208,
-      name: 'Brightening Pore Serum',
-      brand: 'innisfree',
-      price: 28.00,
-      compare_at_price: null,
-      rating: 4.5,
-      reviews: '620',
-      badge: null,
-      image_url: '/images/prod-innisfree-cleanser.jpg',
-      slug: 'innisfree-green-tea-seed-serum',
-    },
-    {
-      id: 206,
-      name: 'The Niacinamide 15 Serum',
-      brand: 'COSRX',
-      price: 25.00,
-      compare_at_price: null,
-      rating: 4.6,
-      reviews: '710',
-      badge: null,
-      image_url: '/images/prod-cosrx-snail.jpg',
-      slug: 'cosrx-advanced-snail-96-mucin-essence',
-    },
-    {
-      id: 107,
-      name: 'Sébium Pore Refiner',
-      brand: 'BIODERMA',
-      price: 22.00,
-      compare_at_price: null,
-      rating: 4.4,
-      reviews: '512',
-      badge: null,
-      image_url: '/images/prod-bioderma-micellar.jpg',
-      slug: 'bioderma-sensibio-h2o-micellar-water',
-    },
-    {
-      id: 219,
-      name: 'Niacinamide 10% + TXA 4% Serum',
-      brand: 'Anua',
-      price: 26.00,
-      compare_at_price: null,
-      rating: 4.7,
-      reviews: '1.0K',
-      badge: null,
-      image_url: '/images/prod-anua-toner.jpg',
-      slug: 'anua-niacinamide-10-txa-4-serum',
-    },
-    {
-      id: 217,
-      name: 'Niacinamide Glow Mask',
-      brand: 'TIRTIR',
-      price: 18.00,
-      compare_at_price: null,
-      rating: 4.6,
-      reviews: '430',
-      badge: null,
-      image_url: '/images/prod-sulwhasoo.jpg',
-      slug: 'sk-ii-overnight-miracle-mask',
-    },
-    {
-      id: 216,
-      name: 'Niacinamide Brightening Toner',
-      brand: 'Some By Mi',
-      price: 20.00,
-      compare_at_price: null,
-      rating: 4.5,
-      reviews: '620',
-      badge: null,
-      image_url: '/images/prod-dermalogica.jpg',
-      slug: 'sk-ii-facial-treatment-clear-lotion',
-    },
-  ]
+// Fallback catalog in case API is delayed
+const fallbackProducts = [
+  {
+    id: 202,
+    name: 'Niacinamide 10% + Zinc 1%',
+    brand: 'The Ordinary',
+    category_name: 'Serums',
+    price: 8.90,
+    compare_at_price: null,
+    rating: 4.7,
+    reviews: '980',
+    badge: 'Best Seller',
+    image_url: '/images/prod-ordinary.jpg',
+    slug: 'the-ordinary-niacinamide-10-zinc-1',
+    stock: 24,
+  },
+  {
+    id: 201,
+    name: 'Facial Treatment Essence',
+    brand: 'SK-II',
+    category_name: 'Toners',
+    price: 99.00,
+    compare_at_price: 125.00,
+    rating: 4.8,
+    reviews: '1.2K',
+    badge: '20% OFF',
+    image_url: '/images/prod-sk2.jpg',
+    slug: 'sk-ii-facial-treatment-essence',
+    stock: 12,
+  },
+  {
+    id: 221,
+    name: 'PM Facial Moisturizing Lotion',
+    brand: 'CeraVe',
+    category_name: 'Moisturizers',
+    price: 18.00,
+    compare_at_price: null,
+    rating: 4.6,
+    reviews: '1.1K',
+    badge: null,
+    image_url: '/images/prod-cerave.jpg',
+    slug: 'cerave-pm-facial-moisturizing-lotion',
+    stock: 30,
+  },
+  {
+    id: 220,
+    name: 'Glow Serum (Propolis + Niacinamide)',
+    brand: 'Beauty of Joseon',
+    category_name: 'Serums',
+    price: 17.00,
+    compare_at_price: null,
+    rating: 4.8,
+    reviews: '2.3K',
+    badge: null,
+    image_url: '/images/prod-boj.jpg',
+    slug: 'beauty-of-joseon-glow-serum-propolis-niacinamide',
+    stock: 18,
+  },
+  {
+    id: 108,
+    name: 'Cream Skin Refiner & Toner',
+    brand: 'LANEIGE',
+    category_name: 'Toners',
+    price: 24.00,
+    compare_at_price: null,
+    rating: 4.7,
+    reviews: '892',
+    badge: null,
+    image_url: '/images/prod-laneige.jpg',
+    slug: 'laneige-cream-skin-milk-cleanser',
+    stock: 15,
+  },
+  {
+    id: 218,
+    name: 'Mela B3 Serum',
+    brand: 'La Roche-Posay',
+    category_name: 'Serums',
+    price: 39.00,
+    compare_at_price: null,
+    rating: 4.6,
+    reviews: '743',
+    badge: null,
+    image_url: '/images/prod-laroche-effaclar.jpg',
+    slug: 'la-roche-posay-pure-niacinamide-10',
+    stock: 10,
+  },
+  {
+    id: 208,
+    name: 'Brightening Pore Serum',
+    brand: 'innisfree',
+    category_name: 'Serums',
+    price: 28.00,
+    compare_at_price: null,
+    rating: 4.5,
+    reviews: '620',
+    badge: null,
+    image_url: '/images/prod-innisfree-cleanser.jpg',
+    slug: 'innisfree-green-tea-seed-serum',
+    stock: 20,
+  },
+  {
+    id: 206,
+    name: 'The Niacinamide 15 Serum',
+    brand: 'COSRX',
+    category_name: 'Serums',
+    price: 25.00,
+    compare_at_price: null,
+    rating: 4.6,
+    reviews: '710',
+    badge: null,
+    image_url: '/images/prod-cosrx-snail.jpg',
+    slug: 'cosrx-advanced-snail-96-mucin-essence',
+    stock: 25,
+  },
+  {
+    id: 107,
+    name: 'Sébium Pore Refiner',
+    brand: 'Bioderma',
+    category_name: 'Treatments',
+    price: 22.00,
+    compare_at_price: null,
+    rating: 4.4,
+    reviews: '512',
+    badge: null,
+    image_url: '/images/prod-bioderma-micellar.jpg',
+    slug: 'bioderma-sensibio-h2o-micellar-water',
+    stock: 16,
+  },
+  {
+    id: 219,
+    name: 'Niacinamide 10% + TXA 4% Serum',
+    brand: 'Anua',
+    category_name: 'Serums',
+    price: 26.00,
+    compare_at_price: null,
+    rating: 4.7,
+    reviews: '1.0K',
+    badge: null,
+    image_url: '/images/prod-anua-toner.jpg',
+    slug: 'anua-niacinamide-10-txa-4-serum',
+    stock: 14,
+  },
+]
+
+// All active products pool
+const allProductsPool = computed(() => {
+  if (productStore.products && productStore.products.length > 0) {
+    return productStore.products
+  }
+  return fallbackProducts
+})
+
+// Dynamic category counts from pool
+const categoryCounts = computed(() => {
+  const map = {}
+  allProductsPool.value.forEach((p) => {
+    const c = p.category_name || p.category || 'Skincare'
+    map[c] = (map[c] || 0) + 1
+  })
+  return Object.keys(map).map((k) => ({ name: k, count: map[k] }))
+})
+
+// Filtered products list
+const filteredProductsList = computed(() => {
+  let list = allProductsPool.value
+  const q = activeQuery.value.toLowerCase().trim()
+
+  if (q && q !== 'all') {
+    list = list.filter((p) => {
+      const name = (p.name || '').toLowerCase()
+      const brand = (p.brand || '').toLowerCase()
+      const desc = (p.description || p.desc || '').toLowerCase()
+      const cat = (p.category_name || p.category || '').toLowerCase()
+      const skinType = (p.skin_type || '').toLowerCase()
+      const concerns = (p.concerns || '').toLowerCase()
+      return (
+        name.includes(q) ||
+        brand.includes(q) ||
+        desc.includes(q) ||
+        cat.includes(q) ||
+        skinType.includes(q) ||
+        concerns.includes(q)
+      )
+    })
+  }
+
+  if (selectedCategories.value.length > 0) {
+    list = list.filter((p) =>
+      selectedCategories.value.includes(p.category_name || p.category)
+    )
+  }
 
   if (selectedBrands.value.length > 0) {
     list = list.filter((p) => selectedBrands.value.includes(p.brand))
@@ -631,8 +669,42 @@ const displayedProducts = computed(() => {
   if (maxPrice.value) {
     list = list.filter((p) => p.price <= maxPrice.value)
   }
+  if (inStockOnly.value) {
+    list = list.filter((p) => p.stock > 0)
+  }
+  if (onSaleOnly.value) {
+    list = list.filter((p) => p.compare_at_price && p.compare_at_price > p.price)
+  }
+
+  // Sorting
+  if (sortOption.value === 'rating') {
+    list = [...list].sort((a, b) => (b.rating || 0) - (a.rating || 0))
+  } else if (sortOption.value === 'price_asc') {
+    list = [...list].sort((a, b) => a.price - b.price)
+  } else if (sortOption.value === 'price_desc') {
+    list = [...list].sort((a, b) => b.price - a.price)
+  } else if (sortOption.value === 'popular') {
+    list = [...list].sort((a, b) => (b.reviews_count || 0) - (a.reviews_count || 0))
+  }
 
   return list
+})
+
+// Pagination
+const pageSize = 8
+const totalPages = computed(() =>
+  Math.max(1, Math.ceil(filteredProductsList.value.length / pageSize))
+)
+const paginatedProducts = computed(() => {
+  const start = (currentPage.value - 1) * pageSize
+  return filteredProductsList.value.slice(start, start + pageSize)
+})
+
+const allResultsCount = computed(() => filteredProductsList.value.length)
+const productsCount = computed(() => filteredProductsList.value.length)
+const brandsCount = computed(() => {
+  const brands = new Set(filteredProductsList.value.map((p) => p.brand).filter(Boolean))
+  return brands.size
 })
 
 // Cart & Wishlist
