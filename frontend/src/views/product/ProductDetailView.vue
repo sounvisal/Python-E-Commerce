@@ -270,6 +270,77 @@
       </div>
     </section>
 
+    <!-- Atelier Sensory Reel: Real Texture & Customer Video Reviews -->
+    <section v-if="displayedVideoReels.length > 0" class="container video-reel-section">
+      <div class="video-reel-header">
+        <div class="reel-header-left">
+          <div class="reel-eyebrow">
+            <Sparkles :size="14" class="text-terracotta" />
+            <span>SENSORY TEXTURE &amp; VERIFIED RESULTS</span>
+          </div>
+          <h2 class="reel-main-heading">Atelier Video Reviews &amp; Texture Demos</h2>
+          <p class="reel-subheading">Watch verified patrons and estheticians demonstrate texture viscosity, absorption rate, and radiant dewy finish.</p>
+        </div>
+        <div class="reel-header-right">
+          <button class="btn-reel-write" @click="openWriteReview">
+            <Video :size="15" />
+            <span>Submit Video Review</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Reel Horizontal Scroll Track -->
+      <div class="video-reels-track">
+        <div
+          v-for="(reel, rIdx) in displayedVideoReels"
+          :key="reel.id || rIdx"
+          class="video-reel-card"
+          @click="openVideoReel(reel, rIdx)"
+        >
+          <!-- 9:16 Video Poster Frame with Glow & Overlay -->
+          <div class="reel-poster-box">
+            <img
+              :src="reel.video_thumbnail || reel.product_image || '/images/pdp-stage-sk2-hero.jpg'"
+              :alt="reel.title"
+              class="reel-poster-img"
+              @error="$event.target.src = '/images/pdp-stage-sk2-hero.jpg'"
+            />
+            <div class="reel-gradient-scrim"></div>
+            
+            <!-- Video duration pill -->
+            <div class="reel-duration-badge">
+              <Play :size="10" class="fill-white" />
+              <span>{{ reel.video_duration || '0:24' }}</span>
+            </div>
+
+            <!-- Skin Type Pill -->
+            <div v-if="reel.skin_type" class="reel-skintype-badge">
+              {{ reel.skin_type }}
+            </div>
+
+            <!-- Pulsing Play Button Button -->
+            <div class="reel-play-btn-overlay">
+              <div class="reel-play-ring">
+                <Play :size="22" class="reel-play-icon" />
+              </div>
+            </div>
+
+            <!-- Bottom Scrim Info inside Poster -->
+            <div class="reel-poster-info">
+              <div class="reel-reviewer-line">
+                <img :src="reel.customer_avatar || '/images/avatar-sreynich.jpg'" class="reel-avatar" />
+                <span class="reel-name">{{ reel.customer_name }}</span>
+              </div>
+              <p class="reel-title-snippet">"{{ reel.title }}"</p>
+              <div class="reel-stars">
+                <Star v-for="s in 5" :key="s" :size="11" class="star-gold" />
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
     <!-- Mid-Page Content Tabs matching Product Details.png -->
     <section class="container mid-tabs-container">
       <div class="mid-tabs-bar">
@@ -580,6 +651,17 @@
               <h4 class="review-title">{{ rev.title }}</h4>
               <p class="review-comment">{{ rev.comment }}</p>
 
+              <!-- Video Review Card Preview -->
+              <div v-if="rev.video_url" class="review-video-trigger" @click="openVideoReel(rev, 0)">
+                <div class="rev-video-thumb-frame">
+                  <img :src="rev.video_thumbnail || rev.product_image || '/images/pdp-stage-sk2-hero.jpg'" class="rev-video-thumb" />
+                  <div class="rev-play-pill">
+                    <Play :size="12" class="fill-white" />
+                    <span>Watch Video Review ({{ rev.video_duration || '0:24' }})</span>
+                  </div>
+                </div>
+              </div>
+
               <!-- Atelier Curator Reply -->
               <div v-if="rev.admin_reply" class="curator-reply-box">
                 <div class="reply-header">
@@ -732,16 +814,176 @@
             </div>
           </div>
 
+          <!-- Skin Type Selector -->
+          <div class="form-group">
+            <label class="form-label">Your Skin Profile (Helps other patrons)</label>
+            <div class="skin-types-chips">
+              <button
+                v-for="st in ['Combination', 'Dry', 'Oily', 'Normal', 'Sensitive']"
+                :key="st"
+                type="button"
+                class="skin-chip-btn"
+                :class="{ active: reviewForm.skin_type === st }"
+                @click="reviewForm.skin_type = st"
+              >
+                {{ st }}
+              </button>
+            </div>
+          </div>
+
+          <!-- Video Review Upload Option -->
+          <div class="form-group">
+            <label class="form-label">Attach Texture / Video Review (Optional)</label>
+            <div class="video-upload-area">
+              <div v-if="!reviewForm.video_url" class="video-drop-zone">
+                <input
+                  type="file"
+                  id="reviewVideoInput"
+                  accept="video/mp4,video/webm,video/quicktime"
+                  class="hidden-file-input"
+                  @change="handleVideoFileSelect"
+                />
+                <label for="reviewVideoInput" class="video-upload-label">
+                  <Video :size="22" class="text-terracotta" />
+                  <span class="upload-title">{{ isUploadingVideo ? 'Uploading clip to atelier storage...' : 'Click to Upload Video Review (MP4, max 50MB)' }}</span>
+                  <span class="upload-sub">Share texture viscosity, droplet absorption, and routine finish</span>
+                </label>
+              </div>
+              <div v-else class="video-preview-badge">
+                <div class="preview-left">
+                  <Film :size="18" class="text-terracotta" />
+                  <span class="video-file-name">Video attached: {{ reviewForm.video_url }}</span>
+                </div>
+                <button type="button" class="btn-remove-video" @click="reviewForm.video_url = ''">
+                  <X :size="14" />
+                </button>
+              </div>
+            </div>
+          </div>
+
           <div class="modal-actions">
             <button type="button" class="btn-cancel" @click="showReviewModal = false">
               Cancel
             </button>
-            <button type="submit" class="btn-submit-review" :disabled="submittingReview">
+            <button type="submit" class="btn-submit-review" :disabled="submittingReview || isUploadingVideo">
               <span v-if="!submittingReview">Submit Review to Atelier</span>
               <span v-else>Recording Review...</span>
             </button>
           </div>
         </form>
+      </div>
+    </div>
+
+    <!-- Luxury Video Reel Player Modal with 1-Click Quick-Buy -->
+    <div v-if="activeVideoModal" class="video-modal-backdrop" @click.self="closeVideoReel">
+      <div class="video-modal-container">
+        <!-- Close Button -->
+        <button class="btn-close-video" @click="closeVideoReel" title="Close Reel">
+          <X :size="22" />
+        </button>
+
+        <!-- Previous Video Arrow -->
+        <button
+          v-if="displayedVideoReels.length > 1"
+          class="video-nav-arrow arrow-prev"
+          @click="prevVideoReel"
+          title="Previous Review"
+        >
+          <ChevronLeft :size="24" />
+        </button>
+
+        <!-- Vertical 9:16 Video Player Card -->
+        <div class="reel-player-wrapper">
+          <video
+            ref="videoElementRef"
+            :src="activeVideoModal.video_url"
+            :poster="activeVideoModal.video_thumbnail"
+            class="reel-html-video"
+            autoplay
+            loop
+            playsinline
+            :muted="isVideoMuted"
+            @click="toggleVideoPlay"
+          ></video>
+
+          <!-- Top Scrim / Brand & Mute Button -->
+          <div class="reel-top-bar">
+            <div class="reel-brand-pill">
+              <Sparkles :size="13" class="text-terracotta" />
+              <span>Luméa Atelier Reel</span>
+            </div>
+
+            <button class="btn-mute-toggle" @click.stop="toggleVideoMute">
+              <VolumeX v-if="isVideoMuted" :size="18" />
+              <Volume2 v-else :size="18" />
+            </button>
+          </div>
+
+          <!-- Central Play Indicator on Pause -->
+          <div v-if="!isVideoPlaying" class="reel-paused-overlay" @click="toggleVideoPlay">
+            <div class="reel-big-play-btn">
+              <Play :size="36" />
+            </div>
+          </div>
+
+          <!-- Bottom Content Overlay: Reviewer Details + Quick-Buy Product Card -->
+          <div class="reel-bottom-overlay">
+            <!-- Reviewer Info -->
+            <div class="reel-reviewer-card">
+              <div class="reviewer-meta-row">
+                <img :src="activeVideoModal.customer_avatar || '/images/avatar-sreynich.jpg'" class="active-avatar" />
+                <div class="reviewer-text">
+                  <div class="name-badge-row">
+                    <span class="active-name">{{ activeVideoModal.customer_name }}</span>
+                    <span class="badge-verified-tiny">
+                      <Check :size="10" />
+                      Verified
+                    </span>
+                  </div>
+                  <div class="reviewer-sub-info">
+                    <span v-if="activeVideoModal.skin_type" class="chip-skin">{{ activeVideoModal.skin_type }}</span>
+                    <div class="modal-stars">
+                      <Star v-for="s in 5" :key="s" :size="11" class="star-gold" />
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <h4 class="active-title">"{{ activeVideoModal.title }}"</h4>
+              <p class="active-comment">{{ activeVideoModal.comment }}</p>
+            </div>
+
+            <!-- Quick-Buy 1-Click Card -->
+            <div class="reel-quick-buy-box">
+              <div class="quick-buy-prod-left">
+                <img :src="product.image_url || '/images/prod-sk2.jpg'" class="quick-buy-thumb" />
+                <div class="quick-buy-meta">
+                  <span class="quick-buy-name">{{ product.name }}</span>
+                  <span class="quick-buy-price">${{ selectedSize.price.toFixed(2) }}</span>
+                </div>
+              </div>
+              <button
+                class="btn-reel-quick-buy"
+                :class="{ 'is-added': videoQuickBuyAdded }"
+                @click.stop="handleReelQuickBuy"
+              >
+                <ShoppingBag v-if="!videoQuickBuyAdded" :size="15" />
+                <Check v-else :size="15" />
+                <span>{{ videoQuickBuyAdded ? 'Added to Bag!' : 'Add to Bag' }}</span>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Next Video Arrow -->
+        <button
+          v-if="displayedVideoReels.length > 1"
+          class="video-nav-arrow arrow-next"
+          @click="nextVideoReel"
+          title="Next Review"
+        >
+          <ChevronRight :size="24" />
+        </button>
       </div>
     </div>
   </div>
@@ -778,6 +1020,12 @@ import {
   Leaf,
   Clock,
   Award,
+  Play,
+  Volume2,
+  VolumeX,
+  ChevronLeft,
+  Video,
+  Film,
 } from 'lucide-vue-next'
 import BrandLogo from '@/components/BrandLogo.vue'
 import ProductCard from '@/components/ProductCard.vue'
@@ -798,6 +1046,16 @@ const isWishlisted = ref(false)
 const activeThumbIdx = ref(0)
 const addedItemMap = ref({})
 const wishlistItemMap = ref({})
+
+// Video Reels State & Controls
+const allAtelierVideoReviews = ref([])
+const activeVideoModal = ref(null)
+const activeVideoIndex = ref(0)
+const isVideoMuted = ref(true)
+const isVideoPlaying = ref(true)
+const videoElementRef = ref(null)
+const videoQuickBuyAdded = ref(false)
+const isUploadingVideo = ref(false)
 
 // Reviews & Ratings state
 const productReviews = ref([])
@@ -824,7 +1082,151 @@ const reviewForm = reactive({
   comment: '',
   customer_name: '',
   customer_email: '',
+  skin_type: 'Combination',
+  video_url: '',
+  video_thumbnail: '',
+  video_duration: '',
 })
+
+async function fetchGlobalVideoReviews() {
+  try {
+    const res = await axios.get('/api/reviews', { params: { has_video: true, limit: 8 } })
+    if (res.data?.status === 'success') {
+      allAtelierVideoReviews.value = res.data.data || []
+    }
+  } catch (err) {
+    console.error('Failed to load global video reviews:', err)
+  }
+}
+
+const displayedVideoReels = computed(() => {
+  const reels = []
+
+  // If the product itself has an official texture demo video, add it first!
+  if (product.value?.video_url) {
+    reels.push({
+      id: `prod-demo-${product.value.id}`,
+      product_id: product.value.id,
+      product_name: product.value.name,
+      product_image: product.value.image_url,
+      customer_name: `${product.value.brand} Atelier`,
+      customer_avatar: '/images/avatar-sreynich.jpg',
+      title: product.value.video_title || 'Texture Viscosity & Absorption Demonstration',
+      comment: 'Official formulation demonstration: lightweight sensorial fluid that melts into the skin barrier with zero tackiness.',
+      video_url: product.value.video_url,
+      video_thumbnail: product.value.video_thumbnail || product.value.image_url,
+      video_duration: '0:25',
+      skin_type: 'All Skin Types',
+      rating: 5,
+      verified_purchase: true,
+    })
+  }
+
+  // Add reviews for this specific product that have a video
+  const specificReviews = productReviews.value.filter((r) => r.video_url)
+  reels.push(...specificReviews)
+
+  // If we have fewer than 4 reels, supplement with top verified atelier video reviews
+  if (reels.length < 4 && allAtelierVideoReviews.value.length > 0) {
+    for (const gReel of allAtelierVideoReviews.value) {
+      if (!reels.some((r) => r.video_url === gReel.video_url)) {
+        reels.push(gReel)
+      }
+      if (reels.length >= 6) break
+    }
+  }
+
+  return reels
+})
+
+function openVideoReel(reel, idx) {
+  activeVideoModal.value = reel
+  activeVideoIndex.value = idx
+  isVideoPlaying.value = true
+  isVideoMuted.value = true
+}
+
+function closeVideoReel() {
+  if (videoElementRef.value) {
+    videoElementRef.value.pause()
+  }
+  activeVideoModal.value = null
+  isVideoPlaying.value = false
+}
+
+function toggleVideoPlay() {
+  if (!videoElementRef.value) return
+  if (videoElementRef.value.paused) {
+    videoElementRef.value.play()
+    isVideoPlaying.value = true
+  } else {
+    videoElementRef.value.pause()
+    isVideoPlaying.value = false
+  }
+}
+
+function toggleVideoMute() {
+  if (!videoElementRef.value) return
+  isVideoMuted.value = !isVideoMuted.value
+  videoElementRef.value.muted = isVideoMuted.value
+}
+
+function prevVideoReel() {
+  const reels = displayedVideoReels.value
+  if (reels.length === 0) return
+  activeVideoIndex.value = (activeVideoIndex.value - 1 + reels.length) % reels.length
+  activeVideoModal.value = reels[activeVideoIndex.value]
+  isVideoPlaying.value = true
+}
+
+function nextVideoReel() {
+  const reels = displayedVideoReels.value
+  if (reels.length === 0) return
+  activeVideoIndex.value = (activeVideoIndex.value + 1) % reels.length
+  activeVideoModal.value = reels[activeVideoIndex.value]
+  isVideoPlaying.value = true
+}
+
+function handleReelQuickBuy() {
+  if (!product.value) return
+  cartStore.addItem({
+    ...product.value,
+    price: selectedSize.value.price,
+    selectedSize: selectedSize.value.label,
+  }, 1)
+  videoQuickBuyAdded.value = true
+  notificationStore.addToast(`Added "${product.value.name}" to your atelier shopping bag!`, 'success')
+  setTimeout(() => {
+    videoQuickBuyAdded.value = false
+  }, 2200)
+}
+
+async function handleVideoFileSelect(e) {
+  const file = e.target.files?.[0]
+  if (!file) return
+  if (file.size > 50 * 1024 * 1024) {
+    notificationStore.addToast('Video file size exceeds 50MB limit.', 'error')
+    return
+  }
+  isUploadingVideo.value = true
+  try {
+    const formData = new FormData()
+    formData.append('file', file)
+    const res = await axios.post('/api/upload/video', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    })
+    if (res.data?.status === 'success') {
+      reviewForm.video_url = res.data.data.url
+      reviewForm.video_duration = '0:20'
+      notificationStore.addToast('Video review clip uploaded successfully to atelier storage!', 'success')
+    }
+  } catch (err) {
+    console.error('Failed to upload video clip:', err)
+    notificationStore.addToast('Failed to upload video clip. Please check format.', 'error')
+  } finally {
+    isUploadingVideo.value = false
+  }
+}
 
 function loadProduct() {
   const slug = route.params.slug || 'sk-ii-facial-treatment-essence'
@@ -851,10 +1253,12 @@ async function fetchReviews(productId) {
 
 onMounted(() => {
   loadProduct()
+  fetchGlobalVideoReviews()
 })
 
 watch(() => route.params.slug, () => {
   loadProduct()
+  fetchGlobalVideoReviews()
   window.scrollTo({ top: 0, behavior: 'smooth' })
 })
 
@@ -965,7 +1369,11 @@ async function submitReview() {
       comment: reviewForm.comment,
       customer_name: reviewForm.customer_name || 'Luméa Patron',
       customer_email: reviewForm.customer_email || 'patron@example.com',
-      customer_avatar: authStore.user?.avatar || '/images/avatar-sreynich.jpg'
+      customer_avatar: authStore.user?.avatar || '/images/avatar-sreynich.jpg',
+      skin_type: reviewForm.skin_type || 'Combination',
+      video_url: reviewForm.video_url || undefined,
+      video_duration: reviewForm.video_duration || undefined,
+      video_thumbnail: reviewForm.video_thumbnail || undefined,
     }
     const res = await axios.post('/api/reviews', payload)
     if (res.data?.status === 'success') {
@@ -973,9 +1381,12 @@ async function submitReview() {
       showReviewModal.value = false
       reviewForm.title = ''
       reviewForm.comment = ''
+      reviewForm.video_url = ''
+      reviewForm.video_duration = ''
       if (product.value?.id) {
         await fetchReviews(product.value.id)
       }
+      await fetchGlobalVideoReviews()
     }
   } catch (err) {
     notificationStore.addToast('Failed to submit review. Please try again.', 'error')
@@ -2775,6 +3186,722 @@ function toggleItemWishlist(id) {
 
 .btn-submit-review:hover {
   background: #73382E;
+}
+
+/* ========================================================
+   ATELIER VIDEO REELS & TEXTURE SHOWCASE STYLES
+   ======================================================== */
+.video-reel-section {
+  margin-bottom: 3.5rem;
+}
+
+.video-reel-header {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 1.5rem;
+  margin-bottom: 1.75rem;
+  flex-wrap: wrap;
+}
+
+.reel-eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  color: #8E4A3E;
+  margin-bottom: 0.35rem;
+}
+
+.reel-main-heading {
+  font-family: 'Playfair Display', Georgia, serif;
+  font-size: 1.85rem;
+  font-weight: 700;
+  color: #1C1917;
+  margin-bottom: 0.4rem;
+}
+
+.reel-subheading {
+  font-size: 0.88rem;
+  color: #78716C;
+  max-width: 600px;
+  line-height: 1.5;
+}
+
+.btn-reel-write {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: #FFFFFF;
+  border: 1px solid #8E4A3E;
+  color: #8E4A3E;
+  border-radius: 9999px;
+  padding: 0.55rem 1.25rem;
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-reel-write:hover {
+  background: #8E4A3E;
+  color: #FFFFFF;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(142, 74, 62, 0.15);
+}
+
+/* Horizontal Reels Track */
+.video-reels-track {
+  display: flex;
+  gap: 1.25rem;
+  overflow-x: auto;
+  padding-bottom: 1rem;
+  scroll-snap-type: x mandatory;
+  -webkit-overflow-scrolling: touch;
+}
+
+.video-reels-track::-webkit-scrollbar {
+  height: 6px;
+}
+
+.video-reels-track::-webkit-scrollbar-track {
+  background: #F5EFEB;
+  border-radius: 9999px;
+}
+
+.video-reels-track::-webkit-scrollbar-thumb {
+  background: #D7CCC8;
+  border-radius: 9999px;
+}
+
+.video-reels-track::-webkit-scrollbar-thumb:hover {
+  background: #8E4A3E;
+}
+
+.video-reel-card {
+  flex: 0 0 220px;
+  scroll-snap-align: start;
+  cursor: pointer;
+  transition: transform 0.25s cubic-bezier(0.2, 0, 0, 1), box-shadow 0.25s ease;
+}
+
+.video-reel-card:hover {
+  transform: translateY(-6px);
+}
+
+.reel-poster-box {
+  position: relative;
+  width: 100%;
+  height: 380px;
+  border-radius: 16px;
+  overflow: hidden;
+  background: #242721;
+  box-shadow: 0 8px 24px rgba(28, 25, 23, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.reel-poster-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.5s ease;
+}
+
+.video-reel-card:hover .reel-poster-img {
+  transform: scale(1.05);
+}
+
+.reel-gradient-scrim {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, rgba(0, 0, 0, 0.3) 0%, rgba(0, 0, 0, 0) 35%, rgba(0, 0, 0, 0.75) 75%, rgba(0, 0, 0, 0.95) 100%);
+  pointer-events: none;
+}
+
+.reel-duration-badge {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  background: rgba(0, 0, 0, 0.65);
+  backdrop-filter: blur(8px);
+  color: #FFFFFF;
+  font-size: 0.7rem;
+  font-weight: 600;
+  padding: 0.25rem 0.55rem;
+  border-radius: 9999px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.reel-skintype-badge {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  background: rgba(142, 74, 62, 0.85);
+  backdrop-filter: blur(8px);
+  color: #FFFFFF;
+  font-size: 0.65rem;
+  font-weight: 700;
+  padding: 0.22rem 0.55rem;
+  border-radius: 9999px;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+
+.reel-play-btn-overlay {
+  position: absolute;
+  top: 42%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+}
+
+.reel-play-ring {
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.88);
+  backdrop-filter: blur(8px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.3);
+  transition: transform 0.25s ease, background 0.25s ease;
+}
+
+.video-reel-card:hover .reel-play-ring {
+  transform: scale(1.12);
+  background: #FFFFFF;
+}
+
+.reel-play-icon {
+  color: #8E4A3E;
+  margin-left: 3px;
+  fill: #8E4A3E;
+}
+
+.reel-poster-info {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.reel-reviewer-line {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+}
+
+.reel-avatar {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  border: 1.5px solid #FFFFFF;
+  object-fit: cover;
+}
+
+.reel-name {
+  color: #FFFFFF;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.reel-title-snippet {
+  color: #FAF6F2;
+  font-size: 0.8rem;
+  font-weight: 600;
+  line-height: 1.25;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  margin: 0;
+}
+
+.reel-stars {
+  display: flex;
+  gap: 2px;
+}
+
+/* Review Item In-Line Video Preview */
+.review-video-trigger {
+  margin: 0.75rem 0;
+  cursor: pointer;
+  display: inline-block;
+}
+
+.rev-video-thumb-frame {
+  position: relative;
+  width: 140px;
+  height: 190px;
+  border-radius: 12px;
+  overflow: hidden;
+  background: #000;
+  border: 1px solid rgba(142, 74, 62, 0.2);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.rev-video-thumb-frame:hover {
+  transform: scale(1.03);
+  box-shadow: 0 6px 18px rgba(142, 74, 62, 0.2);
+}
+
+.rev-video-thumb {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  opacity: 0.85;
+}
+
+.rev-play-pill {
+  position: absolute;
+  bottom: 8px;
+  left: 6px;
+  right: 6px;
+  background: rgba(0, 0, 0, 0.75);
+  backdrop-filter: blur(4px);
+  color: #FFFFFF;
+  font-size: 0.65rem;
+  font-weight: 600;
+  padding: 0.3rem 0.45rem;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+
+/* Skin Profile Chips inside Review Form */
+.skin-types-chips {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.skin-chip-btn {
+  background: #FAF8F5;
+  border: 1px solid #EAE5DF;
+  border-radius: 9999px;
+  padding: 0.35rem 0.85rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #78716C;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.skin-chip-btn:hover {
+  border-color: #8E4A3E;
+  color: #8E4A3E;
+}
+
+.skin-chip-btn.active {
+  background: #8E4A3E;
+  border-color: #8E4A3E;
+  color: #FFFFFF;
+}
+
+/* Video Upload Inside Review Form */
+.video-upload-area {
+  margin-top: 0.35rem;
+}
+
+.hidden-file-input {
+  display: none;
+}
+
+.video-upload-label {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 1.25rem;
+  border: 2px dashed #D7CCC8;
+  border-radius: 12px;
+  background: #FAF8F5;
+  cursor: pointer;
+  text-align: center;
+  gap: 0.35rem;
+  transition: border-color 0.2s ease, background 0.2s ease;
+}
+
+.video-upload-label:hover {
+  border-color: #8E4A3E;
+  background: #F5EFEB;
+}
+
+.upload-title {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: #1C1917;
+}
+
+.upload-sub {
+  font-size: 0.72rem;
+  color: #78716C;
+}
+
+.video-preview-badge {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.65rem 1rem;
+  background: #F5EFEB;
+  border: 1px solid #EAE5DF;
+  border-radius: 8px;
+}
+
+.preview-left {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.8rem;
+  color: #1C1917;
+  font-weight: 500;
+}
+
+.btn-remove-video {
+  background: none;
+  border: none;
+  color: #DC2626;
+  cursor: pointer;
+}
+
+/* ========================================================
+   FULL-SCREEN LUXURY ATELIER REEL MODAL & QUICK-BUY WIDGET
+   ======================================================== */
+.video-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(10, 8, 7, 0.92);
+  backdrop-filter: blur(12px);
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.5rem;
+}
+
+.video-modal-container {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  max-height: 90vh;
+}
+
+.btn-close-video {
+  position: absolute;
+  top: -45px;
+  right: 0;
+  background: none;
+  border: none;
+  color: #FFFFFF;
+  cursor: pointer;
+  opacity: 0.8;
+  transition: opacity 0.15s ease;
+}
+
+.btn-close-video:hover {
+  opacity: 1;
+}
+
+.video-nav-arrow {
+  background: rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: #FFFFFF;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.video-nav-arrow:hover {
+  background: #8E4A3E;
+  border-color: #8E4A3E;
+  transform: scale(1.08);
+}
+
+.arrow-prev {
+  margin-right: 1.5rem;
+}
+
+.arrow-next {
+  margin-left: 1.5rem;
+}
+
+.reel-player-wrapper {
+  position: relative;
+  width: 360px;
+  height: 640px;
+  max-height: 85vh;
+  border-radius: 20px;
+  overflow: hidden;
+  background: #000000;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+}
+
+.reel-html-video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  cursor: pointer;
+}
+
+.reel-top-bar {
+  position: absolute;
+  top: 16px;
+  left: 16px;
+  right: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  z-index: 5;
+}
+
+.reel-brand-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(8px);
+  color: #FFFFFF;
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 0.35rem 0.75rem;
+  border-radius: 9999px;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+}
+
+.btn-mute-toggle {
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  color: #FFFFFF;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: transform 0.15s ease;
+}
+
+.btn-mute-toggle:hover {
+  transform: scale(1.1);
+}
+
+.reel-paused-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.35);
+  cursor: pointer;
+  z-index: 4;
+}
+
+.reel-big-play-btn {
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.9);
+  color: #8E4A3E;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.4);
+}
+
+.reel-big-play-btn svg {
+  margin-left: 5px;
+  fill: #8E4A3E;
+}
+
+.reel-bottom-overlay {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  padding: 1.25rem 1rem 1rem 1rem;
+  background: linear-gradient(180deg, rgba(0, 0, 0, 0) 0%, rgba(0, 0, 0, 0.85) 40%, rgba(0, 0, 0, 0.98) 100%);
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  z-index: 5;
+}
+
+.reel-reviewer-card {
+  color: #FFFFFF;
+}
+
+.reviewer-meta-row {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  margin-bottom: 0.4rem;
+}
+
+.active-avatar {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  border: 1.5px solid #FFFFFF;
+  object-fit: cover;
+}
+
+.name-badge-row {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.active-name {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: #FFFFFF;
+}
+
+.badge-verified-tiny {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.2rem;
+  background: rgba(16, 185, 129, 0.2);
+  color: #10B981;
+  font-size: 0.65rem;
+  font-weight: 600;
+  padding: 0.15rem 0.4rem;
+  border-radius: 9999px;
+}
+
+.reviewer-sub-info {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 0.15rem;
+}
+
+.chip-skin {
+  font-size: 0.68rem;
+  color: #E2D9D2;
+  background: rgba(255, 255, 255, 0.15);
+  padding: 0.1rem 0.45rem;
+  border-radius: 4px;
+}
+
+.modal-stars {
+  display: flex;
+  gap: 2px;
+}
+
+.active-title {
+  font-size: 0.92rem;
+  font-weight: 700;
+  color: #FFFFFF;
+  line-height: 1.3;
+  margin-bottom: 0.25rem;
+}
+
+.active-comment {
+  font-size: 0.78rem;
+  color: #D6CEC7;
+  line-height: 1.4;
+  margin: 0;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* Quick-Buy Atelier Box */
+.reel-quick-buy-box {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: rgba(255, 255, 255, 0.14);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  border-radius: 12px;
+  padding: 0.6rem 0.75rem;
+  gap: 0.75rem;
+}
+
+.quick-buy-prod-left {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  min-width: 0;
+}
+
+.quick-buy-thumb {
+  width: 38px;
+  height: 38px;
+  border-radius: 8px;
+  background: #FAF8F5;
+  object-fit: cover;
+  flex-shrink: 0;
+}
+
+.quick-buy-meta {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.quick-buy-name {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: #FFFFFF;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.quick-buy-price {
+  font-size: 0.82rem;
+  font-weight: 800;
+  color: #FBBF24;
+}
+
+.btn-reel-quick-buy {
+  background: #8E4A3E;
+  border: none;
+  color: #FFFFFF;
+  font-size: 0.78rem;
+  font-weight: 700;
+  padding: 0.45rem 0.85rem;
+  border-radius: 8px;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.2s ease;
+  flex-shrink: 0;
+}
+
+.btn-reel-quick-buy:hover {
+  background: #73382E;
+  transform: scale(1.04);
+}
+
+.btn-reel-quick-buy.is-added {
+  background: #10B981;
 }
 
 /* Responsive */

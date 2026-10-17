@@ -74,10 +74,14 @@ app.include_router(reviews.router, prefix=settings.API_V1_STR)
 app.include_router(quizzes.router, prefix=settings.API_V1_STR)
 app.include_router(settings_api.router, prefix=settings.API_V1_STR)
 
-# Serve static images directly from backend for direct API inspection
+# Serve static images and videos directly from backend for direct API inspection
 static_images_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "frontend", "public", "images"))
 if os.path.exists(static_images_dir):
     app.mount("/images", StaticFiles(directory=static_images_dir), name="images")
+
+static_videos_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "frontend", "public", "videos"))
+os.makedirs(static_videos_dir, exist_ok=True)
+app.mount("/videos", StaticFiles(directory=static_videos_dir), name="videos")
 
 @app.get("/", include_in_schema=False)
 def root_redirect():

@@ -86,6 +86,19 @@ const countriesList = [
   { name: 'United Kingdom', code: 'GB' }
 ]
 
+const countryFlags = {
+  'Canada': '🇨🇦',
+  'South Korea': '🇰🇷',
+  'United States': '🇺🇸',
+  'France': '🇫🇷',
+  'Japan': '🇯🇵',
+  'United Kingdom': '🇬🇧'
+}
+
+const getCountryFlag = (countryName) => {
+  return countryFlags[countryName] || '🌐'
+}
+
 const getCountryCode = (countryName) => {
   const match = countriesList.find(c => c.name.toLowerCase() === (countryName || '').toLowerCase())
   return match ? match.code : (countryName ? countryName.substring(0, 2).toUpperCase() : 'GL')

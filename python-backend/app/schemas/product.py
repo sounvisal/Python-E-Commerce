@@ -22,6 +22,9 @@ class ProductBase(BaseModel):
     skin_type: Optional[List[str]] = []
     skin_concern: Optional[List[str]] = []
     gallery: Optional[List[str]] = []
+    video_url: Optional[str] = None
+    video_thumbnail: Optional[str] = None
+    video_title: Optional[str] = None
 
 class ProductOut(ProductBase):
     id: int

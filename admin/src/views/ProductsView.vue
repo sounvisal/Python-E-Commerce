@@ -20,7 +20,9 @@ import {
   ExternalLink,
   Sparkles,
   Save,
-  ArrowLeft
+  ArrowLeft,
+  Video,
+  Film
 } from 'lucide-vue-next'
 
 const adminStore = useAdminStore()
@@ -70,6 +72,9 @@ const productForm = reactive({
   skin_concerns: ['Dryness', 'Brightening'],
   ingredients: 'Hyaluronic Acid, Niacinamide, Camellia Sinensis Leaf Extract',
   how_to_use: 'Apply a few drops to cleansed face morning and night before heavier creams.',
+  video_url: '',
+  video_title: '',
+  video_thumbnail: '',
   images: [
     '/images/prod-sk2.jpg',
     '/images/prod-lamer.jpg',
@@ -235,6 +240,9 @@ const openAddProduct = () => {
   productForm.ingredients = 'Hyaluronic Acid, Vitamin C, Niacinamide'
   productForm.how_to_use = 'Gently smooth onto face and neck after cleansing.'
   productForm.images = ['/images/prod-sk2.jpg']
+  productForm.video_url = ''
+  productForm.video_title = ''
+  productForm.video_thumbnail = ''
 
   currentView.value = 'editor'
 }
@@ -263,6 +271,9 @@ const openEditProduct = (prod) => {
   productForm.ingredients = prod.ingredients || 'Pitera, Niacinamide, Botanical Extracts'
   productForm.how_to_use = prod.how_to_use || 'Dispense 2-3 drops into palm and press into clean skin.'
   productForm.images = prod.image_url ? [prod.image_url] : ['/images/prod-sk2.jpg']
+  productForm.video_url = prod.video_url || ''
+  productForm.video_title = prod.video_title || ''
+  productForm.video_thumbnail = prod.video_thumbnail || ''
 
   currentView.value = 'editor'
 }
@@ -289,7 +300,10 @@ const saveProduct = async () => {
     short_description: productForm.short_description,
     is_featured: false,
     rating: productForm.rating,
-    reviews: productForm.reviews
+    reviews: productForm.reviews,
+    video_url: productForm.video_url || null,
+    video_title: productForm.video_title || null,
+    video_thumbnail: productForm.video_thumbnail || null,
   }
 
   try {
@@ -348,6 +362,42 @@ const handleProductFileUpload = async (e) => {
     adminStore.addToast('Failed to upload image', 'error')
   } finally {
     isUploading.value = false
+    if (e.target) e.target.value = ''
+  }
+}
+
+// Real Video Upload to backend /api/upload/video
+const videoFileInputRef = ref(null)
+const isUploadingVideo = ref(false)
+
+const triggerVideoUpload = () => {
+  if (videoFileInputRef.value) {
+    videoFileInputRef.value.click()
+  }
+}
+
+const handleProductVideoUpload = async (e) => {
+  const file = e.target.files?.[0]
+  if (!file) return
+  isUploadingVideo.value = true
+  try {
+    const formData = new FormData()
+    formData.append('file', file)
+    const res = await apiClient.post('/upload/video', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' }
+    })
+    if (res.data?.status === 'success' && res.data.data?.url) {
+      productForm.video_url = res.data.data.url
+      if (!productForm.video_title) {
+        productForm.video_title = `${productForm.name} Texture Demonstration`
+      }
+      adminStore.addToast('Texture demonstration video uploaded and synced to storage', 'success')
+    }
+  } catch (err) {
+    console.error('Failed to upload video:', err)
+    adminStore.addToast('Failed to upload video', 'error')
+  } finally {
+    isUploadingVideo.value = false
     if (e.target) e.target.value = ''
   }
 }
@@ -565,7 +615,13 @@ const toggleSkinConcern = (concern) => {
                     @error="$event.target.src = '/images/prod-sk2.jpg'"
                   />
                   <div class="prod-names-wrap">
-                    <span class="prod-primary-name">{{ prod.name }}</span>
+                    <div class="prod-name-video-row">
+                      <span class="prod-primary-name">{{ prod.name }}</span>
+                      <span v-if="prod.video_url" class="badge-prod-video" title="Texture Demonstration Video">
+                        <Video :size="11" class="text-crimson" />
+                        <span>Reel</span>
+                      </span>
+                    </div>
                     <span class="prod-sku-code">SKU: {{ getSku(prod) }}</span>
                   </div>
                 </div>
@@ -1071,6 +1127,60 @@ const toggleSkinConcern = (concern) => {
                   <X :size="11" />
                 </button>
               </div>
+            </div>
+          </div>
+
+          <!-- Texture & Demonstration Video Card -->
+          <div class="card editor-card">
+            <h3 class="editor-card-title">Texture &amp; Demonstration Video</h3>
+            <p class="editor-card-sub">Upload sensory texture demonstrations or routine reels.</p>
+
+            <div class="form-group mb-3">
+              <label class="form-label">Video Title / Routine Caption</label>
+              <input
+                v-model="productForm.video_title"
+                type="text"
+                placeholder="e.g. PITERA™ Water Texture & Absorption Swatch"
+                class="atelier-input"
+              />
+            </div>
+
+            <!-- Video File Upload Box -->
+            <div class="video-dropzone-box" @click="triggerVideoUpload">
+              <input
+                type="file"
+                ref="videoFileInputRef"
+                style="display: none"
+                accept="video/mp4,video/webm,video/quicktime"
+                @change="handleProductVideoUpload"
+              />
+              <Video :size="24" class="upload-icon text-crimson" />
+              <p class="drop-text">{{ isUploadingVideo ? 'Streaming video to atelier storage...' : 'Click to Upload Texture Video (.mp4, max 50MB)' }}</p>
+              <span class="drop-hint">Synced to both storefront & admin public assets</span>
+            </div>
+
+            <div class="form-group mt-3">
+              <label class="form-label">Or Direct Video URL</label>
+              <input
+                v-model="productForm.video_url"
+                type="text"
+                placeholder="/videos/reel-sk2-texture.mp4"
+                class="atelier-input"
+              />
+            </div>
+
+            <!-- Video Player Preview -->
+            <div v-if="productForm.video_url" class="product-video-preview-wrap">
+              <div class="video-preview-header">
+                <span class="font-medium text-xs text-charcoal">Live Video Preview</span>
+                <button type="button" class="btn-clear-video" @click="productForm.video_url = ''">Remove Video</button>
+              </div>
+              <video
+                :src="productForm.video_url"
+                controls
+                playsinline
+                class="prod-editor-video"
+              ></video>
             </div>
           </div>
 
@@ -2084,6 +2194,77 @@ const toggleSkinConcern = (concern) => {
   display: flex;
   align-items: center;
   justify-content: center;
+}
+
+/* Product Table Video Badge */
+.prod-name-video-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.badge-prod-video {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  background: #FFF1F0;
+  border: 1px solid #FFCCC7;
+  color: #84261B;
+  font-size: 10px;
+  font-weight: 700;
+  padding: 1px 6px;
+  border-radius: 9999px;
+}
+
+/* Texture Video Dropzone & Editor Preview */
+.video-dropzone-box {
+  border: 2px dashed #E5D7CD;
+  border-radius: 12px;
+  padding: 20px 16px;
+  text-align: center;
+  background: #FAF7F4;
+  cursor: pointer;
+  transition: all 0.2s;
+  margin-top: 6px;
+}
+
+.video-dropzone-box:hover {
+  border-color: #84261B;
+  background: #FDF9F8;
+}
+
+.product-video-preview-wrap {
+  margin-top: 14px;
+  background: #1C1917;
+  border-radius: 10px;
+  overflow: hidden;
+  border: 1px solid #EBE1D7;
+}
+
+.video-preview-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  background: #FAF6F2;
+  border-bottom: 1px solid #EBE1D7;
+}
+
+.btn-clear-video {
+  background: none;
+  border: none;
+  color: #DC2626;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.prod-editor-video {
+  width: 100%;
+  max-height: 220px;
+  object-fit: contain;
+  background: #000;
+  display: block;
 }
 
 /* Live Preview Card */

@@ -12,13 +12,19 @@ router = APIRouter(prefix="/upload", tags=["File Uploads"])
 PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", ".."))
 FRONTEND_UPLOADS_DIR = os.path.join(PROJECT_ROOT, "frontend", "public", "images", "uploads")
 ADMIN_UPLOADS_DIR = os.path.join(PROJECT_ROOT, "admin", "public", "images", "uploads")
+FRONTEND_VIDEOS_DIR = os.path.join(PROJECT_ROOT, "frontend", "public", "videos")
+ADMIN_VIDEOS_DIR = os.path.join(PROJECT_ROOT, "admin", "public", "videos")
 
 ALLOWED_EXTENSIONS = {".jpg", ".jpeg", ".png", ".webp", ".svg", ".gif", ".avif"}
-MAX_FILE_SIZE = 10 * 1024 * 1024  # 10 MB
+ALLOWED_VIDEO_EXTENSIONS = {".mp4", ".webm", ".mov", ".m4v", ".ogg"}
+MAX_FILE_SIZE = 10 * 1024 * 1024       # 10 MB for images
+MAX_VIDEO_SIZE = 50 * 1024 * 1024      # 50 MB for UGC video clips
 
 def ensure_directories():
     os.makedirs(FRONTEND_UPLOADS_DIR, exist_ok=True)
     os.makedirs(ADMIN_UPLOADS_DIR, exist_ok=True)
+    os.makedirs(FRONTEND_VIDEOS_DIR, exist_ok=True)
+    os.makedirs(ADMIN_VIDEOS_DIR, exist_ok=True)
 
 def sanitize_filename(filename: str) -> str:
     # Extract extension and base
@@ -125,3 +131,67 @@ async def upload_multiple_files(files: List[UploadFile] = File(...)):
         "message": f"Successfully uploaded {len(uploaded)} files",
         "data": uploaded
     }
+
+def sanitize_video_filename(filename: str) -> str:
+    base, ext = os.path.splitext(filename)
+    ext = ext.lower()
+    if ext not in ALLOWED_VIDEO_EXTENSIONS:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Unsupported video format '{ext}'. Allowed formats: {', '.join(sorted(ALLOWED_VIDEO_EXTENSIONS))}"
+        )
+    clean_base = re.sub(r'[^a-zA-Z0-9_\-]', '_', base).strip('_')[:30] or "video_review"
+    timestamp = datetime.now().strftime("%y%m%d%H%M%S")
+    unique_suffix = uuid.uuid4().hex[:6]
+    return f"{clean_base}_{timestamp}_{unique_suffix}{ext}"
+
+@router.post("/video", status_code=status.HTTP_201_CREATED)
+async def upload_video_file(file: UploadFile = File(...)):
+    """
+    Upload a short-form video review or product texture masterclass clip.
+    Saves binary stream to Storefront and Admin public/videos directories.
+    Returns the public web URL (/videos/filename.mp4).
+    """
+    ensure_directories()
+    
+    if not file.filename:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="No filename provided in video upload payload."
+        )
+
+    safe_name = sanitize_video_filename(file.filename)
+    frontend_path = os.path.join(FRONTEND_VIDEOS_DIR, safe_name)
+    admin_path = os.path.join(ADMIN_VIDEOS_DIR, safe_name)
+
+    content = await file.read()
+    if len(content) > MAX_VIDEO_SIZE:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Video exceeds maximum allowed size of 50MB ({len(content)} bytes)."
+        )
+
+    # Write to frontend public/videos
+    with open(frontend_path, "wb") as f:
+        f.write(content)
+
+    # Mirror copy to admin public/videos
+    try:
+        shutil.copyfile(frontend_path, admin_path)
+    except Exception as e:
+        print(f"[Upload] Warning: Could not mirror video to admin: {e}")
+
+    public_url = f"/videos/{safe_name}"
+
+    return {
+        "status": "success",
+        "message": "Video uploaded and synchronized successfully",
+        "data": {
+            "filename": safe_name,
+            "original_filename": file.filename,
+            "url": public_url,
+            "size": len(content),
+            "content_type": file.content_type
+        }
+    }
+

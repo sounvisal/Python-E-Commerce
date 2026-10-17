@@ -39,6 +39,9 @@ class ProductAdminCreate(BaseModel):
     is_featured: Optional[bool] = False
     rating: Optional[float] = 5.0
     reviews: Optional[int] = 0
+    video_url: Optional[str] = None
+    video_thumbnail: Optional[str] = None
+    video_title: Optional[str] = None
 
 class ProductAdminUpdate(BaseModel):
     name: Optional[str] = None
@@ -54,6 +57,9 @@ class ProductAdminUpdate(BaseModel):
     description: Optional[str] = None
     short_description: Optional[str] = None
     is_featured: Optional[bool] = None
+    video_url: Optional[str] = None
+    video_thumbnail: Optional[str] = None
+    video_title: Optional[str] = None
 
 class CategoryAdminPayload(BaseModel):
     name: str
@@ -72,6 +78,8 @@ class BrandAdminPayload(BaseModel):
     story: Optional[str] = None
     logo_url: Optional[str] = None
     banner_url: Optional[str] = None
+    story_video_url: Optional[str] = None
+    story_video_title: Optional[str] = None
     is_featured: Optional[bool] = False
     is_active: Optional[bool] = True
     slug: Optional[str] = None
@@ -92,6 +100,10 @@ class ReviewCreatePayload(BaseModel):
     rating: int = 5
     title: str
     comment: str
+    video_url: Optional[str] = None
+    video_thumbnail: Optional[str] = None
+    video_duration: Optional[str] = None
+    skin_type: Optional[str] = None
     status: Optional[str] = "approved"
 
 # --- Helpers ---
@@ -297,6 +309,9 @@ def admin_create_product(
         is_featured=payload.is_featured or False,
         rating=payload.rating or 5.0,
         reviews=payload.reviews or 0,
+        video_url=payload.video_url,
+        video_thumbnail=payload.video_thumbnail,
+        video_title=payload.video_title,
     )
 
     db.add(new_prod)
@@ -510,6 +525,8 @@ def get_admin_brands(db: Session = Depends(get_db)):
             "story": b.story,
             "logo_url": b.logo_url,
             "banner_url": b.banner_url,
+            "story_video_url": b.story_video_url,
+            "story_video_title": b.story_video_title,
             "is_featured": b.is_featured,
             "is_active": b.is_active,
             "created_at": b.created_at.isoformat() if b.created_at else None,
@@ -537,6 +554,8 @@ def admin_create_brand(payload: BrandAdminPayload, db: Session = Depends(get_db)
         story=payload.story or "",
         logo_url=payload.logo_url,
         banner_url=payload.banner_url,
+        story_video_url=payload.story_video_url,
+        story_video_title=payload.story_video_title,
         is_featured=payload.is_featured or False,
         is_active=payload.is_active if payload.is_active is not None else True,
     )
@@ -575,6 +594,10 @@ def admin_update_brand(brand_id: int, payload: BrandAdminPayload, db: Session = 
         b.logo_url = payload.logo_url
     if payload.banner_url is not None:
         b.banner_url = payload.banner_url
+    if payload.story_video_url is not None:
+        b.story_video_url = payload.story_video_url
+    if payload.story_video_title is not None:
+        b.story_video_title = payload.story_video_title
     if payload.is_featured is not None:
         b.is_featured = payload.is_featured
     if payload.is_active is not None:
@@ -638,6 +661,10 @@ def format_review(r: Review) -> dict:
         "title": r.title,
         "comment": r.comment,
         "status": r.status,
+        "video_url": r.video_url,
+        "video_thumbnail": r.video_thumbnail,
+        "video_duration": r.video_duration,
+        "skin_type": r.skin_type,
         "helpful_count": r.helpful_count,
         "admin_reply": r.admin_reply,
         "created_at": r.created_at.strftime("%b %d, %Y %I:%M %p") if r.created_at else "Aug 28, 2025 10:24 AM",
@@ -650,6 +677,7 @@ def admin_get_reviews(
     product_id: Optional[int] = None,
     rating: Optional[int] = None,
     status_filter: Optional[str] = Query(None, alias="status"),
+    has_video: Optional[bool] = Query(None, description="Filter reviews that have video review"),
     page: int = 1,
     limit: int = 10,
     db: Session = Depends(get_db)
@@ -664,6 +692,7 @@ def admin_get_reviews(
     approved_count = sum(1 for r in all_reviews if r.status == "approved")
     pending_count = sum(1 for r in all_reviews if r.status == "pending")
     rejected_count = sum(1 for r in all_reviews if r.status == "rejected")
+    video_count = sum(1 for r in all_reviews if r.video_url)
     avg_rating = round(sum(r.rating for r in all_reviews) / total_count, 1) if total_count > 0 else 4.6
 
     # Rating Breakdown percentages
@@ -691,6 +720,10 @@ def admin_get_reviews(
         query = query.filter(Review.rating == rating)
     if status_filter and status_filter.lower() != "all":
         query = query.filter(Review.status == status_filter.lower())
+    if has_video is True:
+        query = query.filter(Review.video_url.isnot(None), Review.video_url != "")
+    elif has_video is False:
+        query = query.filter((Review.video_url.is_(None)) | (Review.video_url == ""))
 
     filtered_total = query.count()
     total_pages = max(1, math.ceil(filtered_total / limit))
@@ -707,7 +740,8 @@ def admin_get_reviews(
             "average_rating": avg_rating,
             "approved": approved_count,
             "pending_approval": pending_count,
-            "rejected_hidden": rejected_count
+            "rejected_hidden": rejected_count,
+            "with_video": video_count
         },
         "rating_breakdown": breakdown,
         "recent_reviews": [format_review(r) for r in recent],
@@ -792,6 +826,10 @@ def admin_create_review(payload: ReviewCreatePayload, db: Session = Depends(get_
         rating=max(1, min(5, payload.rating)),
         title=payload.title,
         comment=payload.comment,
+        video_url=payload.video_url,
+        video_thumbnail=payload.video_thumbnail,
+        video_duration=payload.video_duration,
+        skin_type=payload.skin_type,
         status=payload.status.lower() if payload.status else "approved"
     )
     db.add(new_rev)

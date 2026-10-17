@@ -18,11 +18,16 @@ class ReviewSubmission(BaseModel):
     customer_name: Optional[str] = "Luméa Patron"
     customer_email: Optional[str] = "patron@example.com"
     customer_avatar: Optional[str] = "/images/avatar-sreynich.jpg"
+    video_url: Optional[str] = None
+    video_thumbnail: Optional[str] = None
+    video_duration: Optional[str] = None
+    skin_type: Optional[str] = None
 
 @router.get("")
 def get_public_reviews(
     product_id: Optional[int] = Query(None, description="Filter reviews by product ID"),
     rating: Optional[int] = Query(None, ge=1, le=5, description="Filter reviews by rating"),
+    has_video: Optional[bool] = Query(None, description="Filter reviews that have video review"),
     limit: int = Query(20, ge=1, le=100),
     page: int = Query(1, ge=1),
     db: Session = Depends(get_db)
@@ -37,6 +42,10 @@ def get_public_reviews(
         query = query.filter(Review.product_id == product_id)
     if rating is not None:
         query = query.filter(Review.rating == rating)
+    if has_video is True:
+        query = query.filter(Review.video_url.isnot(None), Review.video_url != "")
+    elif has_video is False:
+        query = query.filter((Review.video_url.is_(None)) | (Review.video_url == ""))
 
     total_count = query.count()
     skip = (page - 1) * limit
@@ -97,6 +106,10 @@ def submit_review(payload: ReviewSubmission, db: Session = Depends(get_db)):
         rating=payload.rating,
         title=payload.title,
         comment=payload.comment,
+        video_url=payload.video_url,
+        video_thumbnail=payload.video_thumbnail,
+        video_duration=payload.video_duration,
+        skin_type=payload.skin_type,
         status="approved",  # auto-approved for instant satisfaction, editable by admin
         helpful_count=0
     )

@@ -152,6 +152,60 @@
       </div>
     </section>
 
+    <!-- Cinematic Brand Atelier Masterclass Video Film -->
+    <section class="container brand-film-container">
+      <div class="brand-film-card">
+        <div class="brand-film-video-col">
+          <div class="brand-film-player-wrap">
+            <video
+              ref="brandFilmRef"
+              :src="brandStoryVideo.url"
+              class="brand-film-video"
+              playsinline
+              loop
+              :muted="isBrandFilmMuted"
+              @click="toggleBrandFilmPlay"
+            ></video>
+            
+            <div class="film-play-badge" @click="toggleBrandFilmPlay">
+              <Play v-if="!isBrandFilmPlaying" :size="24" class="fill-white" />
+              <Pause v-else :size="24" class="fill-white" />
+            </div>
+
+            <button class="film-sound-btn" @click.stop="isBrandFilmMuted = !isBrandFilmMuted" title="Toggle Sound">
+              <VolumeX v-if="isBrandFilmMuted" :size="16" />
+              <Volume2 v-else :size="16" />
+            </button>
+          </div>
+        </div>
+
+        <div class="brand-film-text-col">
+          <div class="film-eyebrow">
+            <Sparkles :size="14" class="text-terracotta" />
+            <span>BRAND ATELIER MASTERCLASS</span>
+          </div>
+          <h2 class="film-title">{{ brandStoryVideo.title }}</h2>
+          <p class="film-desc">
+            Discover the heritage philosophy and scientific distillation that define {{ currentBrand.name }}. From time-honored botanical cultivation to clinically evaluated skin barrier repair, experience formulation craftsmanship in motion.
+          </p>
+          <div class="film-metrics-row">
+            <div class="film-metric">
+              <span class="f-num">100%</span>
+              <span class="f-lbl">Authentic Laboratory Batch</span>
+            </div>
+            <div class="film-metric">
+              <span class="f-num">0%</span>
+              <span class="f-lbl">Synthetic Dyes</span>
+            </div>
+            <div class="film-metric">
+              <span class="f-num">4.9★</span>
+              <span class="f-lbl">Patron Rating</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
     <!-- Two Bottom Editorial Cards matching Brand Store.png -->
     <section class="container editorial-cards-container">
       <div class="editorial-cards-grid">
@@ -243,6 +297,10 @@ import {
   ShoppingBag,
   Check,
   ArrowRight,
+  Play,
+  Pause,
+  Volume2,
+  VolumeX,
 } from 'lucide-vue-next'
 import BrandLogo from '@/components/BrandLogo.vue'
 import ProductCard from '@/components/ProductCard.vue'
@@ -269,6 +327,36 @@ const currentBrand = computed(() => {
     desc: 'Renowned Japanese luxury skincare crafted around PITERA™.',
   }
 })
+
+// Brand Atelier Story Video Film
+const isBrandFilmPlaying = ref(false)
+const isBrandFilmMuted = ref(true)
+const brandFilmRef = ref(null)
+
+const brandStoryVideo = computed(() => {
+  const s = currentSlug.value.toLowerCase()
+  if (s.includes('joseon') || s.includes('boj')) {
+    return {
+      url: '/videos/brand-story-boj.mp4',
+      title: 'Beauty of Joseon: Hanbang Court Herbalism & Sun Care',
+    }
+  }
+  return {
+    url: '/videos/brand-story-sk2.mp4',
+    title: 'The Legend of Pitera™: Japanese Fermentation Craftsmanship',
+  }
+})
+
+function toggleBrandFilmPlay() {
+  if (!brandFilmRef.value) return
+  if (brandFilmRef.value.paused) {
+    brandFilmRef.value.play()
+    isBrandFilmPlaying.value = true
+  } else {
+    brandFilmRef.value.pause()
+    isBrandFilmPlaying.value = false
+  }
+}
 
 // Store sub-navbar tabs
 const storeTabs = [
@@ -1068,6 +1156,142 @@ function toggleWishlist(id) {
 
 .step-arrow {
   color: #C4B5AA;
+}
+
+/* Cinematic Brand Atelier Masterclass Video Film */
+.brand-film-container {
+  margin-bottom: 3rem;
+}
+
+.brand-film-card {
+  background: #FFFFFF;
+  border: 1px solid #EAE5DF;
+  border-radius: 16px;
+  overflow: hidden;
+  display: grid;
+  grid-template-columns: 1fr 1.15fr;
+  box-shadow: 0 4px 20px rgba(40, 20, 10, 0.04);
+}
+
+.brand-film-video-col {
+  position: relative;
+  background: #1A1816;
+  min-height: 320px;
+}
+
+.brand-film-player-wrap {
+  position: relative;
+  width: 100%;
+  height: 100%;
+}
+
+.brand-film-video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  cursor: pointer;
+}
+
+.film-play-badge {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  background: rgba(142, 74, 62, 0.85);
+  backdrop-filter: blur(8px);
+  color: #FFFFFF;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.35);
+  transition: transform 0.2s ease, background 0.2s ease;
+}
+
+.film-play-badge:hover {
+  transform: translate(-50%, -50%) scale(1.1);
+  background: #8E4A3E;
+}
+
+.film-sound-btn {
+  position: absolute;
+  bottom: 14px;
+  right: 14px;
+  background: rgba(0, 0, 0, 0.65);
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: #FFFFFF;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.brand-film-text-col {
+  padding: 2.5rem;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.film-eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  color: #8E4A3E;
+  margin-bottom: 0.5rem;
+}
+
+.film-title {
+  font-family: 'Playfair Display', Georgia, serif;
+  font-size: 1.6rem;
+  font-weight: 700;
+  color: #1C1917;
+  line-height: 1.3;
+  margin-bottom: 0.85rem;
+}
+
+.film-desc {
+  font-size: 0.88rem;
+  line-height: 1.6;
+  color: #78716C;
+  margin-bottom: 1.75rem;
+}
+
+.film-metrics-row {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1rem;
+  border-top: 1px solid #F0ECE7;
+  padding-top: 1.25rem;
+}
+
+.film-metric {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.f-num {
+  font-family: 'Playfair Display', Georgia, serif;
+  font-size: 1.35rem;
+  font-weight: 700;
+  color: #8E4A3E;
+}
+
+.f-lbl {
+  font-size: 0.7rem;
+  color: #78716C;
+  line-height: 1.3;
 }
 
 /* Responsive */

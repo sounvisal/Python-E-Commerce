@@ -24,7 +24,8 @@ import {
   Filter,
   Check,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  Video
 } from 'lucide-vue-next'
 
 const adminStore = useAdminStore()
@@ -34,6 +35,7 @@ const searchQuery = ref('')
 const selectedProduct = ref('all')
 const selectedRating = ref('all')
 const selectedStatus = ref('all')
+const selectedMedia = ref('all') // 'all', 'video', 'text'
 const selectedDateRange = ref('all')
 const currentPage = ref(1)
 const pageSize = ref(10)
@@ -57,6 +59,7 @@ async function loadReviews() {
     product_id: selectedProduct.value !== 'all' ? selectedProduct.value : undefined,
     rating: selectedRating.value !== 'all' ? selectedRating.value : undefined,
     status: selectedStatus.value !== 'all' ? selectedStatus.value : undefined,
+    has_video: selectedMedia.value === 'video' ? true : (selectedMedia.value === 'text' ? false : undefined),
     page: currentPage.value,
     limit: pageSize.value
   })
@@ -323,6 +326,16 @@ function exportReviewsCSV() {
               </select>
             </div>
 
+            <!-- Media / Video Dropdown -->
+            <div class="filter-field">
+              <label class="filter-label">Media</label>
+              <select v-model="selectedMedia" class="filter-select" @change="handleFilterChange">
+                <option value="all">All Media</option>
+                <option value="video">📹 With Video Reel</option>
+                <option value="text">Text Only</option>
+              </select>
+            </div>
+
             <!-- Date Range Dropdown -->
             <div class="filter-field">
               <label class="filter-label">Date Range</label>
@@ -395,7 +408,13 @@ function exportReviewsCSV() {
                     <div class="review-flex">
                       <img :src="review.product_image || '/images/prod-sk2.jpg'" :alt="review.product_name" class="rev-prod-thumb" />
                       <div class="rev-text-block">
-                        <span class="rev-title">{{ review.title }}</span>
+                        <div class="rev-title-line">
+                          <span class="rev-title">{{ review.title }}</span>
+                          <span v-if="review.video_url" class="badge-video-ugc">
+                            <Video class="w-3 h-3 text-crimson inline mr-0.5" />
+                            <span>Video Reel ({{ review.video_duration || '0:24' }})</span>
+                          </span>
+                        </div>
                         <p class="rev-comment">{{ review.comment }}</p>
                         <div v-if="review.admin_reply" class="rev-atelier-reply-tag">
                           <CornerDownRight class="w-3 h-3 text-crimson inline mr-1" />
@@ -714,6 +733,29 @@ function exportReviewsCSV() {
             <div class="comment-box">
               <label class="inspect-lbl">Full Review Feedback</label>
               <p class="comment-full-text">{{ inspectingReview.comment }}</p>
+            </div>
+
+            <!-- Customer UGC Video Review Player -->
+            <div v-if="inspectingReview.video_url" class="inspect-video-container">
+              <div class="inspect-video-header">
+                <div class="flex items-center gap-1.5">
+                  <Video class="w-4 h-4 text-crimson" />
+                  <span class="font-semibold text-xs text-charcoal">Customer UGC Video Review</span>
+                </div>
+                <div class="flex items-center gap-2">
+                  <span class="badge-duration">{{ inspectingReview.video_duration || '0:24' }}</span>
+                  <span v-if="inspectingReview.skin_type" class="badge-skintype-sm">{{ inspectingReview.skin_type }}</span>
+                </div>
+              </div>
+              <div class="admin-video-player-wrap">
+                <video
+                  :src="inspectingReview.video_url"
+                  :poster="inspectingReview.video_thumbnail"
+                  controls
+                  playsinline
+                  class="admin-inspect-video"
+                ></video>
+              </div>
             </div>
 
             <!-- Atelier response if present -->
@@ -1701,6 +1743,77 @@ function exportReviewsCSV() {
   color: #84261B;
   line-height: 1.5;
   margin-top: 0.35rem;
+}
+
+/* Video Reel Badges & Inspect Player */
+.rev-title-line {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.badge-video-ugc {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.2rem;
+  background: #FFF1F0;
+  border: 1px solid #FFCCC7;
+  color: #84261B;
+  font-size: 0.65rem;
+  font-weight: 700;
+  padding: 0.15rem 0.45rem;
+  border-radius: 9999px;
+}
+
+.inspect-video-container {
+  margin-top: 1rem;
+  background: #1C1917;
+  border-radius: 8px;
+  overflow: hidden;
+  border: 1px solid #EBE1D7;
+}
+
+.inspect-video-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.5rem 0.75rem;
+  background: #FAF6F2;
+  border-bottom: 1px solid #EBE1D7;
+}
+
+.badge-duration {
+  font-size: 0.65rem;
+  background: #EBE1D7;
+  color: #6E635E;
+  font-weight: 600;
+  padding: 0.1rem 0.35rem;
+  border-radius: 4px;
+}
+
+.badge-skintype-sm {
+  font-size: 0.65rem;
+  background: #84261B;
+  color: #FFFFFF;
+  font-weight: 600;
+  padding: 0.1rem 0.4rem;
+  border-radius: 9999px;
+}
+
+.admin-video-player-wrap {
+  width: 100%;
+  height: 240px;
+  background: #000000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.admin-inspect-video {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
 }
 
 .customer-preview-box {

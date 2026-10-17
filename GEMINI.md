@@ -64,6 +64,8 @@ The backend was built in [`python-backend/`](file:///d:/lumea/python-backend) to
 - `POST /api/orders` — Checkout submission with automated tax, discount code, and `LUM-XXXXXX` order generator
 - `GET /api/orders/{orderNumber}` — Order tracking details
 - `GET /api/banners` & `GET /api/banners/{page}` — Dynamic page banner CMS (Home, Shop, Deals, etc.)
+- `POST /api/upload/video` — Chunked / streaming video upload (.mp4, .webm) with MIME & size validation
+- `GET /api/reviews?has_video=true` — Filtered UGC video reviews with reviewer skin profile chips
 
 ### Demo User for Grading & Testing:
 - **Email**: `sreynich.chan@example.com`
@@ -136,7 +138,22 @@ A comprehensive audit of [`format/`](file:///d:/lumea/format) mockups against [`
 
 ---
 
-## 🛠️ 5. Commands to Run & Test the Entire Project
+## 🎥 5. Video Review & Sensory Showcase Architecture
+
+Luméa features a high-conversion multimedia engine built for dermatological texture demonstration and user-generated content (UGC):
+- **FastAPI Upload & Static Streaming**: `POST /api/upload/video` validates video MIME formats (`.mp4`, `.webm`, `.mov`), enforces 50MB file size limits, and serves clips via FastAPI static mounts without requiring cloud CDN keys.
+- **Storefront Texture & UGC Reels (`ProductDetailView.vue`)**:
+  - Horizontal carousel of vertical (9:16) video reel cards with play rings, skin profile tags, duration chips, and reviewer avatars.
+  - Luxury vertical Reel Player modal with playback controls, sound mute/unmute toggle, next/previous carousel navigation, and a **1-Click Quick-Buy "Add to Bag"** button.
+  - Video upload support and skin profile selection (`Combination`, `Dry`, `Oily`, `Normal`, `Sensitive`) in the customer "Write a Review" modal.
+- **Cinematic Brand Atelier Masterclass (`BrandStoreView.vue`)**:
+  - Dedicated brand heritage and formulation video player with interactive sound toggle and metrics showcase.
+- **Admin Atelier Moderation Studio (`ReviewsView.vue` & `ProductsView.vue`)**:
+  - Video moderation filter (`With Video Reel`), video stream preview modal, and product texture demonstration video uploader with live inline player.
+
+---
+
+## 🛠️ 6. Commands to Run & Test the Entire Project
 
 ### A. Run Python Backend:
 ```powershell
@@ -146,7 +163,7 @@ cd d:\lumea\python-backend
 # Interactive Swagger UI: http://127.0.0.1:8000/docs
 ```
 
-### B. Run Verification Test Suite (21/21 Automated Tests):
+### B. Run Verification Test Suite (28/28 Automated Tests):
 ```powershell
 cd d:\lumea\python-backend
 .\venv\Scripts\python test_api.py
@@ -168,7 +185,7 @@ npm run dev
 
 ---
 
-## 💡 6. Guidelines for Future AI / Remote Agents
+## 💡 7. Guidelines for Future AI / Remote Agents
 
 1. **Backend Technology**: Always use **Python FastAPI** (`python-backend/`). Do not revert to PHP.
 2. **Frontend Styling**: Luméa uses handcrafted **Vanilla CSS** with CSS variables (`--color-primary`, `--font-serif`, etc.) defined in `frontend/src/assets/main.css`. Avoid Tailwind unless explicitly requested.

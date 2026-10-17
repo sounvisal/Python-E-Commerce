@@ -16,6 +16,8 @@ class Brand(Base):
     story = Column(Text, nullable=True)
     logo_url = Column(String(255), nullable=True)
     banner_url = Column(String(255), nullable=True)
+    story_video_url = Column(String(500), nullable=True)     # Brand masterclass / heritage film URL
+    story_video_title = Column(String(255), nullable=True)   # e.g. "The Art of Fermentation: SK-II Pitera Masterclass"
     is_featured = Column(Boolean, default=False)
     is_active = Column(Boolean, default=True)
     created_at = Column(DateTime, default=func.now())

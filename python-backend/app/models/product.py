@@ -30,4 +30,9 @@ class Product(Base):
     skin_concern = Column(JSON, default=list)    # e.g. ["Acne & Blemishes", "Dullness"]
     gallery = Column(JSON, default=list)         # List of additional image URLs
 
+    # Video showcase fields
+    video_url = Column(String(500), nullable=True)        # MP4/WebM video or stream URL
+    video_thumbnail = Column(String(500), nullable=True)  # Poster thumbnail frame
+    video_title = Column(String(255), nullable=True)      # e.g. "Texture & Absorption Demo"
+
     category_rel = relationship("Category", back_populates="products")

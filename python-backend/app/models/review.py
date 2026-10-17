@@ -23,6 +23,12 @@ class Review(Base):
     
     helpful_count = Column(Integer, default=0)
     admin_reply = Column(Text, nullable=True)
+
+    # Video Review (UGC) fields
+    video_url = Column(String(500), nullable=True)         # Short-form video clip URL (.mp4/.webm)
+    video_thumbnail = Column(String(500), nullable=True)   # Video poster thumbnail frame
+    video_duration = Column(String(50), nullable=True)     # e.g. "0:28"
+    skin_type = Column(String(100), nullable=True)         # Reviewer's skin type (e.g. "Combination / Sensitive")
     
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
     updated_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))

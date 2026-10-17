@@ -248,8 +248,26 @@ def run_tests():
     assert "tax_rate" in sett_data["data"]
     print(f"[PASS] 26. GET /api/settings -> Store: '{sett_data['data']['store_name']}', Free Shipping Threshold: ${sett_data['data']['free_shipping_threshold']}, Tax Rate: {sett_data['data']['tax_rate']}%")
 
+    # 27. Video Reviews API
+    res = client.get("/api/reviews?has_video=true")
+    assert res.status_code == 200
+    v_data = res.json()
+    assert v_data["status"] == "success"
+    assert len(v_data["data"]) >= 1
+    assert v_data["data"][0]["video_url"] is not None
+    print(f"[PASS] 27. GET /api/reviews?has_video=true -> Found {len(v_data['data'])} UGC video reviews (e.g. {v_data['data'][0]['video_url']})")
+
+    # 28. Video Upload API
+    dummy_video_bytes = b"\x00\x00\x00\x18ftypmp42\x00\x00\x00\x00isommp42\x00\x00\x00\x08free"
+    res = client.post("/api/upload/video", files={"file": ("sample_reel.mp4", dummy_video_bytes, "video/mp4")})
+    assert res.status_code == 201, f"Video upload failed: {res.text}"
+    v_upload = res.json()
+    assert v_upload["status"] == "success"
+    assert "url" in v_upload["data"]
+    print(f"[PASS] 28. POST /api/upload/video -> Uploaded streaming video: {v_upload['data']['url']}")
+
     print("=" * 60)
-    print(f"[SUCCESS] ALL 26/26 ENDPOINT TESTS PASSED WITH 100% SUCCESS!")
+    print(f"[SUCCESS] ALL 28/28 ENDPOINT TESTS PASSED WITH 100% SUCCESS!")
     print("=" * 60)
 
 if __name__ == "__main__":
