@@ -157,7 +157,11 @@
                   class="item-thumb-box"
                   :title="item.name"
                 >
-                  <img :src="item.image_url" :alt="item.name" />
+                  <img
+                    :src="item.image_url"
+                    :alt="item.name"
+                    @error="$event.target.src = '/images/prod-essence.jpg'"
+                  />
                 </div>
                 <div v-if="order.items.length > 3" class="thumb-extra-badge">
                   <span>+{{ order.items.length - 3 }}<br />more</span>

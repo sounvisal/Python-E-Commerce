@@ -12,8 +12,8 @@ class Settings(BaseSettings):
     ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24 * 7  # 7 days
     
-    # Database: Default to local SQLite database in python-backend folder
-    DATABASE_URL: str = "sqlite:///./lumea.db"
+    # Database: Absolute path to lumea.db in python-backend directory
+    DATABASE_URL: str = f"sqlite:///{os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), 'lumea.db').replace(chr(92), '/')}"
     
     # CORS: Allow Vue frontend
     CORS_ORIGINS: List[str] = [

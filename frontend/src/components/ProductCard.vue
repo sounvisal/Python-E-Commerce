@@ -6,7 +6,13 @@
     <!-- Image Stage -->
     <div class="image-wrapper">
       <router-link :to="`/product/${product.slug}`" class="image-link">
-        <img :src="product.image_url" :alt="product.name" class="product-img" loading="lazy" />
+        <img
+          :src="cardImageUrl"
+          :alt="product.name"
+          class="product-img"
+          loading="lazy"
+          @error="handleImageError"
+        />
       </router-link>
 
       <!-- Wishlist Heart -->
@@ -89,7 +95,7 @@
 </template>
 
 <script setup>
-import { computed, ref } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { useCartStore } from '@/stores/cart'
 import { useWishlistStore } from '@/stores/wishlist'
 import { useNotificationStore } from '@/stores/notification'
@@ -105,6 +111,24 @@ const props = defineProps({
     default: 'grid', // 'grid' | 'list'
   },
 })
+
+const defaultPlaceholder = '/images/prod-essence.jpg'
+const cardImageUrl = ref(props.product.image_url || defaultPlaceholder)
+
+watch(
+  () => props.product.image_url,
+  (newUrl) => {
+    cardImageUrl.value = newUrl || defaultPlaceholder
+  }
+)
+
+const handleImageError = (e) => {
+  if (cardImageUrl.value !== defaultPlaceholder) {
+    cardImageUrl.value = defaultPlaceholder
+  } else if (e && e.target) {
+    e.target.src = 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="400" height="400" viewBox="0 0 400 400"><rect width="400" height="400" fill="%23F5EFEB"/><text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" font-family="sans-serif" font-size="16" fill="%238E4A3E">LUMÉA ATELIER</text></svg>'
+  }
+}
 
 const cartStore = useCartStore()
 const wishlistStore = useWishlistStore()

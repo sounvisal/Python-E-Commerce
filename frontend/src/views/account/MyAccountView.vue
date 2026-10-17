@@ -136,7 +136,11 @@
                     :key="idx"
                     class="order-mini-thumb"
                   >
-                    <img :src="item.image_url" :alt="item.name" />
+                    <img
+                      :src="item.image_url"
+                      :alt="item.name"
+                      @error="$event.target.src = '/images/prod-essence.jpg'"
+                    />
                   </div>
                 </div>
 

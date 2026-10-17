@@ -49,7 +49,12 @@
 
         <div v-else class="items-list">
           <div v-for="item in cartStore.items" :key="item.id" class="cart-item">
-            <img :src="item.image_url" :alt="item.name" class="item-img" />
+            <img
+              :src="item.image_url"
+              :alt="item.name"
+              class="item-img"
+              @error="$event.target.src = '/images/prod-essence.jpg'"
+            />
             <div class="item-details">
               <div class="item-top">
                 <router-link

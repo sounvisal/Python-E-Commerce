@@ -301,7 +301,12 @@
                     <div class="embed-step-number">{{ prod.step }}</div>
                     <span class="embed-step-tag">{{ prod.stepName }}</span>
                     <div class="embed-img-wrap">
-                      <img :src="prod.image_url" :alt="prod.name" class="embed-img" />
+                      <img
+                        :src="prod.image_url"
+                        :alt="prod.name"
+                        class="embed-img"
+                        @error="$event.target.src = '/images/prod-essence.jpg'"
+                      />
                     </div>
                     <span class="embed-prod-name">{{ prod.name }}</span>
                   </div>

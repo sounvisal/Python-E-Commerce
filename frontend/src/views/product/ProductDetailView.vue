@@ -29,7 +29,12 @@
               :class="{ active: activeThumbIdx === idx }"
               @click="selectThumb(idx)"
             >
-              <img :src="thumb.url" :alt="thumb.label" class="thumb-img" />
+              <img
+                :src="thumb.url"
+                :alt="thumb.label"
+                class="thumb-img"
+                @error="$event.target.src = '/images/prod-essence.jpg'"
+              />
             </button>
             <button class="thumb-down-btn" @click="nextThumb">
               <ChevronDown :size="16" />
@@ -51,6 +56,7 @@
                 :src="activeMainImage"
                 :alt="product.name"
                 class="stage-hero-packshot"
+                @error="$event.target.src = '/images/prod-essence.jpg'"
               />
             </div>
 

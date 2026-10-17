@@ -130,7 +130,12 @@
                 <!-- Product Thumb + Info -->
                 <div class="td-col col-product">
                   <router-link :to="`/product/${item.slug}`" class="item-img-link">
-                    <img :src="item.image_url" :alt="item.name" class="item-table-img" />
+                    <img
+                      :src="item.image_url"
+                      :alt="item.name"
+                      class="item-table-img"
+                      @error="$event.target.src = '/images/prod-essence.jpg'"
+                    />
                   </router-link>
                   <div class="item-meta-text">
                     <router-link :to="`/product/${item.slug}`" class="item-name-link">

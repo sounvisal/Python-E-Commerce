@@ -223,7 +223,12 @@
             <!-- Item Mini List -->
             <div class="summary-items">
               <div v-for="item in cartStore.items" :key="item.id" class="summary-item">
-                <img :src="item.image_url" :alt="item.name" class="mini-img" />
+                <img
+                  :src="item.image_url"
+                  :alt="item.name"
+                  class="mini-img"
+                  @error="$event.target.src = '/images/prod-essence.jpg'"
+                />
                 <div class="mini-info">
                   <span class="mini-title">{{ item.name }}</span>
                   <span class="mini-qty">Qty: {{ item.quantity }}</span>

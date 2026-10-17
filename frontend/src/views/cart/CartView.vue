@@ -52,7 +52,12 @@
 
           <div v-for="item in cartStore.items" :key="item.id" class="cart-row">
             <div class="product-cell">
-              <img :src="item.image_url" :alt="item.name" class="table-img" />
+              <img
+                :src="item.image_url"
+                :alt="item.name"
+                class="table-img"
+                @error="$event.target.src = '/images/prod-essence.jpg'"
+              />
               <div class="cell-info">
                 <span class="cell-cat">{{ item.category_name }}</span>
                 <router-link :to="`/product/${item.slug}`" class="cell-title">
