@@ -689,6 +689,35 @@ A morning routine should prioritize protection (antioxidants + SPF), while the e
                 content="Accelerate wound healing and soothe irritated, red skin with concentrated Centella Asiatica botanical extracts."
             )
         ]
+        try:
+            from app.seed.expand_catalog_and_articles import NEW_ARTICLES
+            for a_data in NEW_ARTICLES:
+                initial_articles.append(
+                    Article(
+                        id=a_data.get("id"),
+                        slug=a_data["slug"],
+                        title=a_data["title"],
+                        subtitle=a_data["subtitle"],
+                        category=a_data["category"],
+                        read_time=a_data["read_time"],
+                        views_count=a_data["views_count"],
+                        author_name=a_data["author_name"],
+                        author_role=a_data["author_role"],
+                        author_avatar=a_data["author_avatar"],
+                        published_at=a_data["published_at"],
+                        hero_image=a_data["hero_image"],
+                        thumbnail=a_data["thumbnail"],
+                        excerpt=a_data["excerpt"],
+                        toc=a_data["toc"],
+                        content=a_data["content"],
+                        is_featured=a_data["is_featured"],
+                        is_popular=a_data["is_popular"],
+                        popular_rank=a_data["popular_rank"]
+                    )
+                )
+        except Exception as e:
+            print(f"[Seed] Note: could not import NEW_ARTICLES: {e}")
+
         db.add_all(initial_articles)
         db.commit()
         print(f"[Seed] Created {len(initial_articles)} Skincare Journal articles in database.")

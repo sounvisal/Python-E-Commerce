@@ -45,5 +45,11 @@ Thumbs.db
 *.ntvs*
 *.njsproj
 *.sln
-*.sw?
 *.local
+
+# Test uploads & temp test artifacts
+*test_upload*
+*.jsonl
+e2e_results.json
+master_qa_results.json
+test_*.js

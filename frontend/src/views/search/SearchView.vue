@@ -191,7 +191,7 @@
           <div class="search-toolbar-strip">
             <div class="toolbar-left">
               <span class="results-text">
-                <strong>{{ displayedProducts.length }}</strong> results for “{{ activeQuery }}”
+                <strong>{{ filteredProductsList.length }}</strong> results for “{{ activeQuery }}”
               </span>
             </div>
 
@@ -636,12 +636,18 @@ const filteredProductsList = computed(() => {
 
   if (q && q !== 'all') {
     list = list.filter((p) => {
-      const name = (p.name || '').toLowerCase()
-      const brand = (p.brand || '').toLowerCase()
-      const desc = (p.description || p.desc || '').toLowerCase()
-      const cat = (p.category_name || p.category || '').toLowerCase()
-      const skinType = (p.skin_type || '').toLowerCase()
-      const concerns = (p.concerns || '').toLowerCase()
+      const name = (p.name || '').toString().toLowerCase()
+      const brand = (p.brand || '').toString().toLowerCase()
+      const desc = (p.description || p.desc || '').toString().toLowerCase()
+      const cat = (p.category_name || p.category || '').toString().toLowerCase()
+      const skinType = Array.isArray(p.skin_type)
+        ? p.skin_type.join(' ').toLowerCase()
+        : (p.skin_type || '').toString().toLowerCase()
+      const concerns = Array.isArray(p.concerns)
+        ? p.concerns.join(' ').toLowerCase()
+        : Array.isArray(p.skin_concern)
+          ? p.skin_concern.join(' ').toLowerCase()
+          : (p.concerns || p.skin_concern || '').toString().toLowerCase()
       return (
         name.includes(q) ||
         brand.includes(q) ||
@@ -699,6 +705,7 @@ const paginatedProducts = computed(() => {
   const start = (currentPage.value - 1) * pageSize
   return filteredProductsList.value.slice(start, start + pageSize)
 })
+const displayedProducts = computed(() => filteredProductsList.value)
 
 const allResultsCount = computed(() => filteredProductsList.value.length)
 const productsCount = computed(() => filteredProductsList.value.length)
