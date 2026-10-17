@@ -1,0 +1,559 @@
+openapi: 3.0.3
+info:
+  title: LUMEA — Atelier E-Commerce API
+  description: |
+    Comprehensive RESTful API specification for the LUMEA Contemporary E-Commerce Atelier.
+    Serves both the public storefront SPA (`localhost:5173`) and the administrative management console (`localhost:5174`).
+  version: 1.0.0
+  contact:
+    name: LUMEA Concierge Team
+    email: concierge@lumea.com
+
+servers:
+  - url: http://127.0.0.1:8000/api
+    description: Local Development API Server
+
+tags:
+  - name: System
+    description: Health and diagnostic endpoints
+  - name: Catalog
+    description: Products and Collections (Storefront)
+  - name: Orders
+    description: Customer order placement and tracking
+  - name: Authentication
+    description: JWT token-based authentication
+  - name: Admin
+    description: Atelier management console endpoints
+
+paths:
+  /health:
+    get:
+      tags:
+        - System
+      summary: Health check
+      description: Returns service status and current server timestamp.
+      responses:
+        '200':
+          description: Service is healthy
+          content:
+            application/json:
+              example:
+                status: healthy
+                service: Lumea API
+                timestamp: "2026-09-12T09:30:00Z"
+
+  /categories:
+    get:
+      tags:
+        - Catalog
+      summary: List all product categories
+      responses:
+        '200':
+          description: Array of product categories
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: success
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Category'
+
+  /categories/{slug}:
+    get:
+      tags:
+        - Catalog
+      summary: Get category by slug
+      parameters:
+        - name: slug
+          in: path
+          required: true
+          schema:
+            type: string
+          example: living-furniture
+      responses:
+        '200':
+          description: Category detail with related products
+        '404':
+          description: Category not found
+
+  /products:
+    get:
+      tags:
+        - Catalog
+      summary: Search, filter, and paginate products
+      parameters:
+        - name: search
+          in: query
+          description: Full-text query across name and description
+          schema:
+            type: string
+        - name: category
+          in: query
+          description: Category slug filter
+          schema:
+            type: string
+        - name: min_price
+          in: query
+          schema:
+            type: number
+        - name: max_price
+          in: query
+          schema:
+            type: number
+        - name: sort
+          in: query
+          schema:
+            type: string
+            enum: [newest, price_asc, price_desc, rating, popular]
+            default: newest
+        - name: per_page
+          in: query
+          schema:
+            type: integer
+            default: 12
+      responses:
+        '200':
+          description: Paginated product list
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: success
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Product'
+
+  /products/featured:
+    get:
+      tags:
+        - Catalog
+      summary: Get signature / featured products
+      responses:
+        '200':
+          description: Array of featured products
+
+  /products/{slug}:
+    get:
+      tags:
+        - Catalog
+      summary: Get product details by slug
+      parameters:
+        - name: slug
+          in: path
+          required: true
+          schema:
+            type: string
+          example: aura-lounge-chair-boucle
+      responses:
+        '200':
+          description: Product specifications, gallery, and related items
+        '404':
+          description: Product not found
+
+  /orders:
+    post:
+      tags:
+        - Orders
+      summary: Place a new customer order
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OrderCreateRequest'
+      responses:
+        '201':
+          description: Order placed successfully
+        '422':
+          description: Validation error
+
+  /orders/{orderNumber}:
+    get:
+      tags:
+        - Orders
+      summary: Track order by order number
+      parameters:
+        - name: orderNumber
+          in: path
+          required: true
+          schema:
+            type: string
+          example: LUM-948271
+      responses:
+        '200':
+          description: Order status and line items
+        '404':
+          description: Order not found
+
+  /auth/register:
+    post:
+      tags:
+        - Authentication
+      summary: Register customer account
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name, email, password]
+              properties:
+                name:
+                  type: string
+                  example: Elena Rostova
+                email:
+                  type: string
+                  format: email
+                  example: customer@lumea.com
+                password:
+                  type: string
+                  format: password
+                  example: password123
+      responses:
+        '201':
+          description: Registered and authenticated
+
+  /auth/login:
+    post:
+      tags:
+        - Authentication
+      summary: Authenticate and obtain Sanctum Bearer token
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password]
+              properties:
+                email:
+                  type: string
+                  format: email
+                  example: admin@lumea.com
+                password:
+                  type: string
+                  format: password
+                  example: admin123
+      responses:
+        '200':
+          description: Login successful with token
+          content:
+            application/json:
+              example:
+                status: success
+                data:
+                  user:
+                    id: 1
+                    name: Alexander Vance
+                    email: admin@lumea.com
+                  token: "1|abcdef123456789..."
+
+  /auth/logout:
+    post:
+      tags:
+        - Authentication
+      summary: Revoke current session token
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Logged out successfully
+
+  /auth/me:
+    get:
+      tags:
+        - Authentication
+      summary: Get authenticated user profile
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Current user data
+
+  /admin/stats:
+    get:
+      tags:
+        - Admin
+      summary: Executive dashboard KPI metrics & telemetry
+      description: Returns gross revenue, orders breakdown, category weights, and 7-day revenue timeline.
+      responses:
+        '200':
+          description: Dashboard overview telemetry
+
+  /admin/orders:
+    get:
+      tags:
+        - Admin
+      summary: List all orders with status filter & search
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [all, pending, confirmed, processing, shipped, delivered, cancelled]
+        - name: search
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Paginated orders list
+
+  /admin/orders/{id}/status:
+    patch:
+      tags:
+        - Admin
+      summary: Advance or update order fulfillment status
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [status]
+              properties:
+                status:
+                  type: string
+                  enum: [pending, confirmed, processing, shipped, delivered, cancelled]
+      responses:
+        '200':
+          description: Order status updated
+
+  /admin/products:
+    post:
+      tags:
+        - Admin
+      summary: Create new atelier piece
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProductInput'
+      responses:
+        '201':
+          description: Product published
+
+  /admin/products/{id}:
+    put:
+      tags:
+        - Admin
+      summary: Update existing piece
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProductInput'
+      responses:
+        '200':
+          description: Product updated
+    delete:
+      tags:
+        - Admin
+      summary: Delete piece from catalog
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Product deleted
+
+  /admin/categories:
+    post:
+      tags:
+        - Admin
+      summary: Create design collection
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name]
+              properties:
+                name:
+                  type: string
+                description:
+                  type: string
+                image:
+                  type: string
+      responses:
+        '201':
+          description: Collection created
+
+  /admin/customers:
+    get:
+      tags:
+        - Admin
+      summary: Registered clientele list with lifetime spend
+      responses:
+        '200':
+          description: Customer directory
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: Sanctum token obtained from `/api/auth/login`
+
+  schemas:
+    Category:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        name:
+          type: string
+          example: Living & Furniture
+        slug:
+          type: string
+          example: living-furniture
+        description:
+          type: string
+          example: Sculptural silhouettes and enduring materials crafted for modern interiors.
+        image:
+          type: string
+          example: https://images.unsplash.com/photo-1555041469-a586c61ea9bc
+
+    Product:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        category_id:
+          type: integer
+          example: 1
+        name:
+          type: string
+          example: Aura Lounge Chair in Bouclé
+        slug:
+          type: string
+          example: aura-lounge-chair-boucle
+        short_description:
+          type: string
+          example: Generous cocooning armchair upholstered in tactile Italian textured bouclé.
+        price:
+          type: number
+          example: 840.00
+        compare_at_price:
+          type: number
+          nullable: true
+          example: 980.00
+        stock:
+          type: integer
+          example: 8
+        image_url:
+          type: string
+          example: https://images.unsplash.com/photo-1586023492125-27b2c045efd7
+        featured:
+          type: boolean
+          example: true
+        rating:
+          type: number
+          example: 4.95
+        reviews_count:
+          type: integer
+          example: 42
+
+    ProductInput:
+      type: object
+      required: [name, category_id, short_description, description, price, stock, image_url]
+      properties:
+        name:
+          type: string
+          example: Minimalist Travertine Pedestal
+        category_id:
+          type: integer
+          example: 1
+        short_description:
+          type: string
+          example: Solid carved stone pedestal.
+        description:
+          type: string
+          example: Hand-finished Roman travertine plinth.
+        price:
+          type: number
+          example: 450.00
+        compare_at_price:
+          type: number
+          example: 520.00
+        stock:
+          type: integer
+          example: 12
+        image_url:
+          type: string
+          example: https://images.unsplash.com/photo-1586023492125-27b2c045efd7
+        featured:
+          type: boolean
+          example: false
+
+    OrderCreateRequest:
+      type: object
+      required: [customer_name, customer_email, shipping_address, shipping_city, items]
+      properties:
+        customer_name:
+          type: string
+          example: Elena Rostova
+        customer_email:
+          type: string
+          example: customer@lumea.com
+        customer_phone:
+          type: string
+          example: +1 (415) 892-4910
+        shipping_address:
+          type: string
+          example: 742 Evergreen Terrace
+        shipping_city:
+          type: string
+          example: San Francisco
+        shipping_postal_code:
+          type: string
+          example: 94107
+        payment_method:
+          type: string
+          enum: [card, paypal, apple_pay, cod]
+          default: card
+        discount_code:
+          type: string
+          example: LUMEA10
+        items:
+          type: array
+          items:
+            type: object
+            required: [product_id, quantity]
+            properties:
+              product_id:
+                type: integer
+                example: 1
+              quantity:
+                type: integer
+                example: 1

@@ -1,0 +1,18 @@
+{
+  "store_name": "Luméa",
+  "store_email": "support@lumea.com",
+  "store_phone": "+855 12 345 678",
+  "store_language": "English (Default)",
+  "store_description": "Premium skincare for a healthier, brighter you. Natural beauty, real results.",
+  "company_name": "Luméa Co., Ltd.",
+  "business_reg_number": "KH-123456789",
+  "business_address": "#123, Norodom Blvd, Phnom Penh, Cambodia",
+  "time_zone": "(UTC+07:00) Phnom Penh",
+  "currency": "USD ($)",
+  "currency_symbol": "$",
+  "free_shipping_threshold": 50.0,
+  "tax_rate": 10.0,
+  "online_status": "Online",
+  "maintenance_mode": false,
+  "last_updated": "Oct 17, 2026 09:24 AM"
+}
