@@ -1,14 +1,23 @@
 <script setup>
 import ToastContainer from '@/components/common/ToastContainer.vue'
 import AdminHeader from '@/components/layout/AdminHeader.vue'
-import AdminSidebar from '@/components/layout/AdminSidebar.vue'
-import { ref } from 'vue'
+import { ref, watch } from 'vue'
+import { useRoute } from 'vue-router'
 
+const route = useRoute()
+const contentRef = ref(null)
 const isSidebarCollapsed = ref(false)
 
 function toggleSidebar() {
   isSidebarCollapsed.value = !isSidebarCollapsed.value
 }
+
+// Reset content scroll position on route change
+watch(() => route.path, () => {
+  if (contentRef.value) {
+    contentRef.value.scrollTop = 0
+  }
+})
 </script>
 
 <template>
@@ -21,7 +30,7 @@ function toggleSidebar() {
     <div class="admin-main-area">
       <AdminHeader />
 
-      <main class="admin-content">
+      <main ref="contentRef" class="admin-content">
         <router-view v-slot="{ Component }">
           <transition name="fade-view" mode="out-in">
             <component :is="Component" />

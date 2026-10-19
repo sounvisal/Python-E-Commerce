@@ -47,6 +47,8 @@ class OrderOut(BaseModel):
     total: float
     status: str
     payment_method: str
+    payment_status: Optional[str] = "Paid"
+    transaction_ref: Optional[str] = None
     created_at: Optional[datetime] = None
     items: List[OrderItemOut] = []
 

@@ -71,6 +71,19 @@ function handleFilterChange() {
   loadReviews()
 }
 
+// Stacked date formatting
+function formatReviewDate(d) {
+  if (!d) return { date: 'Aug 28, 2025', time: '10:24 AM' }
+  const parts = d.trim().split(/\s+/)
+  if (parts.length >= 4) {
+    return {
+      date: `${parts[0]} ${parts[1]} ${parts[2]}`,
+      time: `${parts[3]} ${parts[4] || ''}`
+    }
+  }
+  return { date: d, time: '' }
+}
+
 // Checkbox multi-select
 const allSelected = computed(() => {
   return adminStore.reviews.length > 0 && selectedReviews.value.length === adminStore.reviews.length
@@ -285,68 +298,70 @@ function exportReviewsCSV() {
               <input
                 v-model="searchQuery"
                 type="text"
-                placeholder="Search reviews..."
+                placeholder="Search reviews by customer, product, or keyword..."
                 class="search-input"
                 @keyup.enter="handleFilterChange"
               />
             </div>
 
-            <!-- Product Dropdown -->
-            <div class="filter-field">
-              <label class="filter-label">Product</label>
-              <select v-model="selectedProduct" class="filter-select" @change="handleFilterChange">
-                <option value="all">All Products</option>
-                <option v-for="prod in adminStore.products" :key="prod.id" :value="prod.id">
-                  {{ prod.name }}
-                </option>
-              </select>
-            </div>
-
-            <!-- Rating Dropdown -->
-            <div class="filter-field">
-              <label class="filter-label">Rating</label>
-              <select v-model="selectedRating" class="filter-select" @change="handleFilterChange">
-                <option value="all">All Ratings</option>
-                <option value="5">5 Stars</option>
-                <option value="4">4 Stars</option>
-                <option value="3">3 Stars</option>
-                <option value="2">2 Stars</option>
-                <option value="1">1 Star</option>
-              </select>
-            </div>
-
-            <!-- Status Dropdown -->
-            <div class="filter-field">
-              <label class="filter-label">Status</label>
-              <select v-model="selectedStatus" class="filter-select" @change="handleFilterChange">
-                <option value="all">All Statuses</option>
-                <option value="approved">Approved</option>
-                <option value="pending">Pending</option>
-                <option value="rejected">Rejected</option>
-              </select>
-            </div>
-
-            <!-- Media / Video Dropdown -->
-            <div class="filter-field">
-              <label class="filter-label">Media</label>
-              <select v-model="selectedMedia" class="filter-select" @change="handleFilterChange">
-                <option value="all">All Media</option>
-                <option value="video">📹 With Video Reel</option>
-                <option value="text">Text Only</option>
-              </select>
-            </div>
-
-            <!-- Date Range Dropdown -->
-            <div class="filter-field">
-              <label class="filter-label">Date Range</label>
-              <div class="date-select-wrap">
-                <Calendar class="w-3.5 h-3.5 text-taupe mr-1" />
-                <select v-model="selectedDateRange" class="filter-select date-select" @change="handleFilterChange">
-                  <option value="all">All Time</option>
-                  <option value="30d">Last 30 Days</option>
-                  <option value="90d">Last 90 Days</option>
-                  <option value="year">This Year</option>
+            <div class="filter-dropdowns-row">
+              <!-- Product Dropdown -->
+              <div class="filter-field">
+                <label class="filter-label">Product</label>
+                <select v-model="selectedProduct" class="filter-select" @change="handleFilterChange">
+                  <option value="all">All Products</option>
+                  <option v-for="prod in adminStore.products" :key="prod.id" :value="prod.id">
+                    {{ prod.name }}
+                  </option>
                 </select>
+              </div>
+
+              <!-- Rating Dropdown -->
+              <div class="filter-field">
+                <label class="filter-label">Rating</label>
+                <select v-model="selectedRating" class="filter-select" @change="handleFilterChange">
+                  <option value="all">All Ratings</option>
+                  <option value="5">5 Stars</option>
+                  <option value="4">4 Stars</option>
+                  <option value="3">3 Stars</option>
+                  <option value="2">2 Stars</option>
+                  <option value="1">1 Star</option>
+                </select>
+              </div>
+
+              <!-- Status Dropdown -->
+              <div class="filter-field">
+                <label class="filter-label">Status</label>
+                <select v-model="selectedStatus" class="filter-select" @change="handleFilterChange">
+                  <option value="all">All Statuses</option>
+                  <option value="approved">Approved</option>
+                  <option value="pending">Pending</option>
+                  <option value="rejected">Rejected</option>
+                </select>
+              </div>
+
+              <!-- Media / Video Dropdown -->
+              <div class="filter-field">
+                <label class="filter-label">Media</label>
+                <select v-model="selectedMedia" class="filter-select" @change="handleFilterChange">
+                  <option value="all">All Media</option>
+                  <option value="video">📹 With Video</option>
+                  <option value="text">Text Only</option>
+                </select>
+              </div>
+
+              <!-- Date Range Dropdown -->
+              <div class="filter-field">
+                <label class="filter-label">Date Range</label>
+                <div class="date-select-wrap">
+                  <Calendar class="w-3.5 h-3.5 text-taupe mr-1" />
+                  <select v-model="selectedDateRange" class="filter-select date-select" @change="handleFilterChange">
+                    <option value="all">All Time</option>
+                    <option value="30d">Last 30 Days</option>
+                    <option value="90d">Last 90 Days</option>
+                    <option value="year">This Year</option>
+                  </select>
+                </div>
               </div>
             </div>
           </div>
@@ -461,7 +476,10 @@ function exportReviewsCSV() {
 
                   <!-- Date -->
                   <td class="td-date">
-                    <span class="date-text">{{ review.created_at }}</span>
+                    <div class="date-stacked">
+                      <span class="date-part">{{ formatReviewDate(review.created_at).date }}</span>
+                      <span class="time-part">{{ formatReviewDate(review.created_at).time }}</span>
+                    </div>
                   </td>
 
                   <!-- Action Buttons -->
@@ -1043,17 +1061,15 @@ function exportReviewsCSV() {
   background: #FFFFFF;
   border: 1px solid #EBE1D7;
   border-radius: 10px;
-  padding: 0.875rem 1rem;
+  padding: 1rem 1.25rem;
   display: flex;
-  align-items: center;
-  gap: 0.875rem;
-  flex-wrap: wrap;
+  flex-direction: column;
+  gap: 0.85rem;
 }
 
 .search-input-wrap {
   position: relative;
-  flex: 1;
-  min-width: 180px;
+  width: 100%;
 }
 
 .search-icon {
@@ -1066,13 +1082,14 @@ function exportReviewsCSV() {
 
 .search-input {
   width: 100%;
-  padding: 0.5rem 0.75rem 0.5rem 2.25rem;
+  padding: 0.55rem 0.75rem 0.55rem 2.25rem;
   border: 1px solid #E4D8CE;
   border-radius: 6px;
   font-size: 0.8125rem;
   background: #FAF6F2;
   color: #2D2422;
   outline: none;
+  transition: all 0.2s ease;
 }
 
 .search-input:focus {
@@ -1080,10 +1097,28 @@ function exportReviewsCSV() {
   background: #FFFFFF;
 }
 
+.filter-dropdowns-row {
+  display: grid;
+  grid-template-columns: 1.5fr 1fr 1fr 1fr 1.2fr;
+  gap: 0.75rem;
+}
+
+@media (max-width: 900px) {
+  .filter-dropdowns-row {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 550px) {
+  .filter-dropdowns-row {
+    grid-template-columns: 1fr;
+  }
+}
+
 .filter-field {
   display: flex;
   flex-direction: column;
-  gap: 0.2rem;
+  gap: 0.25rem;
 }
 
 .filter-label {
@@ -1095,7 +1130,7 @@ function exportReviewsCSV() {
 }
 
 .filter-select {
-  padding: 0.45rem 0.75rem;
+  padding: 0.45rem 0.65rem;
   border: 1px solid #E4D8CE;
   border-radius: 6px;
   font-size: 0.8125rem;
@@ -1103,6 +1138,7 @@ function exportReviewsCSV() {
   color: #2D2422;
   outline: none;
   cursor: pointer;
+  width: 100%;
 }
 
 .filter-select:focus {
@@ -1116,11 +1152,13 @@ function exportReviewsCSV() {
   border-radius: 6px;
   padding: 0 0.5rem;
   background: #FFFFFF;
+  width: 100%;
 }
 
 .date-select {
   border: none;
   padding: 0.45rem 0.25rem;
+  width: 100%;
 }
 
 /* Table Card */
@@ -1304,17 +1342,37 @@ function exportReviewsCSV() {
   color: #C0392B;
 }
 
-.date-text {
+.date-stacked {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.3;
+  white-space: nowrap;
+}
+
+.date-part {
   font-size: 0.75rem;
-  color: #6E635E;
+  color: #2D2422;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.time-part {
+  font-size: 0.6875rem;
+  color: #8C827A;
+  white-space: nowrap;
 }
 
 /* Actions */
+.td-actions {
+  white-space: nowrap;
+  width: 95px;
+}
+
 .actions-group {
   display: flex;
   align-items: center;
   gap: 0.35rem;
-  position: relative;
+  white-space: nowrap;
 }
 
 .action-btn {

@@ -21,7 +21,8 @@ from app.api import (
     upload,
     reviews,
     quizzes,
-    settings as settings_api
+    settings as settings_api,
+    payments
 )
 from app.seed.seed_data import seed_database
 
@@ -73,6 +74,7 @@ app.include_router(upload.router, prefix=settings.API_V1_STR)
 app.include_router(reviews.router, prefix=settings.API_V1_STR)
 app.include_router(quizzes.router, prefix=settings.API_V1_STR)
 app.include_router(settings_api.router, prefix=settings.API_V1_STR)
+app.include_router(payments.router, prefix=settings.API_V1_STR)
 
 # Serve static images and videos directly from backend for direct API inspection
 static_images_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "frontend", "public", "images"))

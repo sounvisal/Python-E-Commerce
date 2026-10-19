@@ -95,47 +95,30 @@ function formatCurrency(val) {
 
 <template>
   <div class="dashboard-page">
-    <!-- Top Row: Welcome Banner + Quick Actions matching format/Luméa Beauty Admin Dashboard.png -->
-    <div class="dashboard-top-grid">
-      <!-- Welcome Hero Banner -->
-      <div class="hero-welcome-card">
-        <div class="hero-content">
-          <span class="hero-eyebrow">WELCOME BACK, ADMIN</span>
-          <h1 class="hero-heading">
-            Manage beauty.<br/>
-            Create brighter tomorrows.
-          </h1>
-          <p class="hero-subtext">From products to people, everything in one place.</p>
+    <div class="dashboard-split-layout">
+      <!-- ============================================== -->
+      <!-- MAIN COLUMN (LEFT): Hero, KPIs, Charts, Orders -->
+      <!-- ============================================== -->
+      <div class="dashboard-main-col">
+        <!-- Welcome Hero Banner -->
+        <div class="hero-welcome-card">
+          <div class="hero-content">
+            <span class="hero-eyebrow">WELCOME BACK, ADMIN</span>
+            <h1 class="hero-heading">
+              Manage beauty.<br/>
+              Create brighter tomorrows.
+            </h1>
+            <p class="hero-subtext">From products to people, everything in one place.</p>
+          </div>
+          <div class="hero-graphic-wrap">
+            <img
+              src="/images/admin-hero-bottles.jpg"
+              alt="Luméa Atelier"
+              class="hero-bottles-img"
+              @error="$event.target.src = '/images/ai-banner-atelier.jpg'"
+            />
+          </div>
         </div>
-        <div class="hero-graphic-wrap">
-          <img
-            src="/images/admin-hero-bottles.jpg"
-            alt="Luméa Atelier"
-            class="hero-bottles-img"
-            @error="$event.target.src = '/images/ai-banner-atelier.jpg'"
-          />
-        </div>
-      </div>
-
-      <!-- Quick Actions Card matching mockup -->
-      <div class="card quick-actions-card">
-        <h3 class="panel-card-title">Quick Actions</h3>
-        <div class="actions-list">
-          <router-link
-            v-for="action in quickActions"
-            :key="action.name"
-            :to="action.path"
-            class="action-item-row"
-          >
-            <div class="action-icon-box">
-              <component :is="action.icon" :size="16" />
-            </div>
-            <span class="action-label">{{ action.name }}</span>
-            <ChevronRight :size="14" class="action-arrow" />
-          </router-link>
-        </div>
-      </div>
-    </div>
 
     <!-- 4 Pastel KPI Metric Cards matching mockup -->
     <div class="kpi-metrics-row">
@@ -345,32 +328,9 @@ function formatCurrency(val) {
           </div>
         </div>
       </div>
-
-      <!-- Low Stock Products Box matching mockup -->
-      <div class="card low-stock-box">
-        <div class="card-head-row">
-          <h3 class="panel-card-title">Low Stock Products</h3>
-          <router-link to="/products?stock=low" class="view-all-link">View all</router-link>
-        </div>
-
-        <div class="low-stock-list">
-          <div
-            v-for="item in lowStockProducts"
-            :key="item.id"
-            class="low-stock-row"
-          >
-            <img :src="item.img" :alt="item.name" class="stock-item-thumb" />
-            <div class="stock-item-meta">
-              <strong>{{ item.name }}</strong>
-              <span class="stock-left-sub">{{ item.stock }} left</span>
-            </div>
-            <span class="badge" :class="item.class">{{ item.status }}</span>
-          </div>
-        </div>
-      </div>
     </div>
 
-    <!-- Bottom Section: Recent Orders + Top Products + Recent Returns -->
+    <!-- Bottom Section: Recent Orders + Top Products (Spacious 2-column layout) -->
     <div class="dashboard-bottom-grid">
       <!-- Recent Orders Table -->
       <div class="card recent-orders-panel">
@@ -455,29 +415,78 @@ function formatCurrency(val) {
           </table>
         </div>
       </div>
+    </div>
+  </div>
 
-      <!-- Recent Returns List matching mockup -->
-      <div class="card recent-returns-panel">
-        <div class="card-head-row">
-          <h3 class="panel-card-title">Recent Returns</h3>
-          <router-link to="/returns" class="view-all-link">View all</router-link>
-        </div>
-
-        <div class="returns-items-list">
-          <div
-            v-for="ret in recentReturns"
-            :key="ret.id"
-            class="return-item-row"
-          >
-            <div class="return-id-reason">
-              <strong class="return-hash">{{ ret.id }}</strong>
-              <span class="return-reason-text">{{ ret.reason }}</span>
-            </div>
-            <span class="badge" :class="ret.class">{{ ret.status }}</span>
+  <!-- ============================================== -->
+  <!-- SIDEBAR COLUMN (RIGHT): Actions, Stock, Returns -->
+  <!-- ============================================== -->
+  <div class="dashboard-side-col">
+    <!-- 1. Quick Actions Card matching mockup -->
+    <div class="card quick-actions-card">
+      <h3 class="panel-card-title">Quick Actions</h3>
+      <div class="actions-list">
+        <router-link
+          v-for="action in quickActions"
+          :key="action.name"
+          :to="action.path"
+          class="action-item-row"
+        >
+          <div class="action-icon-box">
+            <component :is="action.icon" :size="16" />
           </div>
+          <span class="action-label">{{ action.name }}</span>
+          <ChevronRight :size="14" class="action-arrow" />
+        </router-link>
+      </div>
+    </div>
+
+    <!-- 2. Low Stock Products Box matching mockup -->
+    <div class="card low-stock-box">
+      <div class="card-head-row">
+        <h3 class="panel-card-title">Low Stock Products</h3>
+        <router-link to="/products?stock=low" class="view-all-link">View all</router-link>
+      </div>
+
+      <div class="low-stock-list">
+        <div
+          v-for="item in lowStockProducts"
+          :key="item.id"
+          class="low-stock-row"
+        >
+          <img :src="item.img" :alt="item.name" class="stock-item-thumb" />
+          <div class="stock-item-meta">
+            <strong>{{ item.name }}</strong>
+            <span class="stock-left-sub">{{ item.stock }} left</span>
+          </div>
+          <span class="badge" :class="item.class">{{ item.status }}</span>
         </div>
       </div>
     </div>
+
+    <!-- 3. Recent Returns List matching mockup -->
+    <div class="card recent-returns-panel">
+      <div class="card-head-row">
+        <h3 class="panel-card-title">Recent Returns</h3>
+        <router-link to="/returns" class="view-all-link">View all</router-link>
+      </div>
+
+      <div class="returns-items-list">
+        <div
+          v-for="ret in recentReturns"
+          :key="ret.id"
+          class="return-item-row"
+        >
+          <div class="return-id-reason">
+            <strong class="return-hash">{{ ret.id }}</strong>
+            <span class="return-reason-text">{{ ret.reason }}</span>
+          </div>
+          <span class="badge" :class="ret.class">{{ ret.status }}</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
 
     <!-- Atelier Footer Strip matching mockup -->
     <footer class="atelier-dashboard-footer">
@@ -509,17 +518,32 @@ function formatCurrency(val) {
   gap: 1.5rem;
 }
 
-/* Top Row: Welcome Banner + Quick Actions */
-.dashboard-top-grid {
+/* 2-Column Split Layout matching mockup */
+.dashboard-split-layout {
   display: grid;
-  grid-template-columns: 1fr 280px;
+  grid-template-columns: 1fr 310px;
   gap: 1.5rem;
+  align-items: flex-start;
 }
 
-@media (max-width: 1100px) {
-  .dashboard-top-grid {
+@media (max-width: 1250px) {
+  .dashboard-split-layout {
     grid-template-columns: 1fr;
   }
+}
+
+.dashboard-main-col {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  min-width: 0;
+}
+
+.dashboard-side-col {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  min-width: 0;
 }
 
 .hero-welcome-card {
@@ -723,20 +747,14 @@ function formatCurrency(val) {
   height: 16px;
 }
 
-/* Mid Section: Chart + Donut + Low Stock */
+/* Mid Section: Chart + Donut */
 .dashboard-mid-grid {
   display: grid;
-  grid-template-columns: 1.35fr 1fr 1fr;
+  grid-template-columns: 1.4fr 1fr;
   gap: 1.25rem;
 }
 
-@media (max-width: 1200px) {
-  .dashboard-mid-grid {
-    grid-template-columns: 1fr 1fr;
-  }
-}
-
-@media (max-width: 768px) {
+@media (max-width: 900px) {
   .dashboard-mid-grid {
     grid-template-columns: 1fr;
   }
@@ -922,14 +940,14 @@ function formatCurrency(val) {
   color: var(--crimson);
 }
 
-/* Bottom Grid: Recent Orders + Top Products + Returns */
+/* Bottom Grid: Recent Orders + Top Products */
 .dashboard-bottom-grid {
   display: grid;
-  grid-template-columns: 1.4fr 1.1fr 1fr;
+  grid-template-columns: 1.45fr 1fr;
   gap: 1.25rem;
 }
 
-@media (max-width: 1200px) {
+@media (max-width: 900px) {
   .dashboard-bottom-grid {
     grid-template-columns: 1fr;
   }
@@ -939,11 +957,13 @@ function formatCurrency(val) {
   font-family: var(--font-mono);
   font-size: 0.8rem;
   color: var(--crimson);
+  white-space: nowrap;
 }
 
 .customer-name-bold {
   font-weight: 500;
   color: var(--text-main);
+  white-space: nowrap;
 }
 
 .mini-thumbs-stack {
@@ -962,6 +982,7 @@ function formatCurrency(val) {
 .date-dim {
   font-size: 0.74rem;
   color: var(--text-dim);
+  white-space: nowrap;
 }
 
 .product-cell-flex {
@@ -973,6 +994,17 @@ function formatCurrency(val) {
 .prod-name-text {
   font-size: 0.82rem;
   color: var(--text-main);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 140px;
+}
+
+.view-all-link {
+  font-size: 0.76rem;
+  color: var(--crimson);
+  font-weight: 600;
+  white-space: nowrap;
 }
 
 /* Returns Items List */
@@ -989,6 +1021,11 @@ function formatCurrency(val) {
   gap: 0.75rem;
 }
 
+.return-item-row .badge {
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
 .return-id-reason {
   display: flex;
   flex-direction: column;
@@ -999,11 +1036,13 @@ function formatCurrency(val) {
   font-family: var(--font-mono);
   font-size: 0.8rem;
   color: var(--text-main);
+  white-space: nowrap;
 }
 
 .return-reason-text {
   font-size: 0.74rem;
   color: var(--text-muted);
+  white-space: nowrap;
 }
 
 /* Dashboard Footer */

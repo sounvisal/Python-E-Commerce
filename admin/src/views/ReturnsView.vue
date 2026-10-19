@@ -217,6 +217,30 @@ function exportReturnsCSV() {
   document.body.removeChild(link)
   adminStore.addToast('Returns exported (CSV)', 'success')
 }
+
+function formatRequestedDate(dateStr) {
+  if (!dateStr) return { date: 'Aug 28, 2025', time: '10:24 AM' }
+  if (dateStr.includes('T')) {
+    const [d, t] = dateStr.split('T')
+    return { date: d, time: t.substring(0, 5) }
+  }
+  if (dateStr.includes('·')) {
+    const [d, t] = dateStr.split('·')
+    return { date: d.trim(), time: t.trim() }
+  }
+  const parts = dateStr.trim().split(' ')
+  if (parts.length >= 3 && parts[2].includes(',')) {
+    const date = `${parts[0]} ${parts[1]} ${parts[2]}`
+    const time = parts.slice(3).join(' ') || '10:24 AM'
+    return { date, time }
+  }
+  if (parts.length >= 4) {
+    const date = `${parts[0]} ${parts[1]} ${parts[2]}`
+    const time = parts.slice(3).join(' ')
+    return { date, time }
+  }
+  return { date: dateStr, time: '' }
+}
 </script>
 
 <template>
@@ -541,7 +565,10 @@ function exportReturnsCSV() {
 
                   <!-- Requested Date -->
                   <td class="td-date">
-                    <span class="date-text">{{ item.submitted_date }}</span>
+                    <div class="date-cell">
+                      <span class="date-main">{{ formatRequestedDate(item.submitted_date).date }}</span>
+                      <span class="date-sub">{{ formatRequestedDate(item.submitted_date).time }}</span>
+                    </div>
                   </td>
 
                   <!-- Actions -->
@@ -1103,16 +1130,15 @@ function exportReturnsCSV() {
   border: 1px solid #EBE1D7;
   border-radius: 10px;
   padding: 0.875rem 1rem;
-  display: flex;
-  align-items: center;
+  display: grid;
+  grid-template-columns: 1.5fr 1fr 1fr 1fr;
   gap: 0.875rem;
-  flex-wrap: wrap;
+  align-items: flex-end;
 }
 
 .search-input-wrap {
   position: relative;
-  flex: 1;
-  min-width: 220px;
+  width: 100%;
 }
 
 .search-icon {
@@ -1121,23 +1147,26 @@ function exportReturnsCSV() {
   top: 50%;
   transform: translateY(-50%);
   color: #8C827A;
+  pointer-events: none;
 }
 
 .search-input {
   width: 100%;
-  padding: 0.5rem 0.75rem 0.5rem 2.25rem;
+  height: 38px;
+  padding: 0 0.75rem 0 2.25rem;
   border: 1px solid #E4D8CE;
   border-radius: 6px;
   font-size: 0.8125rem;
   background: #FAF6F2;
   color: #2D2422;
   outline: none;
+  box-sizing: border-box;
 }
 
 .filter-field {
   display: flex;
   flex-direction: column;
-  gap: 0.2rem;
+  gap: 0.3rem;
 }
 
 .filter-label {
@@ -1148,27 +1177,36 @@ function exportReturnsCSV() {
 }
 
 .filter-select {
-  padding: 0.45rem 0.75rem;
+  width: 100%;
+  height: 38px;
+  padding: 0 1.75rem 0 0.75rem;
   border: 1px solid #E4D8CE;
   border-radius: 6px;
   font-size: 0.8125rem;
-  background: #FFFFFF;
+  background: #FFFFFF url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%238C827A' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E") no-repeat right 0.75rem center;
+  appearance: none;
   color: #2D2422;
   outline: none;
+  box-sizing: border-box;
+  cursor: pointer;
 }
 
 .date-select-wrap {
   display: flex;
   align-items: center;
+  height: 38px;
   border: 1px solid #E4D8CE;
   border-radius: 6px;
   padding: 0 0.5rem;
   background: #FFFFFF;
+  box-sizing: border-box;
 }
 
 .date-select {
   border: none;
-  padding: 0.45rem 0.25rem;
+  background: transparent;
+  height: 100%;
+  padding-left: 0.25rem;
 }
 
 /* Tabs & Export Bar */
@@ -1254,13 +1292,14 @@ function exportReturnsCSV() {
 .th-num, .td-num {
   width: 30px;
   color: #8C827A;
+  white-space: nowrap;
 }
 
 .return-prod-block {
   display: flex;
   align-items: center;
   gap: 0.75rem;
-  max-width: 200px;
+  max-width: 220px;
 }
 
 .return-thumb {
@@ -1318,11 +1357,13 @@ function exportReturnsCSV() {
   font-weight: 500;
   color: #2D2422;
   font-size: 0.8125rem;
+  white-space: nowrap;
 }
 
 .cust-email {
   font-size: 0.6875rem;
   color: #8C827A;
+  white-space: nowrap;
 }
 
 .order-cell {
@@ -1330,24 +1371,37 @@ function exportReturnsCSV() {
   flex-direction: column;
 }
 
+.th-order, .td-order {
+  white-space: nowrap;
+}
+
 .order-num {
   font-weight: 600;
   color: #2D2422;
+  white-space: nowrap;
 }
 
 .order-date {
   font-size: 0.6875rem;
   color: #8C827A;
+  white-space: nowrap;
+}
+
+.th-reason, .td-reason {
+  min-width: 130px;
 }
 
 .reason-text {
   font-weight: 500;
   color: #2D2422;
-  max-width: 130px;
-  display: block;
+  white-space: nowrap;
 }
 
 /* Status Badges */
+.th-status, .td-status {
+  white-space: nowrap;
+}
+
 .badge-status {
   display: inline-block;
   padding: 0.2rem 0.65rem;
@@ -1355,6 +1409,7 @@ function exportReturnsCSV() {
   font-size: 0.75rem;
   font-weight: 500;
   text-transform: capitalize;
+  white-space: nowrap;
 }
 
 .status-pending { background: #FEF6E7; color: #B57914; }
@@ -1362,9 +1417,31 @@ function exportReturnsCSV() {
 .status-refunded { background: #EBF4FE; color: #2980B9; }
 .status-rejected { background: #FDECEB; color: #C0392B; }
 
-.date-text {
-  font-size: 0.75rem;
-  color: #6E635E;
+.th-date, .td-date {
+  white-space: nowrap;
+}
+
+.date-cell {
+  display: flex;
+  flex-direction: column;
+}
+
+.date-main {
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: #2D2422;
+  white-space: nowrap;
+}
+
+.date-sub {
+  font-size: 0.6875rem;
+  color: #8C827A;
+  white-space: nowrap;
+}
+
+.th-actions, .td-actions {
+  white-space: nowrap;
+  width: 110px;
 }
 
 /* Actions */

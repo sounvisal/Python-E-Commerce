@@ -266,8 +266,34 @@ def run_tests():
     assert "url" in v_upload["data"]
     print(f"[PASS] 28. POST /api/upload/video -> Uploaded streaming video: {v_upload['data']['url']}")
 
+    # 29. Bakong KHQR Generate API
+    res = client.post("/api/payments/khqr/generate", json={"order_number": "LUM-999888", "amount": 68.0, "try_live": False})
+    assert res.status_code == 200
+    khqr_data = res.json()
+    assert khqr_data["status"] == "success"
+    assert khqr_data["data"]["qr_string"].startswith("000201010212")
+    assert khqr_data["data"]["amount"] == 68.0
+    print(f"[PASS] 29. POST /api/payments/khqr/generate -> Generated valid Bakong KHQR (EMVCo TLV + CRC16: {khqr_data['data']['qr_string'][-4:]})")
+
+    # 30. Bakong KHQR Payment Simulation API
+    # Place a test order first
+    order_res = client.post("/api/orders", json={
+        "customer_name": "Sreynich Chan",
+        "customer_email": "sreynich.chan@example.com",
+        "shipping_address": "Atelier Norodom",
+        "shipping_city": "Phnom Penh",
+        "payment_method": "khqr",
+        "items": [{"product_id": 201, "quantity": 1}]
+    })
+    test_ord_num = order_res.json()["data"]["order_number"]
+    sim_res = client.post("/api/payments/khqr/simulate-approve", json={"order_number": test_ord_num})
+    assert sim_res.status_code == 200
+    assert sim_res.json()["paid"] is True
+    assert "BAKONG" in sim_res.json()["transaction_ref"]
+    print(f"[PASS] 30. POST /api/payments/khqr/simulate-approve -> Verified instant bank clearance ({sim_res.json()['transaction_ref']})")
+
     print("=" * 60)
-    print(f"[SUCCESS] ALL 28/28 ENDPOINT TESTS PASSED WITH 100% SUCCESS!")
+    print(f"[SUCCESS] ALL 30/30 ENDPOINT TESTS PASSED WITH 100% SUCCESS!")
     print("=" * 60)
 
 if __name__ == "__main__":

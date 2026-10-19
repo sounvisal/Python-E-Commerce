@@ -23,6 +23,8 @@ class Order(Base):
     
     status = Column(String(50), default="Confirmed")  # Confirmed, Processing, Shipped, Delivered, Cancelled
     payment_method = Column(String(50), default="card")
+    payment_status = Column(String(50), default="Paid")  # Paid, Pending, Failed
+    transaction_ref = Column(String(100), nullable=True)
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
 
     user_rel = relationship("User", back_populates="orders")

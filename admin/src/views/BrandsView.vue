@@ -818,7 +818,7 @@ const brandProducts = computed(() => {
             <button class="btn-back-link" @click="currentView = 'list'">
               <ArrowLeft :size="13" /> Brands
             </button>
-            <span class="crumb-sep">/</span>
+            <span class="crumb-sep">></span>
             <span class="crumb-current">{{ editorMode === 'add' ? 'Add Brand' : 'Edit Brand' }}</span>
           </div>
           <h1 class="hero-heading">
@@ -832,7 +832,7 @@ const brandProducts = computed(() => {
             <button class="btn-cancel" @click="currentView = 'list'">Cancel</button>
             <button class="btn-save-brand" :disabled="isSaving" @click="saveBrand">
               <Save :size="15" />
-              <span>{{ isSaving ? 'Saving to Database...' : 'Save Brand' }}</span>
+              <span>{{ isSaving ? 'Saving...' : 'Save Brand' }}</span>
             </button>
           </div>
         </div>
@@ -859,11 +859,14 @@ const brandProducts = computed(() => {
 
             <div class="form-group">
               <label class="form-label">Country <span class="req">*</span></label>
-              <select v-model="brandForm.country" class="atelier-input">
-                <option v-for="c in countriesList" :key="c.name" :value="c.name">
-                  {{ c.flag }} {{ c.name }}
-                </option>
-              </select>
+              <div class="select-wrap-custom">
+                <select v-model="brandForm.country" class="atelier-input atelier-select">
+                  <option v-for="c in countriesList" :key="c.name" :value="c.name">
+                    {{ getCountryFlag(c.name) }} {{ c.name }}
+                  </option>
+                </select>
+                <ChevronDown :size="14" class="custom-arrow" />
+              </div>
             </div>
           </div>
 
@@ -890,27 +893,46 @@ const brandProducts = computed(() => {
           </div>
 
           <div class="form-group">
-            <div class="label-with-counter">
-              <label class="form-label">Short Description <span class="req">*</span></label>
-              <span class="char-counter">{{ (brandForm.description || '').length }}/160</span>
+            <label class="form-label">Short Description <span class="req">*</span></label>
+            <div class="textarea-relative">
+              <textarea
+                v-model="brandForm.description"
+                maxlength="160"
+                rows="2"
+                placeholder="A short description that will appear in brand listings (max 160 characters)."
+                class="atelier-textarea"
+              ></textarea>
+              <span class="char-counter-bottom">{{ (brandForm.description || '').length }}/160</span>
             </div>
-            <textarea
-              v-model="brandForm.description"
-              maxlength="160"
-              rows="2"
-              placeholder="A short description that will appear in brand listings (max 160 characters)."
-              class="atelier-textarea"
-            ></textarea>
           </div>
 
           <div class="form-group">
             <label class="form-label">Brand Story</label>
-            <textarea
-              v-model="brandForm.story"
-              rows="4"
-              placeholder="Tell the story of this brand, its values, and what makes it special..."
-              class="atelier-textarea"
-            ></textarea>
+            <div class="rte-box">
+              <div class="rte-toolbar">
+                <select class="rte-select">
+                  <option>Normal</option>
+                  <option>Heading 2</option>
+                  <option>Heading 3</option>
+                </select>
+                <div class="rte-divider"></div>
+                <button type="button" class="rte-btn"><strong>B</strong></button>
+                <button type="button" class="rte-btn"><em>I</em></button>
+                <button type="button" class="rte-btn"><u>U</u></button>
+                <div class="rte-divider"></div>
+                <button type="button" class="rte-btn">• List</button>
+                <button type="button" class="rte-btn">1. List</button>
+                <div class="rte-divider"></div>
+                <button type="button" class="rte-btn">Link</button>
+                <button type="button" class="rte-btn">Image</button>
+              </div>
+              <textarea
+                v-model="brandForm.story"
+                rows="4"
+                placeholder="Tell the story of this brand, its values, and what makes it special..."
+                class="atelier-textarea rte-textarea"
+              ></textarea>
+            </div>
           </div>
         </div>
 
@@ -923,18 +945,18 @@ const brandProducts = computed(() => {
             <div class="form-group">
               <label class="form-label">Brand Logo <span class="req">*</span></label>
               <div class="dropzone-box-small">
-                <Upload :size="20" class="upload-icon" />
-                <span class="drop-text-sm">Drag and drop logo here or browse</span>
-                <span class="drop-hint">PNG, JPG, SVG (Max 2MB) • 500x500px</span>
+                <Upload :size="22" class="upload-icon" />
+                <span class="drop-text-sm">Drag and drop logo here <span class="browse-link">or click to browse</span></span>
+                <span class="drop-hint">PNG, JPG, SVG (Max 2MB) • Recommended: 500 × 500 px</span>
               </div>
             </div>
 
             <div class="form-group">
               <label class="form-label">Brand Banner</label>
               <div class="dropzone-box-small">
-                <Upload :size="20" class="upload-icon" />
-                <span class="drop-text-sm">Drag and drop banner here or browse</span>
-                <span class="drop-hint">PNG, JPG (Max 5MB) • 1920x600px</span>
+                <Upload :size="22" class="upload-icon" />
+                <span class="drop-text-sm">Drag and drop banner here <span class="browse-link">or click to browse</span></span>
+                <span class="drop-hint">PNG, JPG (Max 5MB) • Recommended: 1920 × 600 px</span>
               </div>
             </div>
           </div>
@@ -948,27 +970,41 @@ const brandProducts = computed(() => {
           <div class="form-row-2 align-center">
             <div class="form-group">
               <label class="form-label">Status <span class="req">*</span></label>
-              <select v-model="brandForm.is_active" class="atelier-input">
-                <option :value="true">Active</option>
-                <option :value="false">Inactive</option>
-              </select>
+              <div class="select-wrap-custom">
+                <select v-model="brandForm.is_active" class="atelier-input atelier-select">
+                  <option :value="true">● Active</option>
+                  <option :value="false">○ Inactive</option>
+                </select>
+                <ChevronDown :size="14" class="custom-arrow" />
+              </div>
             </div>
 
-            <div class="featured-toggle-row">
-              <button
-                type="button"
-                class="atelier-toggle-switch"
-                :class="{ active: brandForm.is_featured }"
-                @click="brandForm.is_featured = !brandForm.is_featured"
-              >
-                <span class="toggle-slider"></span>
-              </button>
-              <div class="toggle-texts">
-                <strong>Featured Brand</strong>
-                <span>Show this brand on homepage and featured sections.</span>
+            <div class="featured-toggle-box">
+              <label class="form-label">Featured Brand</label>
+              <div class="featured-toggle-row">
+                <button
+                  type="button"
+                  class="atelier-toggle-switch"
+                  :class="{ active: brandForm.is_featured }"
+                  @click="brandForm.is_featured = !brandForm.is_featured"
+                >
+                  <span class="toggle-slider"></span>
+                </button>
+                <div class="toggle-texts">
+                  <span>Show this brand on homepage and featured sections.</span>
+                </div>
               </div>
             </div>
           </div>
+        </div>
+
+        <!-- 4. Bottom Action Bar -->
+        <div class="editor-bottom-bar">
+          <button class="btn-cancel" @click="currentView = 'list'">Cancel</button>
+          <button class="btn-save-brand" :disabled="isSaving" @click="saveBrand">
+            <Save :size="15" />
+            <span>{{ isSaving ? 'Saving...' : 'Save Brand' }}</span>
+          </button>
         </div>
       </div>
     </template>
@@ -1801,53 +1837,263 @@ const brandProducts = computed(() => {
   gap: 20px;
 }
 
-.btn-save-brand {
-  padding: 8px 18px;
-  background: #84261B;
+.editor-breadcrumb {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  margin-bottom: 6px;
+}
+
+.btn-back-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: #8C847E;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  background: none;
   border: none;
+  padding: 0;
+  transition: color 0.15s;
+}
+
+.btn-back-link:hover {
+  color: #84261B;
+}
+
+.crumb-sep {
+  color: #CDBEB3;
+  font-size: 11px;
+}
+
+.crumb-current {
+  color: #2D2621;
+  font-weight: 600;
+}
+
+.editor-top-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.editor-bottom-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  background: #FFFFFF;
+  border: 1px solid #EFE7E0;
+  border-radius: 12px;
+  margin-top: 4px;
+}
+
+.btn-cancel {
+  padding: 10px 22px;
+  border: 1px solid #E4D8CE;
+  border-radius: 8px;
+  background: #FFFFFF;
+  color: #3C3530;
+  font-size: 13.5px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-cancel:hover {
+  background: #FAF6F2;
+  border-color: #84261B;
+  color: #84261B;
+}
+
+.btn-save-brand {
+  padding: 10px 24px;
+  background: #84261B;
+  border: 1px solid #84261B;
   border-radius: 8px;
   color: #FFFFFF;
-  font-size: 13px;
+  font-size: 13.5px;
   font-weight: 600;
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 4px 14px rgba(132, 38, 27, 0.2);
+}
+
+.btn-save-brand:hover:not(:disabled) {
+  background: #6D1E15;
+  transform: translateY(-1px);
+}
+
+.btn-save-brand:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+.select-wrap-custom {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.select-wrap-custom .atelier-select {
+  appearance: none;
+  -webkit-appearance: none;
+  padding-right: 32px;
   cursor: pointer;
 }
 
-.dropzone-box-small {
-  border: 1.5px dashed #E5D7CD;
+.custom-arrow {
+  position: absolute;
+  right: 12px;
+  pointer-events: none;
+  color: #8C847E;
+}
+
+.textarea-relative {
+  position: relative;
+}
+
+.char-counter-bottom {
+  position: absolute;
+  bottom: 10px;
+  right: 12px;
+  font-size: 11px;
+  color: #8C847E;
+  pointer-events: none;
+}
+
+/* Rich Text Editor Styling */
+.rte-box {
+  border: 1px solid #EFE7E0;
   border-radius: 8px;
-  padding: 16px;
+  overflow: hidden;
+  background: #FFFFFF;
+}
+
+.rte-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 12px;
+  background: #FAF7F4;
+  border-bottom: 1px solid #EFE7E0;
+  flex-wrap: wrap;
+}
+
+.rte-select {
+  border: 1px solid #E4D8CE;
+  background: #FFFFFF;
+  border-radius: 4px;
+  padding: 4px 8px;
+  font-size: 12px;
+  color: #3C3530;
+  outline: none;
+  cursor: pointer;
+}
+
+.rte-divider {
+  width: 1px;
+  height: 18px;
+  background: #E4D8CE;
+  margin: 0 4px;
+}
+
+.rte-btn {
+  background: transparent;
+  border: none;
+  padding: 4px 8px;
+  font-size: 12.5px;
+  color: #5C544E;
+  cursor: pointer;
+  border-radius: 4px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s;
+}
+
+.rte-btn:hover {
+  background: #EFE7E0;
+  color: #84261B;
+}
+
+.rte-textarea {
+  border: none !important;
+  border-radius: 0 !important;
+  background: #FFFFFF !important;
+  min-height: 110px;
+  padding: 12px 14px;
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.rte-textarea:focus {
+  box-shadow: none !important;
+}
+
+/* Dropzones */
+.dropzone-box-small {
+  border: 2px dashed #E5D7CD;
+  border-radius: 10px;
+  padding: 24px 16px;
   text-align: center;
   background: #FAF7F4;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  transition: all 0.2s ease;
+  min-height: 130px;
+}
+
+.dropzone-box-small:hover {
+  border-color: #84261B;
+  background: #FAF4EE;
+}
+
+.dropzone-box-small .upload-icon {
+  color: #84261B;
 }
 
 .drop-text-sm {
-  font-size: 12px;
-  color: #3C3530;
-  display: block;
+  font-size: 13px;
+  font-weight: 500;
+  color: #2D2621;
+}
+
+.browse-link {
+  color: #84261B;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.drop-hint {
+  font-size: 11.5px;
+  color: #8C847E;
+}
+
+.featured-toggle-box {
+  display: flex;
+  flex-direction: column;
 }
 
 .featured-toggle-row {
   display: flex;
   align-items: center;
-  gap: 14px;
-}
-
-.toggle-texts {
-  display: flex;
-  flex-direction: column;
-}
-
-.toggle-texts strong {
-  font-size: 13px;
-  color: #2D2621;
+  gap: 12px;
+  padding-top: 4px;
 }
 
 .toggle-texts span {
-  font-size: 11px;
-  color: #8C847E;
+  font-size: 12.5px;
+  color: #6E6761;
 }
 
 @media (max-width: 1100px) {
