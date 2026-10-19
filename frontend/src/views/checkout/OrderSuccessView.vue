@@ -64,8 +64,16 @@
             <span class="meta-value">{{ formatPaymentMethod(order.payment_method) }}</span>
           </div>
           <div class="meta-item">
-            <span class="meta-title">Status</span>
+            <span class="meta-title">Order Status</span>
             <span class="meta-value status-tag">{{ order.status }}</span>
+          </div>
+          <div class="meta-item" v-if="order.payment_status">
+            <span class="meta-title">Payment Status</span>
+            <span class="meta-value status-tag status-paid">{{ order.payment_status }}</span>
+          </div>
+          <div class="meta-item" v-if="order.transaction_ref">
+            <span class="meta-title">Clearance Ref</span>
+            <span class="meta-value mono-ref">{{ order.transaction_ref }}</span>
           </div>
           <div class="meta-item">
             <span class="meta-title">Estimated Delivery</span>
@@ -130,6 +138,8 @@ const loading = ref(true)
 
 const formatPaymentMethod = (method) => {
   switch (method) {
+    case 'khqr':
+      return 'Bakong KHQR · ABA Mobile'
     case 'apple_pay':
       return 'Apple Pay Express'
     case 'cod':
@@ -362,8 +372,8 @@ onMounted(async () => {
 
 .order-meta-box {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 1rem;
+  grid-template-columns: repeat(auto-fit, minmax(135px, 1fr));
+  gap: 1.25rem;
   background: var(--bg-muted);
   border-radius: var(--radius-md);
   padding: 1.5rem;
@@ -397,6 +407,19 @@ onMounted(async () => {
 .status-tag {
   text-transform: capitalize;
   color: #10B981;
+}
+
+.status-paid {
+  color: #16A34A !important;
+  font-weight: 700;
+}
+
+.mono-ref {
+  font-family: monospace;
+  font-size: 0.78rem;
+  letter-spacing: -0.3px;
+  color: #4B5563;
+  word-break: break-all;
 }
 
 .address-box {

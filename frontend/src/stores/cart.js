@@ -104,9 +104,19 @@ export const useCartStore = defineStore('cart', {
         this.discountCode = cleanCode
         this.discountRate = 0.10 // 10% off
         this.saveToStorage()
-        return { success: true, message: 'Promo code applied: 10% off!' }
+        return { success: true, message: 'Promo code applied: 10% off your atelier order!' }
+      } else if (cleanCode === 'LUMEA20') {
+        this.discountCode = cleanCode
+        this.discountRate = 0.20 // 20% off
+        this.saveToStorage()
+        return { success: true, message: 'VIP Privilege code applied: 20% off your entire order!' }
+      } else if (cleanCode === 'ATELIER15') {
+        this.discountCode = cleanCode
+        this.discountRate = 0.15 // 15% off
+        this.saveToStorage()
+        return { success: true, message: 'Curator code applied: 15% off!' }
       }
-      return { success: false, message: 'Invalid promo code. Try LUMEA10' }
+      return { success: false, message: 'Invalid promo code. Try LUMEA10, LUMEA20, or ATELIER15' }
     },
 
     removePromoCode() {

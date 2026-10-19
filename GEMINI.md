@@ -153,7 +153,23 @@ Luméa features a high-conversion multimedia engine built for dermatological tex
 
 ---
 
-## 🛠️ 6. Commands to Run & Test the Entire Project
+## 💳 6. Bakong KHQR & ABA PayWay Payment Architecture
+
+Luméa features an authentic, localized digital payment system matching the National Bank of Cambodia (NBC) Bakong KHQR standard and ABA PayWay:
+- **FastAPI Endpoints**:
+  - `POST /api/payments/khqr/generate`: Generates compliant dynamic Bakong EMVCo TLV payload with standard CCITT CRC16 (`0x1021` polynomial with `0xFFFF` seed), integrating with live ABA PayWay link (`https://link.payway.com.kh/ABAPAYaC455755m`).
+  - `POST /api/payments/khqr/check`: Polling endpoint checking order clearance and live ABA PayWay transactions.
+  - `POST /api/payments/khqr/simulate-approve`: Defense demonstration mode generating `BAKONG-ABA-{TIMESTAMP}-{ID}` clearance reference and updating order state to `Paid`.
+- **Storefront KHQR Modal (`KHQRModal.vue`)**:
+  - NBC-certified deep crimson banner (`#E1251B`) with genuine white `KHQR` ribbon typography.
+  - Dual-currency display: Order total in USD with live KHR conversion (`$99.00 ≈ 405,900 KHR`).
+  - Dynamic QR rendered via HTML5 canvas with central Bakong emblem.
+  - Partner bank pills (ABA'Mobile, Bakong, Wing, ACLEDA, Sathapana) and real-time 5-minute countdown timer.
+  - Interactive evaluation button: `⚡ Demo Mode: Simulate Instant Bank Approval`.
+
+---
+
+## 🛠️ 7. Commands to Run & Test the Entire Project
 
 ### A. Run Python Backend:
 ```powershell
@@ -163,7 +179,7 @@ cd d:\lumea\python-backend
 # Interactive Swagger UI: http://127.0.0.1:8000/docs
 ```
 
-### B. Run Verification Test Suite (28/28 Automated Tests):
+### B. Run Verification Test Suite (30/30 Automated Tests):
 ```powershell
 cd d:\lumea\python-backend
 .\venv\Scripts\python test_api.py
@@ -185,7 +201,7 @@ npm run dev
 
 ---
 
-## 💡 7. Guidelines for Future AI / Remote Agents
+## 💡 8. Guidelines for Future AI / Remote Agents
 
 1. **Backend Technology**: Always use **Python FastAPI** (`python-backend/`). Do not revert to PHP.
 2. **Frontend Styling**: Luméa uses handcrafted **Vanilla CSS** with CSS variables (`--color-primary`, `--font-serif`, etc.) defined in `frontend/src/assets/main.css`. Avoid Tailwind unless explicitly requested.

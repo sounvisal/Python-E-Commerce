@@ -54,6 +54,8 @@ Thumbs.db
 e2e_results.json
 master_qa_results.json
 test_*.js
+*.png
+
 
 # Mockup format specifications (excluded from remote GitHub repository)
 format/

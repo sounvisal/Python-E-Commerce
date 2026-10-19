@@ -284,7 +284,7 @@
 </template>
 
 <script setup>
-import { computed, ref } from 'vue'
+import { computed, ref, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import { useOrdersStore } from '@/stores/orders'
 import { useNotificationStore } from '@/stores/notification'
@@ -306,6 +306,12 @@ const ordersStore = useOrdersStore()
 const notificationStore = useNotificationStore()
 
 const showTrackingModal = ref(false)
+
+onMounted(async () => {
+  if (route.params.orderNumber) {
+    await ordersStore.fetchOrderByNumber(route.params.orderNumber)
+  }
+})
 
 const order = computed(() => {
   const param = route.params.orderNumber || 'LM250616789'

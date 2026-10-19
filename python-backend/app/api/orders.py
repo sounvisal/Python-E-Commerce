@@ -59,10 +59,12 @@ def place_order(order_in: OrderCreate, db: Session = Depends(get_db)):
             discount = round(subtotal * 0.10, 2)
         elif "20" in code_upper:
             discount = round(subtotal * 0.20, 2)
+        elif "15" in code_upper:
+            discount = round(subtotal * 0.15, 2)
 
-    # Shipping fee (Complimentary over $50)
-    shipping_fee = 0.0 if (subtotal - discount) >= 50.0 else 5.0
-    total = round(subtotal - discount + shipping_fee, 2)
+    # Shipping fee (Complimentary over $50 threshold, standard $15 otherwise)
+    shipping_fee = 0.0 if (subtotal - discount) >= 50.0 else 15.0
+    total = max(0.0, round(subtotal - discount + shipping_fee, 2))
 
     # Create Order
     new_order = Order(

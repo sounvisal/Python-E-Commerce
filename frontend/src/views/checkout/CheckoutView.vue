@@ -126,6 +126,33 @@
           <div class="form-card">
             <h3>3. Payment Method</h3>
             <div class="payment-options">
+              <!-- 1. Bakong KHQR Option -->
+              <label
+                class="payment-option khqr-payment-option"
+                :class="{ selected: form.payment_method === 'khqr' }"
+              >
+                <input
+                  type="radio"
+                  v-model="form.payment_method"
+                  value="khqr"
+                  name="payMethod"
+                />
+                <div class="pay-label">
+                  <div class="khqr-badge-mini">
+                    <span class="badge-kh">KH</span>
+                    <span class="badge-qr">QR</span>
+                  </div>
+                  <div class="pay-details-col">
+                    <div class="pay-title-row">
+                      <strong>Bakong KHQR &middot; ABA Mobile</strong>
+                      <span class="badge-popular-kh">Instant Scan</span>
+                    </div>
+                    <span class="pay-desc-sub">ABA, Bakong, Wing, ACLEDA &amp; all Cambodian banking apps</span>
+                  </div>
+                </div>
+              </label>
+
+              <!-- 2. Credit Card -->
               <label
                 class="payment-option"
                 :class="{ selected: form.payment_method === 'card' }"
@@ -142,6 +169,7 @@
                 </div>
               </label>
 
+              <!-- 3. Apple Pay -->
               <label
                 class="payment-option"
                 :class="{ selected: form.payment_method === 'apple_pay' }"
@@ -158,6 +186,7 @@
                 </div>
               </label>
 
+              <!-- 4. Cash on Delivery -->
               <label
                 class="payment-option"
                 :class="{ selected: form.payment_method === 'cod' }"
@@ -173,6 +202,17 @@
                   <span>Pay Upon White-Glove Inspection</span>
                 </div>
               </label>
+            </div>
+
+            <!-- KHQR Info Box -->
+            <div v-if="form.payment_method === 'khqr'" class="khqr-teaser-box">
+              <div class="teaser-icon-wrap">
+                <QrCode :size="26" class="teaser-qr-icon" />
+              </div>
+              <div class="teaser-body">
+                <strong>Dynamic Bakong KHQR will be generated upon authorization</strong>
+                <p>Scan with ABA Mobile or any Bakong-enabled app for real-time clearance. Includes 1-click evaluation demo mode for presentation.</p>
+              </div>
             </div>
 
             <div v-if="form.payment_method === 'card'" class="card-inputs">
@@ -267,6 +307,7 @@
             </div>
 
             <button
+              id="btn-authorize-order"
               type="submit"
               class="btn btn-primary btn-lg btn-block"
               :disabled="submitting"
@@ -282,6 +323,16 @@
         </aside>
       </form>
     </div>
+
+    <!-- Authentic Bakong KHQR Modal -->
+    <KHQRModal
+      v-if="showKHQRModal && pendingKhqrOrder"
+      :order-number="pendingKhqrOrder.order_number"
+      :amount="pendingKhqrOrder.total"
+      merchant-name="SUON VISAL"
+      @approved="handleKHQRApproved"
+      @cancelled="handleKHQRCancelled"
+    />
   </div>
 </template>
 
@@ -292,7 +343,8 @@ import axios from 'axios'
 import { useCartStore } from '@/stores/cart'
 import { useOrdersStore } from '@/stores/orders'
 import { useNotificationStore } from '@/stores/notification'
-import { CreditCard, Smartphone, Truck } from 'lucide-vue-next'
+import { CreditCard, Smartphone, Truck, QrCode } from 'lucide-vue-next'
+import KHQRModal from '@/components/checkout/KHQRModal.vue'
 
 const router = useRouter()
 const cartStore = useCartStore()
@@ -305,15 +357,17 @@ onMounted(() => {
 
 const submitting = ref(false)
 const submitError = ref(null)
+const showKHQRModal = ref(false)
+const pendingKhqrOrder = ref(null)
 
 const form = reactive({
-  customer_name: 'Elena Rostova',
-  customer_email: 'elena.rostova@atelier-lumea.com',
-  customer_phone: '+46 8 123 4567',
-  shipping_address: 'Strandvägen 18, 4th Floor',
-  shipping_city: 'Stockholm',
-  shipping_postal_code: '114 56',
-  payment_method: 'card',
+  customer_name: 'Sreynich Chan',
+  customer_email: 'sreynich.chan@example.com',
+  customer_phone: '+855 12 345 678',
+  shipping_address: '123 Norodom Boulevard',
+  shipping_city: 'Phnom Penh',
+  shipping_postal_code: '12000',
+  payment_method: 'khqr',
   card_number: '4242 4242 4242 4242',
   card_expiry: '12/28',
   card_cvc: '888',
@@ -340,6 +394,25 @@ const handleSubmitOrder = async () => {
     })),
   }
 
+  // Specialized flow for Bakong KHQR
+  if (form.payment_method === 'khqr') {
+    try {
+      const response = await axios.post('/api/orders', payload)
+      if (response.data && response.data.data) {
+        pendingKhqrOrder.value = response.data.data
+        showKHQRModal.value = true
+      }
+    } catch (err) {
+      console.error('Failed to initiate KHQR order:', err)
+      submitError.value =
+        err.response?.data?.message || 'Failed to generate order for Bakong KHQR. Please check server status.'
+    } finally {
+      submitting.value = false
+    }
+    return
+  }
+
+  // Standard flow for other methods
   try {
     const response = await axios.post('/api/orders', payload)
     if (response.data && response.data.data) {
@@ -356,6 +429,21 @@ const handleSubmitOrder = async () => {
   } finally {
     submitting.value = false
   }
+}
+
+const handleKHQRApproved = (data) => {
+  if (pendingKhqrOrder.value) {
+    ordersStore.addOrder(pendingKhqrOrder.value)
+    cartStore.clearCart()
+    notificationStore.addToast('Bakong KHQR payment cleared & verified!', 'success')
+    router.push(`/order-success/${pendingKhqrOrder.value.order_number}`)
+  }
+  showKHQRModal.value = false
+}
+
+const handleKHQRCancelled = () => {
+  showKHQRModal.value = false
+  notificationStore.addToast('KHQR checkout suspended. You may change payment options.', 'info')
 }
 </script>
 
@@ -561,6 +649,112 @@ const handleSubmitOrder = async () => {
   padding: 1.25rem;
   background: var(--bg-muted);
   border-radius: var(--radius-md);
+}
+
+/* Bakong KHQR Payment Option Styling */
+.khqr-payment-option {
+  border-color: rgba(225, 37, 27, 0.25);
+  background: #fffafa;
+}
+
+.khqr-payment-option.selected {
+  border-color: #E1251B;
+  background: #FFF5F5;
+  box-shadow: 0 0 0 1px #E1251B;
+}
+
+.khqr-badge-mini {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  background: #E1251B;
+  color: #ffffff;
+  padding: 3px 6px;
+  border-radius: 4px;
+  line-height: 1;
+}
+
+.badge-kh {
+  font-size: 0.82rem;
+  font-weight: 900;
+  letter-spacing: -0.5px;
+}
+
+.badge-qr {
+  font-size: 0.72rem;
+  font-weight: 800;
+  background: #ffffff;
+  color: #E1251B;
+  padding: 1px 3px;
+  border-radius: 2px;
+}
+
+.pay-details-col {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  text-align: left;
+}
+
+.pay-title-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.badge-popular-kh {
+  font-size: 0.65rem;
+  font-weight: 700;
+  background: #E1251B;
+  color: #ffffff;
+  padding: 2px 6px;
+  border-radius: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.pay-desc-sub {
+  font-size: 0.76rem;
+  color: #6B7280;
+  font-weight: 400;
+}
+
+/* KHQR Teaser Box */
+.khqr-teaser-box {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  background: #FFFBF8;
+  border: 1px solid #F5EFEB;
+  border-left: 3px solid #E1251B;
+  padding: 1rem 1.25rem;
+  border-radius: var(--radius-md);
+  margin-bottom: 1.5rem;
+}
+
+.teaser-icon-wrap {
+  background: #FFF0F0;
+  color: #E1251B;
+  padding: 6px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.teaser-body strong {
+  display: block;
+  font-size: 0.85rem;
+  color: #1F2937;
+  margin-bottom: 2px;
+}
+
+.teaser-body p {
+  margin: 0;
+  font-size: 0.78rem;
+  color: #6B7280;
+  line-height: 1.4;
 }
 
 .summary-card {

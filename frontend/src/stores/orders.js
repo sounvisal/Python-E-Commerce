@@ -421,6 +421,72 @@ export const useOrdersStore = defineStore('orders', {
       }
     },
 
+    async fetchOrderByNumber(orderNumber) {
+      if (!orderNumber) return null
+      const cleanNum = String(orderNumber).replace('#', '').trim()
+      try {
+        const res = await axios.get(`/api/orders/${cleanNum}`)
+        if (res.data?.data) {
+          const o = res.data.data
+          const mapped = {
+            orderNumber: o.order_number,
+            placedAt: o.created_at ? new Date(o.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'Recent',
+            date: o.created_at ? o.created_at.split('T')[0] : new Date().toISOString().split('T')[0],
+            status: o.status || 'Confirmed',
+            statusText: o.status === 'Delivered' ? 'Delivered successfully' : `${o.status || 'Confirmed'} · Delivery in 3-5 days`,
+            statusType: (o.status || 'confirmed').toLowerCase(),
+            total: o.total,
+            subtotal: o.subtotal,
+            shippingFee: o.shipping_fee,
+            tax: 0.0,
+            rewardPointsEarned: Math.floor(o.total),
+            deliveryMethod: 'Standard Atelier Delivery (3 – 5 days)',
+            deliveredAt: o.status === 'Delivered' ? 'Delivered' : 'Estimated in 3 days',
+            shippingAddress: {
+              name: o.customer_name,
+              address: o.shipping_address,
+              city: `${o.shipping_city || 'Phnom Penh'} ${o.shipping_postal_code || ''}, Cambodia`,
+              phone: o.customer_phone
+            },
+            paymentMethod: {
+              provider: (o.payment_method || 'card').toUpperCase(),
+              details: `Paid via ${(o.payment_method || 'card').toUpperCase()}`,
+              amount: o.total
+            },
+            timeline: [
+              { step: 'Order Placed', date: 'Confirmed', time: '10:00 AM', completed: true },
+              { step: 'Processing', date: o.status !== 'Pending' ? 'Active' : 'Pending', time: '11:00 AM', completed: o.status !== 'Pending' },
+              { step: 'Shipped', date: ['Shipped', 'Out for Delivery', 'Delivered'].includes(o.status) ? 'In Transit' : 'Pending', time: '02:00 PM', completed: ['Shipped', 'Out for Delivery', 'Delivered'].includes(o.status) },
+              { step: 'Out for Delivery', date: ['Out for Delivery', 'Delivered'].includes(o.status) ? 'Out for Delivery' : 'Pending', time: '08:30 AM', completed: ['Out for Delivery', 'Delivered'].includes(o.status) },
+              { step: 'Delivered', date: o.status === 'Delivered' ? 'Completed' : 'Pending', time: '04:00 PM', completed: o.status === 'Delivered' }
+            ],
+            items: (o.items || []).map(item => ({
+              id: item.product_id || 201,
+              name: item.product_name,
+              volume: 'Standard Size',
+              price: item.price,
+              qty: item.quantity,
+              total: item.total,
+              image_url: item.image_url || '/images/prod-sk2.jpg',
+              slug: item.product_name.toLowerCase().replace(/\s+/g, '-')
+            }))
+          }
+
+          const idx = this.orders.findIndex(x => x.orderNumber === cleanNum)
+          if (idx !== -1) {
+            this.orders[idx] = mapped
+          } else {
+            this.orders.unshift(mapped)
+          }
+          this.saveToStorage()
+          return mapped
+        }
+      } catch (err) {
+        console.warn(`Could not fetch backend order ${cleanNum}:`, err)
+      }
+      return this.getOrderById(cleanNum)
+    },
+
     addOrder(order) {
       if (!order) return
       const mapped = {

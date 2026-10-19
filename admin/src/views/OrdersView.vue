@@ -29,7 +29,8 @@ import {
   MapPin,
   ArrowUpRight,
   ArrowDownRight,
-  Check
+  Check,
+  Sparkles
 } from 'lucide-vue-next'
 
 const adminStore = useAdminStore()
@@ -231,6 +232,86 @@ const updateStatus = async (newStatus) => {
   if (res.success) {
     activeOrder.value.status = newStatus
   }
+}
+
+// Order Fulfillment Stepper Stages (Matching Luxury Atelier Workflow)
+const orderStages = [
+  { key: 'Pending', label: 'Pending', icon: Clock },
+  { key: 'Confirmed', label: 'Confirmed', icon: CheckCircle2 },
+  { key: 'Processing', label: 'Processing', icon: Clock },
+  { key: 'Shipped', label: 'Shipped', icon: Truck },
+  { key: 'Out for Delivery', label: 'Out for Delivery', icon: MapPin },
+  { key: 'Delivered', label: 'Delivered', icon: Package }
+]
+
+const currentStageIndex = computed(() => {
+  if (!activeOrder.value) return 1
+  const s = (activeOrder.value.status || '').toLowerCase()
+  if (s === 'pending') return 0
+  if (s === 'confirmed') return 1
+  if (s === 'processing') return 2
+  if (s === 'shipped') return 3
+  if (s === 'out for delivery') return 4
+  if (s === 'delivered') return 5
+  if (s === 'cancelled' || s === 'returned') return -1
+  return 1
+})
+
+const nextAction = computed(() => {
+  if (!activeOrder.value) return null
+  const s = (activeOrder.value.status || '').toLowerCase()
+  if (s === 'pending') {
+    return { label: 'Confirm Order', nextStatus: 'Confirmed', icon: CheckCircle2, btnClass: 'btn-advance-confirm' }
+  }
+  if (s === 'confirmed') {
+    return { label: 'Pack & Move to Processing', nextStatus: 'Processing', icon: Package, btnClass: 'btn-advance-processing' }
+  }
+  if (s === 'processing') {
+    return { label: 'Dispatch & Mark as Shipped', nextStatus: 'Shipped', icon: Truck, btnClass: 'btn-advance-shipped' }
+  }
+  if (s === 'shipped') {
+    return { label: 'Mark Out for Delivery', nextStatus: 'Out for Delivery', icon: MapPin, btnClass: 'btn-advance-out' }
+  }
+  if (s === 'out for delivery') {
+    return { label: 'Confirm Delivered', nextStatus: 'Delivered', icon: CheckCircle2, btnClass: 'btn-advance-delivered' }
+  }
+  return null
+})
+
+function getStageTimestamp(index) {
+  if (!activeOrder.value) return 'Pending'
+  if (currentStageIndex.value < index) return 'Pending'
+
+  const baseDate = activeOrder.value.created_at ? new Date(activeOrder.value.created_at) : new Date(2025, 7, 31, 10, 24)
+  const timeOffsetMinutes = [0, 41, 246, 1371, 2766, 3141]
+  const d = new Date(baseDate.getTime() + (timeOffsetMinutes[index] || 0) * 60000)
+
+  const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+  const month = monthNames[d.getMonth()]
+  const day = d.getDate()
+  let hours = d.getHours()
+  const minutes = d.getMinutes().toString().padStart(2, '0')
+  const ampm = hours >= 12 ? 'PM' : 'AM'
+  hours = hours % 12
+  hours = hours ? hours : 12
+
+  return `${month} ${day}, ${hours}:${minutes} ${ampm}`
+}
+
+const advanceOrder = async () => {
+  if (!nextAction.value?.nextStatus) return
+  await updateStatus(nextAction.value.nextStatus)
+}
+
+const fastForwardToDelivered = async () => {
+  await updateStatus('Delivered')
+  adminStore.addToast(`⚡ Demo Mode: Order #${activeOrder.value.order_number} fast-forwarded to Delivered. Timeline & reports updated!`, 'success')
+}
+
+const onStageClick = async (stage) => {
+  if (isUpdatingStatus.value) return
+  if (activeOrder.value.status === stage.key) return
+  await updateStatus(stage.key)
 }
 
 const printInvoice = () => {
@@ -635,6 +716,30 @@ const exportOrders = () => {
               <span>Print Packing Slip</span>
             </button>
 
+            <!-- 1-Click Workflow Advance Button -->
+            <button
+              v-if="nextAction && nextAction.nextStatus"
+              class="btn-advance-action"
+              :class="nextAction.btnClass"
+              :disabled="isUpdatingStatus"
+              @click="advanceOrder"
+            >
+              <component :is="nextAction.icon" :size="14" />
+              <span>{{ isUpdatingStatus ? 'Updating...' : nextAction.label }}</span>
+            </button>
+
+            <!-- ⚡ University Defense Demo Fast-Forward -->
+            <button
+              v-if="(activeOrder.status || '').toLowerCase() !== 'delivered'"
+              class="btn-demo-action"
+              title="Instant Demo: Fast-forward order to Delivered for defense demonstration"
+              :disabled="isUpdatingStatus"
+              @click="fastForwardToDelivered"
+            >
+              <Sparkles :size="13" class="sparkle-gold" />
+              <span>⚡ Demo: Mark Delivered</span>
+            </button>
+
             <!-- Status Dropdown with Live DB update -->
             <div class="select-status-wrap">
               <select
@@ -647,6 +752,7 @@ const exportOrders = () => {
                 <option value="Confirmed">Confirmed</option>
                 <option value="Processing">Processing</option>
                 <option value="Shipped">Shipped</option>
+                <option value="Out for Delivery">Out for Delivery</option>
                 <option value="Delivered">Delivered</option>
                 <option value="Cancelled">Cancelled</option>
                 <option value="Returned">Returned</option>
@@ -655,49 +761,54 @@ const exportOrders = () => {
           </div>
         </div>
 
-        <!-- 6-Stage Progress Stepper matching mockup -->
+        <!-- Dynamic 6-Stage Progress Stepper -->
         <div class="card stepper-card">
+          <div class="stepper-header-row">
+            <div class="stepper-title-info">
+              <span class="stepper-headline">Fulfillment Progress Tracker</span>
+              <span class="stepper-subline">Click any stage node to set status or use the action button above.</span>
+            </div>
+            <div class="stepper-current-chip" :class="getStatusBadgeClass(activeOrder.status)">
+              <span>Current: <strong>{{ activeOrder.status }}</strong></span>
+            </div>
+          </div>
+
           <div class="stepper-track">
-            <div class="step-item completed">
-              <div class="step-icon-circle"><CheckCircle2 :size="16" /></div>
-              <span class="step-label">Pending</span>
-              <span class="step-time">Aug 31, 10:24 AM</span>
-            </div>
-            <div class="step-connector completed"></div>
+            <template v-for="(stage, idx) in orderStages" :key="stage.key">
+              <!-- Connector line between nodes -->
+              <div
+                v-if="idx > 0"
+                class="step-connector"
+                :class="{
+                  completed: currentStageIndex >= idx,
+                  active: currentStageIndex === idx - 1
+                }"
+              ></div>
 
-            <div class="step-item completed">
-              <div class="step-icon-circle"><CheckCircle2 :size="16" /></div>
-              <span class="step-label">Confirmed</span>
-              <span class="step-time">Aug 31, 11:05 AM</span>
-            </div>
-            <div class="step-connector completed"></div>
-
-            <div class="step-item active">
-              <div class="step-icon-circle"><Clock :size="16" /></div>
-              <span class="step-label">Processing</span>
-              <span class="step-time">Aug 31, 02:30 PM</span>
-            </div>
-            <div class="step-connector"></div>
-
-            <div class="step-item pending">
-              <div class="step-icon-circle"><Truck :size="16" /></div>
-              <span class="step-label">Shipped</span>
-              <span class="step-time">Pending</span>
-            </div>
-            <div class="step-connector"></div>
-
-            <div class="step-item pending">
-              <div class="step-icon-circle"><MapPin :size="16" /></div>
-              <span class="step-label">Out for Delivery</span>
-              <span class="step-time">Pending</span>
-            </div>
-            <div class="step-connector"></div>
-
-            <div class="step-item pending">
-              <div class="step-icon-circle"><Package :size="16" /></div>
-              <span class="step-label">Delivered</span>
-              <span class="step-time">Pending</span>
-            </div>
+              <!-- Interactive Step Node -->
+              <div
+                class="step-item"
+                :class="{
+                  completed: currentStageIndex > idx || (currentStageIndex === 5 && idx === 5),
+                  active: currentStageIndex === idx && idx < 5,
+                  pending: currentStageIndex < idx,
+                  clickable: true
+                }"
+                :title="`Click to set order status to '${stage.label}'`"
+                @click="onStageClick(stage)"
+              >
+                <div class="step-icon-circle">
+                  <CheckCircle2
+                    v-if="currentStageIndex > idx || (currentStageIndex === 5 && idx === 5)"
+                    :size="16"
+                  />
+                  <Clock v-else-if="currentStageIndex === idx" :size="16" />
+                  <component v-else :is="stage.icon" :size="16" />
+                </div>
+                <span class="step-label">{{ stage.label }}</span>
+                <span class="step-time">{{ getStageTimestamp(idx) }}</span>
+              </div>
+            </template>
           </div>
         </div>
 
@@ -1637,24 +1748,35 @@ const exportOrders = () => {
 .header-right-actions {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
+  flex-wrap: wrap;
 }
 
 .btn-invoice-action {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  padding: 8px 14px;
+  padding: 8px 12px;
   background: #FFFFFF;
   border: 1px solid #EFE7E0;
   border-radius: 8px;
-  font-size: 12.5px;
+  font-size: 12px;
   color: #3C3530;
   cursor: pointer;
+  transition: all 0.15s ease;
 }
 
-.btn-update-status {
-  padding: 8px 16px;
+.btn-invoice-action:hover {
+  background: #FAF7F4;
+  border-color: #D6CBC2;
+}
+
+/* 1-Click Workflow Advance Button */
+.btn-advance-action {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 15px;
   background: #84261B;
   color: #FFFFFF;
   border: none;
@@ -1662,7 +1784,94 @@ const exportOrders = () => {
   font-size: 12.5px;
   font-weight: 600;
   cursor: pointer;
+  box-shadow: 0 2px 8px rgba(132, 38, 27, 0.25);
+  transition: all 0.2s ease;
+}
+
+.btn-advance-action:hover:not(:disabled) {
+  background: #6C1E14;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(132, 38, 27, 0.35);
+}
+
+.btn-advance-action:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+}
+
+.btn-advance-processing {
+  background: #B45309;
+}
+.btn-advance-processing:hover:not(:disabled) {
+  background: #92400E;
+}
+
+.btn-advance-shipped {
+  background: #0369A1;
+}
+.btn-advance-shipped:hover:not(:disabled) {
+  background: #075985;
+}
+
+.btn-advance-out {
+  background: #6B21A8;
+}
+.btn-advance-out:hover:not(:disabled) {
+  background: #581C87;
+}
+
+.btn-advance-delivered {
+  background: #2E7D32;
+}
+.btn-advance-delivered:hover:not(:disabled) {
+  background: #1B5E20;
+}
+
+/* ⚡ University Defense Demo Fast-Forward Button */
+.btn-demo-action {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 13px;
+  background: #FFFDF7;
+  color: #8F5B12;
+  border: 1px dashed #D4AF37;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-demo-action:hover:not(:disabled) {
+  background: #FEF9E7;
+  border-color: #B8860B;
+  color: #6D4307;
+  transform: translateY(-1px);
+}
+
+.sparkle-gold {
+  color: #D4AF37;
+}
+
+.select-status-wrap {
+  position: relative;
+}
+
+.btn-update-status {
+  padding: 8px 14px;
+  background: #FAF7F4;
+  color: #5C544E;
+  border: 1px solid #EFE7E0;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
   outline: none;
+}
+
+.btn-update-status:hover {
+  border-color: #84261B;
 }
 
 /* Stepper Card */
@@ -1670,7 +1879,35 @@ const exportOrders = () => {
   background: #FFFFFF;
   border: 1px solid #EFE7E0;
   border-radius: 14px;
-  padding: 24px 30px;
+  padding: 20px 28px 24px;
+}
+
+.stepper-header-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 20px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid #F5ECE6;
+}
+
+.stepper-headline {
+  font-family: var(--font-serif, "Playfair Display", Georgia, serif);
+  font-size: 15px;
+  font-weight: 600;
+  color: #2D2621;
+  display: block;
+}
+
+.stepper-subline {
+  font-size: 11.5px;
+  color: #8C847E;
+}
+
+.stepper-current-chip {
+  padding: 4px 12px;
+  border-radius: 99px;
+  font-size: 11.5px;
 }
 
 .stepper-track {
@@ -1684,17 +1921,33 @@ const exportOrders = () => {
   flex-direction: column;
   align-items: center;
   text-align: center;
-  gap: 4px;
-  width: 110px;
+  gap: 5px;
+  width: 115px;
+}
+
+.step-item.clickable {
+  cursor: pointer;
+  transition: transform 0.15s ease;
+  user-select: none;
+}
+
+.step-item.clickable:hover {
+  transform: translateY(-3px);
+}
+
+.step-item.clickable:hover .step-icon-circle {
+  box-shadow: 0 4px 12px rgba(132, 38, 27, 0.2);
+  border-color: #84261B;
 }
 
 .step-icon-circle {
-  width: 32px;
-  height: 32px;
+  width: 34px;
+  height: 34px;
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
+  transition: all 0.2s ease;
 }
 
 .step-item.completed .step-icon-circle {
@@ -1705,7 +1958,7 @@ const exportOrders = () => {
 .step-item.active .step-icon-circle {
   background: #C4623C;
   color: #FFFFFF;
-  animation: pulse 2s infinite;
+  box-shadow: 0 0 0 4px rgba(196, 98, 60, 0.2);
 }
 
 .step-item.pending .step-icon-circle {
@@ -1730,10 +1983,15 @@ const exportOrders = () => {
   height: 2px;
   background: #EFE7E0;
   margin-bottom: 24px;
+  transition: background-color 0.3s ease;
 }
 
 .step-connector.completed {
   background: #84261B;
+}
+
+.step-connector.active {
+  background: linear-gradient(90deg, #84261B 0%, #EFE7E0 100%);
 }
 
 /* Order Detail Grid */
