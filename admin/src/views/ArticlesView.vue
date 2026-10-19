@@ -717,7 +717,7 @@ const publishArticle = () => {
                   <button
                     class="action-icon-btn"
                     title="View Online"
-                    @click="alert(`Opening /articles/${art.slug}`)"
+                    @click="window.open(`http://localhost:5173/articles/${art.slug}`, '_blank')"
                   >
                     <Eye :size="14" />
                   </button>

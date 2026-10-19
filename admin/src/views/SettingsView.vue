@@ -324,11 +324,11 @@ function backupStoreData() {
                       <span class="logo-text-display">Luméa</span>
                     </div>
                     <div class="logo-btn-col">
-                      <button class="btn-change-box" @click="alert('Upload new atelier store logo...')">
+                      <button class="btn-change-box" @click="window.alert('Upload new atelier store logo...')">
                         <Upload class="w-3 h-3 mr-1" />
                         <span>Change Logo</span>
                       </button>
-                      <button class="btn-remove-box" @click="alert('Logo reset to default')">
+                      <button class="btn-remove-box" @click="window.alert('Logo reset to default')">
                         <Trash2 class="w-3 h-3 mr-1" />
                         <span>Remove</span>
                       </button>
@@ -347,11 +347,11 @@ function backupStoreData() {
                       </svg>
                     </div>
                     <div class="logo-btn-col">
-                      <button class="btn-change-box" @click="alert('Upload new favicon...')">
+                      <button class="btn-change-box" @click="window.alert('Upload new favicon...')">
                         <Upload class="w-3 h-3 mr-1" />
                         <span>Change Favicon</span>
                       </button>
-                      <button class="btn-remove-box" @click="alert('Favicon reset to default')">
+                      <button class="btn-remove-box" @click="window.alert('Favicon reset to default')">
                         <Trash2 class="w-3 h-3 mr-1" />
                         <span>Remove</span>
                       </button>
