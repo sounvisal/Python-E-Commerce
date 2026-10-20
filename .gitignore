@@ -57,6 +57,17 @@ test_*.js
 *.png
 
 
+# Environment & Secrets
+.env
+.env.*
+*.env
+
+# Payment Bridge & Scraping Scripts
+payway_bridge.js
+extract_full_data.js
+test_payway*.js
+*.payway*
+
 # Mockup format specifications (excluded from remote GitHub repository)
 format/
 dashboard-format/

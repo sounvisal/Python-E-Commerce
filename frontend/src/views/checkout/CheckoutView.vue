@@ -329,7 +329,7 @@
       v-if="showKHQRModal && pendingKhqrOrder"
       :order-number="pendingKhqrOrder.order_number"
       :amount="pendingKhqrOrder.total"
-      merchant-name="SUON VISAL"
+      merchant-name="LUMÉA ATELIER"
       @approved="handleKHQRApproved"
       @cancelled="handleKHQRCancelled"
     />

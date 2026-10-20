@@ -1,10 +1,13 @@
 import os
 import json
-import subprocess
 import asyncio
 from typing import Optional, Dict, Any
 from sqlalchemy.orm import Session
 from app.models.order import Order
+
+DEFAULT_MERCHANT_NAME = os.getenv("BAKONG_MERCHANT_NAME", "LUMEA ATELIER")
+DEFAULT_MERCHANT_ID = os.getenv("BAKONG_ACCOUNT_ID", "000000000000000")
+DEFAULT_PAYWAY_URL = os.getenv("ABA_PAYWAY_URL", "")
 
 def crc16_emvco(data: str) -> str:
     """
@@ -21,19 +24,25 @@ def crc16_emvco(data: str) -> str:
                 crc = (crc << 1) & 0xFFFF
     return f"{crc:04X}"
 
-def build_instant_bakong_khqr(amount: float, order_number: str = "LUM-000000", merchant_name: str = "SUON VISAL") -> str:
+def build_instant_bakong_khqr(
+    amount: float,
+    order_number: str = "LUM-000000",
+    merchant_name: Optional[str] = None
+) -> str:
     """
     Generates a 100% compliant Dynamic Bakong KHQR (EMVCo TLV format)
-    configured for ABA Bank (merchant account 0016abaakhppxxx@abaa).
+    configured for Luméa Atelier digital checkout.
     """
+    if not merchant_name:
+        merchant_name = os.getenv("BAKONG_MERCHANT_NAME", DEFAULT_MERCHANT_NAME)
+    
+    account_id = os.getenv("BAKONG_ACCOUNT_ID", DEFAULT_MERCHANT_ID)
+    
     amt_str = f"{amount:.2f}"
     
-    # Tag 30: Merchant Account Information (ABA Bank Bakong)
-    # Subtag 00: Global Unique Identifier "abaakhppxxx@abaa" (len: 16)
-    # Subtag 01: Account/Merchant ID "126052613334027" (len: 15)
-    # Subtag 02: Acquiring Bank "ABA Bank" (len: 8)
+    # Tag 30: Merchant Account Information
     sub_00 = "0016abaakhppxxx@abaa"
-    sub_01 = "0115126052613334027"
+    sub_01 = f"01{len(account_id):02d}{account_id}"
     sub_02 = "0208ABA Bank"
     tag_30_val = f"{sub_00}{sub_01}{sub_02}"
     tag_30 = f"30{len(tag_30_val):02d}{tag_30_val}"
@@ -71,34 +80,34 @@ def build_instant_bakong_khqr(amount: float, order_number: str = "LUM-000000", m
 async def get_bakong_khqr_data(amount: float, order_number: str = "LUM-000000", try_live: bool = True) -> Dict[str, Any]:
     """
     Obtains KHQR payment data.
-    First attempts live generation via ABA PayWay bridge with a short timeout.
-    If unavailable or timed out, falls back instantly to the EMVCo generator.
+    If ABA_PAYWAY_URL is configured in environment, attempts bridge generation.
+    Otherwise, instantly returns compliant Dynamic Bakong KHQR.
     """
-    # Default instant fallback
-    instant_qr = build_instant_bakong_khqr(amount, order_number)
+    merchant_name = os.getenv("BAKONG_MERCHANT_NAME", DEFAULT_MERCHANT_NAME)
+    payway_url = os.getenv("ABA_PAYWAY_URL", DEFAULT_PAYWAY_URL)
+    instant_qr = build_instant_bakong_khqr(amount, order_number, merchant_name)
     
-    if not try_live:
+    if not try_live or not payway_url:
         return {
             "success": True,
             "qr_string": instant_qr,
             "amount": amount,
             "currency": "USD",
-            "merchant_name": "SUON VISAL",
+            "merchant_name": merchant_name,
             "order_number": order_number,
             "client_id": None,
             "source": "instant_emvco",
-            "payway_url": "https://link.payway.com.kh/ABAPAYaC455755m"
+            "payway_url": payway_url or ""
         }
 
-    # Attempt live bridge
+    # Attempt live bridge only if payway_url is configured and script exists
     bridge_path = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), "..", "payway_bridge.js")
     bridge_path = os.path.abspath(bridge_path)
 
     if os.path.exists(bridge_path):
         try:
-            # Run node bridge with 12s timeout
             proc = await asyncio.create_subprocess_exec(
-                "node", bridge_path, "generate", str(amount), "https://link.payway.com.kh/ABAPAYaC455755m",
+                "node", bridge_path, "generate", str(amount), payway_url,
                 stdout=asyncio.subprocess.PIPE,
                 stderr=asyncio.subprocess.PIPE
             )
@@ -111,23 +120,23 @@ async def get_bakong_khqr_data(amount: float, order_number: str = "LUM-000000", 
                         "qr_string": res["qr_string"],
                         "amount": amount,
                         "currency": "USD",
-                        "merchant_name": "SUON VISAL",
+                        "merchant_name": merchant_name,
                         "order_number": order_number,
                         "client_id": res.get("client_id"),
                         "source": "live_aba_payway",
-                        "payway_url": "https://link.payway.com.kh/ABAPAYaC455755m"
+                        "payway_url": payway_url
                     }
         except Exception:
-            pass  # Fall back to instant_qr
+            pass
 
     return {
         "success": True,
         "qr_string": instant_qr,
         "amount": amount,
         "currency": "USD",
-        "merchant_name": "SUON VISAL",
+        "merchant_name": merchant_name,
         "order_number": order_number,
         "client_id": None,
         "source": "instant_emvco",
-        "payway_url": "https://link.payway.com.kh/ABAPAYaC455755m"
+        "payway_url": payway_url or ""
     }

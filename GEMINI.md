@@ -157,7 +157,7 @@ Luméa features a high-conversion multimedia engine built for dermatological tex
 
 Luméa features an authentic, localized digital payment system matching the National Bank of Cambodia (NBC) Bakong KHQR standard and ABA PayWay:
 - **FastAPI Endpoints**:
-  - `POST /api/payments/khqr/generate`: Generates compliant dynamic Bakong EMVCo TLV payload with standard CCITT CRC16 (`0x1021` polynomial with `0xFFFF` seed), integrating with live ABA PayWay link (`https://link.payway.com.kh/ABAPAYaC455755m`).
+  - `POST /api/payments/khqr/generate`: Generates compliant dynamic Bakong EMVCo TLV payload with standard CCITT CRC16 (`0x1021` polynomial with `0xFFFF` seed), with optional dynamic ABA PayWay link support via environment variables.
   - `POST /api/payments/khqr/check`: Polling endpoint checking order clearance and live ABA PayWay transactions.
   - `POST /api/payments/khqr/simulate-approve`: Defense demonstration mode generating `BAKONG-ABA-{TIMESTAMP}-{ID}` clearance reference and updating order state to `Paid`.
 - **Storefront KHQR Modal (`KHQRModal.vue`)**:

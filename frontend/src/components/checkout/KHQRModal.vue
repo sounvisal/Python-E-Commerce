@@ -20,7 +20,7 @@
         <!-- Merchant & Amount Info -->
         <div class="khqr-body">
           <div class="khqr-merchant-info">
-            <h3 class="khqr-merchant-name">{{ merchantName || 'SUON VISAL' }}</h3>
+            <h3 class="khqr-merchant-name">{{ merchantName || 'LUMÉA ATELIER' }}</h3>
             <span class="khqr-merchant-sub">LUMÉA ATELIER &middot; OFFICIAL STORE</span>
             <div class="khqr-order-tag">Order #{{ orderNumber }}</div>
           </div>
@@ -139,7 +139,7 @@ const props = defineProps({
   },
   merchantName: {
     type: String,
-    default: 'SUON VISAL'
+    default: 'LUMÉA ATELIER'
   }
 })
 
@@ -151,7 +151,7 @@ const paymentApproved = ref(false)
 const simulating = ref(false)
 const qrString = ref('')
 const clientId = ref(null)
-const paywayUrl = ref('https://link.payway.com.kh/ABAPAYaC455755m')
+const paywayUrl = ref('')
 const timeLeft = ref(300) // 5 minutes (300 seconds)
 
 let timerInterval = null
