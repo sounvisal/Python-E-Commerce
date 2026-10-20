@@ -1,12 +1,15 @@
 import os
+import time
+import logging
 from contextlib import asynccontextmanager
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import RedirectResponse
 from fastapi.staticfiles import StaticFiles
 
 from app.core.config import settings
 from app.core.database import engine, Base, SessionLocal
+from app.core.rate_limit import RateLimitMiddleware
 from app.api import (
     system,
     categories,
@@ -26,6 +29,14 @@ from app.api import (
 )
 from app.seed.seed_data import seed_database
 
+# Configure structured logging
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s [%(levelname)s] [%(name)s] %(message)s",
+    datefmt="%Y-%m-%d %H:%M:%S"
+)
+logger = logging.getLogger("lumea.server")
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # 1. Startup: Create tables if not exist
@@ -38,8 +49,9 @@ async def lifespan(app: FastAPI):
     finally:
         db.close()
         
+    logger.info("Luméa Atelier E-Commerce backend service initialized successfully.")
     yield
-    # Shutdown logic (if any)
+    logger.info("Luméa Atelier E-Commerce backend service shutting down.")
 
 app = FastAPI(
     title=settings.PROJECT_NAME,
@@ -50,7 +62,32 @@ app = FastAPI(
     redoc_url="/redoc"
 )
 
-# CORS configuration for Vue 3 client communication
+# 1. Security Headers & Request Timing Middleware
+@app.middleware("http")
+async def security_and_timing_middleware(request: Request, call_next):
+    start_time = time.perf_counter()
+    response = await call_next(request)
+    duration_ms = (time.perf_counter() - start_time) * 1000
+
+    # Timing header for observability
+    response.headers["X-Process-Time"] = f"{duration_ms:.2f}ms"
+
+    # OWASP Recommended Security Headers
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    response.headers["X-Frame-Options"] = "SAMEORIGIN"
+    response.headers["X-XSS-Protection"] = "1; mode=block"
+    response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+
+    # Structured request logging
+    if not request.url.path.startswith("/images") and not request.url.path.startswith("/videos"):
+        logger.info(f"{request.method} {request.url.path} -> {response.status_code} ({duration_ms:.1f}ms)")
+
+    return response
+
+# 2. Rate Limiting Middleware (Brute-force & DDoS mitigation)
+app.add_middleware(RateLimitMiddleware)
+
+# 3. CORS configuration for Vue 3 storefront & admin SPA
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.CORS_ORIGINS,

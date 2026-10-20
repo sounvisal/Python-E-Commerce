@@ -27,7 +27,10 @@ def get_current_user(
         )
     
     user_id = payload.get("sub")
-    user = db.query(User).filter(User.id == int(user_id)).first()
+    if user_id and str(user_id).isdigit():
+        user = db.query(User).filter(User.id == int(user_id)).first()
+    else:
+        user = db.query(User).filter(User.email == user_id).first()
     if not user:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
     
