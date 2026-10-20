@@ -1,6 +1,10 @@
 <script setup>
+import apiClient from '@/api/client'
 import { ref, computed, reactive, onMounted } from 'vue'
 import { useAdminStore } from '@/stores/admin'
+import { validateProduct } from '@/utils/validation'
+import ConfirmDialog from '@/components/common/ConfirmDialog.vue'
+import LoadingSkeleton from '@/components/common/LoadingSkeleton.vue'
 import {
   Search,
   Plus,
@@ -281,14 +285,18 @@ const openEditProduct = (prod) => {
 // Save Product directly to SQLite Database
 const isSaving = ref(false)
 const saveProduct = async () => {
-  if (!productForm.name) {
-    alert('Please enter a product name.')
+  const validation = validateProduct(productForm)
+  if (!validation.valid) {
+    validation.errors.forEach(err => {
+      adminStore.addToast(err, 'error')
+    })
     return
   }
+
   isSaving.value = true
 
   const payload = {
-    name: productForm.name,
+    name: productForm.name.trim(),
     brand: productForm.brand,
     category_id: productForm.category_id,
     category_name: productForm.category_name,
@@ -315,6 +323,7 @@ const saveProduct = async () => {
     currentView.value = 'list'
   } catch (err) {
     console.error('Failed to save product:', err)
+    adminStore.addToast('Failed to save product. Please try again.', 'error')
   } finally {
     isSaving.value = false
   }
@@ -326,10 +335,20 @@ const openQuickView = (prod) => {
   showPreviewModal.value = true
 }
 
-// Delete Product
-const deleteProduct = async (id, name) => {
-  if (confirm(`Are you sure you want to delete "${name}" from the atelier catalog?`)) {
-    await adminStore.deleteProduct(id)
+// Delete Product Confirmation Dialog
+const showDeleteConfirm = ref(false)
+const deleteTarget = ref(null)
+
+const deleteProduct = (id, name) => {
+  deleteTarget.value = { id, name }
+  showDeleteConfirm.value = true
+}
+
+const confirmDelete = async () => {
+  if (deleteTarget.value) {
+    await adminStore.deleteProduct(deleteTarget.value.id)
+    showDeleteConfirm.value = false
+    deleteTarget.value = null
   }
 }
 
@@ -572,7 +591,9 @@ const toggleSkinConcern = (concern) => {
 
       <!-- Main Products Table Card -->
       <div class="card table-card">
-        <table class="atelier-table">
+        <LoadingSkeleton v-if="adminStore.productsLoading" :rows="8" :columns="8" />
+        <template v-else>
+          <table class="atelier-table">
           <thead>
             <tr>
               <th class="col-checkbox">
@@ -746,6 +767,7 @@ const toggleSkinConcern = (concern) => {
             </select>
           </div>
         </div>
+        </template>
       </div>
     </template>
 
@@ -1283,6 +1305,18 @@ const toggleSkinConcern = (concern) => {
         </div>
       </div>
     </div>
+
+    <!-- Delete Product Confirmation Dialog -->
+    <ConfirmDialog
+      :is-open="showDeleteConfirm"
+      title="Delete Product?"
+      :message="`Are you sure you want to delete '${deleteTarget?.name}' from the atelier catalog? This action cannot be undone.`"
+      type="danger"
+      confirm-text="Delete Product"
+      cancel-text="Cancel"
+      @confirm="confirmDelete"
+      @cancel="showDeleteConfirm = false"
+    />
   </div>
 </template>
 

@@ -1,6 +1,8 @@
 <script setup>
 import { ref, computed, reactive, onMounted } from 'vue'
 import { useAdminStore } from '@/stores/admin'
+import { validateBrand } from '@/utils/validation'
+import ConfirmDialog from '@/components/common/ConfirmDialog.vue'
 import {
   Search,
   Plus,
@@ -211,8 +213,9 @@ const openEditBrand = (brand) => {
 
 const isSaving = ref(false)
 const saveBrand = async () => {
-  if (!brandForm.name) {
-    alert('Please provide a brand name.')
+  const validation = validateBrand(brandForm)
+  if (!validation.valid) {
+    validation.errors.forEach(err => adminStore.addToast(err, 'error'))
     return
   }
   isSaving.value = true
@@ -245,12 +248,23 @@ const saveBrand = async () => {
   }
 }
 
-const deleteBrand = async (brand) => {
-  if (confirm(`Are you sure you want to delete "${brand.name}"?`)) {
-    await adminStore.deleteBrand(brand.id)
-    if (activeBrand.value?.id === brand.id) {
+// Delete Brand Confirmation Dialog
+const showDeleteConfirm = ref(false)
+const deleteTarget = ref(null)
+
+const deleteBrand = (brand) => {
+  deleteTarget.value = brand
+  showDeleteConfirm.value = true
+}
+
+const confirmDeleteBrand = async () => {
+  if (deleteTarget.value) {
+    await adminStore.deleteBrand(deleteTarget.value.id)
+    if (activeBrand.value?.id === deleteTarget.value.id) {
       currentView.value = 'list'
     }
+    showDeleteConfirm.value = false
+    deleteTarget.value = null
   }
 }
 
@@ -1008,6 +1022,17 @@ const brandProducts = computed(() => {
         </div>
       </div>
     </template>
+    <!-- Delete Brand Confirmation Dialog -->
+    <ConfirmDialog
+      :is-open="showDeleteConfirm"
+      title="Delete Brand?"
+      :message="`Are you sure you want to delete '${deleteTarget?.name}' from the atelier brands directory? This action cannot be undone.`"
+      type="danger"
+      confirm-text="Delete Brand"
+      cancel-text="Cancel"
+      @confirm="confirmDeleteBrand"
+      @cancel="showDeleteConfirm = false"
+    />
   </div>
 </template>
 

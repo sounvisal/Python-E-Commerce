@@ -1,9 +1,10 @@
 import axios from 'axios'
 import { defineStore } from 'pinia'
+import { safeGetJSON, safeSetJSON } from '@/utils/storage'
 
 export const useCartStore = defineStore('cart', {
   state: () => ({
-    items: JSON.parse(localStorage.getItem('lumea_cart') || '[]'),
+    items: safeGetJSON('lumea_cart', []),
     isDrawerOpen: false,
     discountCode: localStorage.getItem('lumea_discount_code') || '',
     discountRate: parseFloat(localStorage.getItem('lumea_discount_rate') || '0'),
@@ -49,7 +50,7 @@ export const useCartStore = defineStore('cart', {
 
   actions: {
     saveToStorage() {
-      localStorage.setItem('lumea_cart', JSON.stringify(this.items))
+      safeSetJSON('lumea_cart', this.items)
       localStorage.setItem('lumea_discount_code', this.discountCode)
       localStorage.setItem('lumea_discount_rate', this.discountRate.toString())
     },

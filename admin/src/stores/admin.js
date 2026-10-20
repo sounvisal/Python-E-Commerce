@@ -79,22 +79,46 @@ export const useAdminStore = defineStore('admin', () => {
 
   // System status
   const backendConnected = ref(true)
+  let offlineWarningShown = false
 
-  // Toast notifications
+  function notifyOffline(customMsg) {
+    if (!offlineWarningShown) {
+      offlineWarningShown = true
+      addToast(customMsg || 'Backend connection error. Operating with cached data.', 'warning', 6000)
+      setTimeout(() => {
+        offlineWarningShown = false
+      }, 20000)
+    }
+  }
+
+  // Toast notifications with memory leak prevention
   const toasts = ref([])
+  const toastTimeouts = new Map()
 
   function addToast(message, type = 'success', duration = 4000) {
     const id = Date.now() + Math.random()
     toasts.value.push({ id, message, type })
     if (duration > 0) {
-      setTimeout(() => {
+      const timeoutId = setTimeout(() => {
         removeToast(id)
       }, duration)
+      toastTimeouts.set(id, timeoutId)
     }
+    return id
   }
 
   function removeToast(id) {
+    if (toastTimeouts.has(id)) {
+      clearTimeout(toastTimeouts.get(id))
+      toastTimeouts.delete(id)
+    }
     toasts.value = toasts.value.filter((t) => t.id !== id)
+  }
+
+  function clearAllToasts() {
+    toastTimeouts.forEach((timeoutId) => clearTimeout(timeoutId))
+    toastTimeouts.clear()
+    toasts.value = []
   }
 
   // --- ACTIONS ---
@@ -110,6 +134,7 @@ export const useAdminStore = defineStore('admin', () => {
     } catch (err) {
       console.warn('Could not fetch stats, using cached/demo data:', err)
       backendConnected.value = false
+      notifyOffline('Backend unavailable. Showing atelier cached stats.')
     } finally {
       statsLoading.value = false
     }
@@ -127,6 +152,7 @@ export const useAdminStore = defineStore('admin', () => {
     } catch (err) {
       console.warn('Could not fetch orders:', err)
       backendConnected.value = false
+      notifyOffline('Backend unavailable. Showing atelier cached orders.')
     } finally {
       ordersLoading.value = false
     }
@@ -165,6 +191,7 @@ export const useAdminStore = defineStore('admin', () => {
     } catch (err) {
       console.warn('Could not fetch products:', err)
       backendConnected.value = false
+      notifyOffline('Backend unavailable. Showing atelier cached products.')
     } finally {
       productsLoading.value = false
     }
@@ -231,6 +258,7 @@ export const useAdminStore = defineStore('admin', () => {
     } catch (err) {
       console.warn('Could not fetch categories:', err)
       backendConnected.value = false
+      notifyOffline('Backend unavailable. Showing atelier cached categories.')
     } finally {
       categoriesLoading.value = false
     }
@@ -295,6 +323,7 @@ export const useAdminStore = defineStore('admin', () => {
     } catch (err) {
       console.warn('Could not fetch customers:', err)
       backendConnected.value = false
+      notifyOffline('Backend unavailable. Showing atelier cached customers.')
     } finally {
       customersLoading.value = false
     }
@@ -311,6 +340,7 @@ export const useAdminStore = defineStore('admin', () => {
     } catch (err) {
       console.warn('Could not fetch brands:', err)
       backendConnected.value = false
+      notifyOffline('Backend unavailable. Showing atelier cached brands.')
     } finally {
       brandsLoading.value = false
     }
@@ -552,6 +582,7 @@ export const useAdminStore = defineStore('admin', () => {
     toasts,
     addToast,
     removeToast,
+    clearAllToasts,
     fetchStats,
     fetchOrders,
     updateOrderStatus,

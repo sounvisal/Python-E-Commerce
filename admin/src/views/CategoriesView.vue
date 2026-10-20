@@ -1,6 +1,8 @@
 <script setup>
 import { ref, computed, reactive, onMounted } from 'vue'
 import { useAdminStore } from '@/stores/admin'
+import { validateCategory } from '@/utils/validation'
+import ConfirmDialog from '@/components/common/ConfirmDialog.vue'
 import {
   Search,
   Plus,
@@ -137,15 +139,22 @@ const openEditCategory = (cat) => {
 
 // Save Category to Database
 const saveCategory = async () => {
-  if (!categoryForm.name) {
-    alert('Please enter a category name.')
+  const validation = validateCategory({
+    name: categoryForm.name,
+    slug: categoryForm.slug || categoryForm.name.toLowerCase().replace(/\s+/g, '-')
+  })
+
+  if (!validation.valid) {
+    validation.errors.forEach(err => {
+      adminStore.addToast(err, 'error')
+    })
     return
   }
 
   isSubmitting.value = true
   const payload = {
-    name: categoryForm.name,
-    slug: categoryForm.slug || categoryForm.name.toLowerCase().replace(/\s+/g, '-'),
+    name: categoryForm.name.trim(),
+    slug: (categoryForm.slug || categoryForm.name.toLowerCase().replace(/\s+/g, '-')).trim(),
     description: categoryForm.description,
     image: categoryForm.image,
     icon: categoryForm.icon
@@ -165,10 +174,20 @@ const saveCategory = async () => {
   }
 }
 
-// Delete Category
-const deleteCategory = async (cat) => {
-  if (confirm(`Are you sure you want to delete category "${cat.name}"?`)) {
-    await adminStore.deleteCategory(cat.id)
+// Delete Category Confirmation Dialog
+const showDeleteConfirm = ref(false)
+const deleteTarget = ref(null)
+
+const deleteCategory = (cat) => {
+  deleteTarget.value = cat
+  showDeleteConfirm.value = true
+}
+
+const confirmDeleteCategory = async () => {
+  if (deleteTarget.value) {
+    await adminStore.deleteCategory(deleteTarget.value.id)
+    showDeleteConfirm.value = false
+    deleteTarget.value = null
   }
 }
 
@@ -487,6 +506,18 @@ const moveOrder = (cat, direction) => {
         </div>
       </div>
     </div>
+
+    <!-- Delete Category Confirmation Dialog -->
+    <ConfirmDialog
+      :is-open="showDeleteConfirm"
+      title="Delete Category?"
+      :message="`Are you sure you want to delete category '${deleteTarget?.name}'? Products assigned to this category will need to be recategorized.`"
+      type="danger"
+      confirm-text="Delete Category"
+      cancel-text="Cancel"
+      @confirm="confirmDeleteCategory"
+      @cancel="showDeleteConfirm = false"
+    />
   </div>
 </template>
 

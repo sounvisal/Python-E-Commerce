@@ -1,20 +1,15 @@
 import apiClient from '@/api/client'
 import { defineStore } from 'pinia'
 import { computed, ref } from 'vue'
+import { safeGetJSON, safeSetJSON, safeRemove } from '@/utils/storage'
 
 export const useAuthStore = defineStore('auth', () => {
-  const token = ref(localStorage.getItem('lumea_admin_token') || 'demo_super_admin_session_active')
-  const user = ref(
-    JSON.parse(localStorage.getItem('lumea_admin_user') || 'null') || {
-      name: 'Sreynich Chan',
-      email: 'admin@lumea.com',
-      role: 'Super Admin',
-    }
-  )
+  const token = ref(localStorage.getItem('lumea_admin_token') || null)
+  const user = ref(safeGetJSON('lumea_admin_user', null))
   const isLoading = ref(false)
   const error = ref(null)
 
-  const isAuthenticated = computed(() => !!token.value)
+  const isAuthenticated = computed(() => !!(token.value && user.value))
 
   async function login(email, password) {
     isLoading.value = true
@@ -29,7 +24,7 @@ export const useAuthStore = defineStore('auth', () => {
           role: 'Master Curator / Admin',
         }
         localStorage.setItem('lumea_admin_token', token.value)
-        localStorage.setItem('lumea_admin_user', JSON.stringify(user.value))
+        safeSetJSON('lumea_admin_user', user.value)
         return { success: true }
       }
       return { success: false, message: 'Invalid server response' }
@@ -50,7 +45,7 @@ export const useAuthStore = defineStore('auth', () => {
       role: 'Master Curator / Admin',
     }
     localStorage.setItem('lumea_admin_token', token.value)
-    localStorage.setItem('lumea_admin_user', JSON.stringify(user.value))
+    safeSetJSON('lumea_admin_user', user.value)
     return true
   }
 
@@ -64,8 +59,8 @@ export const useAuthStore = defineStore('auth', () => {
     } finally {
       token.value = null
       user.value = null
-      localStorage.removeItem('lumea_admin_token')
-      localStorage.removeItem('lumea_admin_user')
+      safeRemove('lumea_admin_token')
+      safeRemove('lumea_admin_user')
     }
   }
 

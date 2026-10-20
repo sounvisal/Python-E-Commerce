@@ -1,5 +1,6 @@
 import { defineStore } from 'pinia'
 import { useNotificationStore } from './notification'
+import { safeGetJSON, safeSetJSON, safeRemove } from '@/utils/storage'
 
 const DEFAULT_USER = {
   name: 'Sreynich Chan',
@@ -68,12 +69,13 @@ const DEFAULT_USER = {
 
 export const useAuthStore = defineStore('auth', {
   state: () => {
-    const savedUser = localStorage.getItem('lumea_auth_user')
-    const savedToken = localStorage.getItem('lumea_auth_token')
+    const user = safeGetJSON('lumea_auth_user', null)
+    const token = localStorage.getItem('lumea_auth_token') || null
+    
     return {
-      user: savedUser ? JSON.parse(savedUser) : { ...DEFAULT_USER },
-      token: savedToken || 'demo-auth-token-lumea',
-      isAuthenticated: Boolean(savedToken || savedUser || true), // pre-authenticated for seamless mockup flow
+      user,
+      token,
+      isAuthenticated: !!(token && user),
     }
   },
 
@@ -88,11 +90,11 @@ export const useAuthStore = defineStore('auth', {
 
   actions: {
     persist() {
-      localStorage.setItem('lumea_auth_user', JSON.stringify(this.user))
+      safeSetJSON('lumea_auth_user', this.user)
       if (this.token) {
         localStorage.setItem('lumea_auth_token', this.token)
       } else {
-        localStorage.removeItem('lumea_auth_token')
+        safeRemove('lumea_auth_token')
       }
     },
 
@@ -102,9 +104,12 @@ export const useAuthStore = defineStore('auth', {
       this.isAuthenticated = true
       
       // If logging in with different credentials, update display
-      if (email && email !== this.user.email) {
+      if (email && email !== this.user?.email) {
+        if (!this.user) this.user = { ...DEFAULT_USER }
         this.user.email = email
         this.user.name = email.split('@')[0]
+      } else if (!this.user) {
+        this.user = { ...DEFAULT_USER }
       }
       
       if (remember) {
@@ -140,8 +145,10 @@ export const useAuthStore = defineStore('auth', {
     logout() {
       const notificationStore = useNotificationStore()
       this.token = null
+      this.user = null
       this.isAuthenticated = false
-      localStorage.removeItem('lumea_auth_token')
+      safeRemove('lumea_auth_token')
+      safeRemove('lumea_auth_user')
       notificationStore.addToast('You have been signed out.', 'info')
     },
 

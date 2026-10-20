@@ -1,4 +1,5 @@
 <script setup>
+import AdminSidebar from '@/components/layout/AdminSidebar.vue'
 import ToastContainer from '@/components/common/ToastContainer.vue'
 import AdminHeader from '@/components/layout/AdminHeader.vue'
 import { ref, watch } from 'vue'
