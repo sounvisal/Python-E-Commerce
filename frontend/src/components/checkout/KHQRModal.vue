@@ -20,7 +20,7 @@
         <!-- Merchant & Amount Info -->
         <div class="khqr-body">
           <div class="khqr-merchant-info">
-            <h3 class="khqr-merchant-name">{{ merchantName || 'LUMÉA ATELIER' }}</h3>
+            <h3 class="khqr-merchant-name">{{ liveMerchantName }}</h3>
             <span class="khqr-merchant-sub">LUMÉA ATELIER &middot; OFFICIAL STORE</span>
             <div class="khqr-order-tag">Order #{{ orderNumber }}</div>
           </div>
@@ -152,6 +152,7 @@ const simulating = ref(false)
 const qrString = ref('')
 const clientId = ref(null)
 const paywayUrl = ref('')
+const liveMerchantName = ref(props.merchantName || 'LUMÉA ATELIER')
 const timeLeft = ref(300) // 5 minutes (300 seconds)
 
 let timerInterval = null
@@ -188,6 +189,7 @@ async function fetchAndRenderKHQR() {
       qrString.value = d.qr_string
       clientId.value = d.client_id
       if (d.payway_url) paywayUrl.value = d.payway_url
+      if (d.merchant_name) liveMerchantName.value = d.merchant_name
     }
   } catch (err) {
     console.warn('Live KHQR generate failed, falling back to local EMVCo string', err)

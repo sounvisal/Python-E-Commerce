@@ -2,8 +2,12 @@ import os
 import json
 import asyncio
 from typing import Optional, Dict, Any
+from dotenv import load_dotenv
 from sqlalchemy.orm import Session
 from app.models.order import Order
+
+# Load local environment if present (gitignored)
+load_dotenv()
 
 DEFAULT_MERCHANT_NAME = os.getenv("BAKONG_MERCHANT_NAME", "LUMEA ATELIER")
 DEFAULT_MERCHANT_ID = os.getenv("BAKONG_ACCOUNT_ID", "000000000000000")
