@@ -128,7 +128,6 @@
             <div class="payment-options">
               <!-- 1. Bakong KHQR Option -->
               <label
-                v-if="!hostedCheckout"
                 class="payment-option khqr-payment-option"
                 :class="{ selected: form.payment_method === 'khqr' }"
               >
@@ -388,7 +387,7 @@ const form = reactive({
   shipping_address: '',
   shipping_city: '',
   shipping_postal_code: '',
-  payment_method: hostedCheckout ? 'cod' : 'khqr',
+  payment_method: 'khqr',
   card_number: '4242 4242 4242 4242',
   card_expiry: '12/28',
   card_cvc: '888',
