@@ -16,6 +16,36 @@ from app.core.security import get_password_hash
 
 SEED_FILE = os.path.join(os.path.dirname(__file__), "seed_data.json")
 
+def _sync_sequence(db: Session, table_name: str):
+    """Safely synchronizes PostgreSQL serial sequences after seeding explicit primary key IDs."""
+    try:
+        bind = db.get_bind()
+        if bind and bind.dialect.name == "postgresql":
+            from sqlalchemy import text
+            sql = f"""
+            DO $$
+            DECLARE
+                seq_name text;
+                max_id bigint;
+            BEGIN
+                seq_name := pg_get_serial_sequence('{table_name}', 'id');
+                IF seq_name IS NOT NULL THEN
+                    EXECUTE 'SELECT COALESCE(MAX(id), 0) FROM {table_name}' INTO max_id;
+                    IF max_id > 0 THEN
+                        PERFORM setval(seq_name, max_id, true);
+                    END IF;
+                END IF;
+            END $$;
+            """
+            db.execute(text(sql))
+            db.commit()
+    except Exception as e:
+        try:
+            db.rollback()
+        except Exception:
+            pass
+        print(f"[Seed] Sequence sync note for {table_name}: {e}")
+
 def seed_database(db: Session):
     """
     Populates SQLite database with Luméa's categories, products,
@@ -38,6 +68,7 @@ def seed_database(db: Session):
                     )
                     db.add(category)
                 db.commit()
+                _sync_sequence(db, "categories")
                 print(f"[Seed] Added {len(categories)} categories.")
 
     # 2. Seed Products
@@ -80,6 +111,7 @@ def seed_database(db: Session):
                     )
                     db.add(prod)
                 db.commit()
+                _sync_sequence(db, "products")
                 print(f"[Seed] Added {len(products)} products.")
 
     # 3. Seed Default User (Sreynich Chan)
@@ -99,12 +131,14 @@ def seed_database(db: Session):
         )
         db.add(demo_user)
         db.commit()
+        _sync_sequence(db, "users")
         print("[Seed] Created default user: sreynich.chan@example.com (password: password123)")
 
     # 3b. Seed Default Admin User (Luméa Administrator)
     admin_user = db.query(User).filter(User.email == "admin@lumea.com").first()
     if not admin_user:
         admin_user = User(
+            id=2,
             name="Luméa Administrator",
             first_name="Luméa",
             last_name="Admin",
@@ -118,11 +152,13 @@ def seed_database(db: Session):
         )
         db.add(admin_user)
         db.commit()
+        _sync_sequence(db, "users")
         print("[Seed] Created default admin user: admin@lumea.com (password: password123)")
     elif admin_user.role != "admin":
         admin_user.role = "admin"
         admin_user.hashed_password = get_password_hash("password123")
         db.commit()
+        _sync_sequence(db, "users")
 
     # 4. Seed Sample Order
     if db.query(Order).count() == 0:
@@ -167,6 +203,8 @@ def seed_database(db: Session):
         db.add(sample_item1)
         db.add(sample_item2)
         db.commit()
+        _sync_sequence(db, "orders")
+        _sync_sequence(db, "order_items")
         print("[Seed] Created sample order: LUM-849201")
 
     # 5. Seed Dynamic Banners
