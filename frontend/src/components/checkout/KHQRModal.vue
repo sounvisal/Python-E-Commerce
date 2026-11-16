@@ -154,7 +154,7 @@ function renderQR() {
     qrString.value,
     {
       width: 440,
-      margin: 4,
+      margin: 2,
       color: {
         dark: '#000000',
         light: '#FFFFFF'
@@ -163,8 +163,16 @@ function renderQR() {
     },
     (error) => {
       if (error) console.error('KHQR Canvas render error:', error)
+      if (canvasEl.value) {
+        canvasEl.value.style.width = '100%'
+        canvasEl.value.style.height = 'auto'
+      }
     }
   )
+  if (canvasEl.value) {
+    canvasEl.value.style.width = '100%'
+    canvasEl.value.style.height = 'auto'
+  }
 }
 
 function startCountdown() {
@@ -297,12 +305,13 @@ function handleClose() {
 }
 
 .khqr-card {
-  width: min(100%, 273px);
+  width: min(100%, 280px);
   margin-inline: auto;
   border-radius: 22px;
   background: #fff;
   color: #171717;
   box-shadow: 0 8px 16px rgb(0 0 0 / 8%), 0 0 0 1px rgb(8 27 55 / 5%);
+  overflow: hidden;
 }
 
 .khqr-banner {
@@ -352,22 +361,34 @@ function handleClose() {
 }
 
 .khqr-code {
-  display: grid;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
   min-height: 242px;
-  place-items: center;
-  padding: 12px;
+  padding: 16px;
   text-align: center;
+  overflow: hidden;
 }
 
 .khqr-canvas-holder {
   position: relative;
-  width: min(100%, 220px);
+  width: 220px;
+  max-width: 100%;
+  aspect-ratio: 1;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .khqr-canvas-img {
-  display: block;
-  width: 100%;
-  height: auto;
+  display: block !important;
+  width: 100% !important;
+  max-width: 100% !important;
+  height: 100% !important;
+  max-height: 100% !important;
+  aspect-ratio: 1;
   image-rendering: pixelated;
 }
 
