@@ -1,12 +1,19 @@
+from app.api.deps import get_current_user
+from app.core.config import settings
 import os
 import re
 import uuid
 import shutil
 from datetime import datetime
-from typing import List, Optional
-from fastapi import APIRouter, UploadFile, File, HTTPException, status
+from typing import List
+from fastapi import Depends, APIRouter, UploadFile, File, HTTPException, status
 
-router = APIRouter(prefix="/upload", tags=["File Uploads"])
+def require_local_uploads():
+    if settings.PRODUCTION:
+        raise HTTPException(status_code=403, detail="File uploads are disabled on this deployment.")
+
+
+router = APIRouter(prefix="/upload", tags=["File Uploads"], dependencies=[Depends(require_local_uploads)])
 
 # Target storage directories (Storefront and Admin public folders)
 PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", ".."))
@@ -41,15 +48,13 @@ def sanitize_filename(filename: str) -> str:
     unique_suffix = uuid.uuid4().hex[:6]
     return f"{clean_base}_{timestamp}_{unique_suffix}{ext}"
 
-@router.post("", status_code=status.HTTP_201_CREATED)
+@router.post("", status_code=status.HTTP_201_CREATED, dependencies=[Depends(get_current_user)])
 async def upload_single_file(file: UploadFile = File(...)):
     """
     Upload a single image or asset.
     Saves binary file to both Storefront and Admin public/images/uploads directories.
     Returns the public web URL (/images/uploads/filename.ext).
     """
-    ensure_directories()
-    
     if not file.filename:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -57,6 +62,7 @@ async def upload_single_file(file: UploadFile = File(...)):
         )
 
     safe_name = sanitize_filename(file.filename)
+    ensure_directories()
     frontend_path = os.path.join(FRONTEND_UPLOADS_DIR, safe_name)
     admin_path = os.path.join(ADMIN_UPLOADS_DIR, safe_name)
 
@@ -91,7 +97,7 @@ async def upload_single_file(file: UploadFile = File(...)):
         }
     }
 
-@router.post("/multiple", status_code=status.HTTP_201_CREATED)
+@router.post("/multiple", status_code=status.HTTP_201_CREATED, dependencies=[Depends(get_current_user)])
 async def upload_multiple_files(files: List[UploadFile] = File(...)):
     """
     Upload multiple images simultaneously for product galleries or review photo sets.
@@ -145,15 +151,13 @@ def sanitize_video_filename(filename: str) -> str:
     unique_suffix = uuid.uuid4().hex[:6]
     return f"{clean_base}_{timestamp}_{unique_suffix}{ext}"
 
-@router.post("/video", status_code=status.HTTP_201_CREATED)
+@router.post("/video", status_code=status.HTTP_201_CREATED, dependencies=[Depends(get_current_user)])
 async def upload_video_file(file: UploadFile = File(...)):
     """
     Upload a short-form video review or product texture masterclass clip.
     Saves binary stream to Storefront and Admin public/videos directories.
     Returns the public web URL (/videos/filename.mp4).
     """
-    ensure_directories()
-    
     if not file.filename:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -161,6 +165,7 @@ async def upload_video_file(file: UploadFile = File(...)):
         )
 
     safe_name = sanitize_video_filename(file.filename)
+    ensure_directories()
     frontend_path = os.path.join(FRONTEND_VIDEOS_DIR, safe_name)
     admin_path = os.path.join(ADMIN_VIDEOS_DIR, safe_name)
 

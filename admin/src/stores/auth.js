@@ -9,7 +9,7 @@ export const useAuthStore = defineStore('auth', () => {
   const isLoading = ref(false)
   const error = ref(null)
 
-  const isAuthenticated = computed(() => !!(token.value && user.value))
+  const isAuthenticated = computed(() => !!(token.value && user.value?.role === 'admin'))
 
   async function login(email, password) {
     isLoading.value = true
@@ -17,19 +17,18 @@ export const useAuthStore = defineStore('auth', () => {
     try {
       const response = await apiClient.post('/auth/login', { email, password })
       const tokenVal = response.data?.data?.access_token || response.data?.data?.token
-      if (tokenVal) {
+      if (tokenVal && response.data?.data?.user?.role === 'admin') {
         token.value = tokenVal
         user.value = {
           ...response.data.data.user,
-          role: 'Master Curator / Admin',
         }
         localStorage.setItem('lumea_admin_token', token.value)
         safeSetJSON('lumea_admin_user', user.value)
         return { success: true }
       }
-      return { success: false, message: 'Invalid server response' }
+      return { success: false, message: 'An administrator account is required.' }
     } catch (err) {
-      error.value = err.response?.data?.message || 'Login failed. Please verify credentials.'
+      error.value = err.response?.data?.detail || 'Login failed. Please verify credentials.'
       return { success: false, message: error.value }
     } finally {
       isLoading.value = false
@@ -37,16 +36,8 @@ export const useAuthStore = defineStore('auth', () => {
   }
 
   function demoLogin() {
-    token.value = 'demo_admin_bearer_token_' + Date.now()
-    user.value = {
-      id: 1,
-      name: 'Alexander Vance',
-      email: 'admin@lumea.com',
-      role: 'Master Curator / Admin',
-    }
-    localStorage.setItem('lumea_admin_token', token.value)
-    safeSetJSON('lumea_admin_user', user.value)
-    return true
+    error.value = 'Use an administrator account to access the console.'
+    return false
   }
 
   async function logout() {

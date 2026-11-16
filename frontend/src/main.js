@@ -1,3 +1,6 @@
+import axios from 'axios'
+import { useAuthStore } from './stores/auth'
+import { useSystemModalStore } from './stores/systemModal'
 import { createApp } from 'vue'
 import { createPinia } from 'pinia'
 import App from './App.vue'
@@ -20,6 +23,13 @@ app.config.warnHandler = (msg, instance, trace) => {
   console.warn('Trace:', trace)
 }
 
+axios.interceptors.response.use(response => response, error => {
+  if (error.response?.status === 401 && !/auth\/(login|register)/.test(error.config?.url || '')) {
+    useAuthStore(pinia).logout(false)
+    useSystemModalStore(pinia).showSessionExpired()
+  }
+  return Promise.reject(error)
+})
 app.use(pinia)
 app.use(router)
 app.mount('#app')

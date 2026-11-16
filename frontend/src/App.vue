@@ -12,6 +12,9 @@
 </template>
 
 <script setup>
+import { onMounted } from 'vue'
+import { useProductStore } from '@/stores/products'
+onMounted(() => useProductStore().fetchProducts())
 import Navbar from '@/components/Navbar.vue'
 import Footer from '@/components/Footer.vue'
 import CartDrawer from '@/components/CartDrawer.vue'

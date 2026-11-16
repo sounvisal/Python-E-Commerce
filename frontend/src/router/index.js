@@ -1,4 +1,6 @@
 import { createRouter, createWebHistory } from 'vue-router'
+import { privateStorageKey } from '@/utils/orderAccess'
+import { useAuthStore } from '@/stores/auth'
 import HomeView from '@/views/home/HomeView.vue'
 import ShopView from '@/views/shop/ShopView.vue'
 import CategoryView from '@/views/category/CategoryView.vue'
@@ -169,11 +171,13 @@ const routes = [
   {
     path: '/returns/request',
     name: 'return-request',
+    meta: { requiresAuth: true },
     component: ReturnRequestView,
   },
   {
     path: '/returns/status/:requestId',
     name: 'return-status',
+    meta: { requiresAuth: true },
     component: ReturnStatusView,
   },
   {
@@ -198,11 +202,13 @@ const routes = [
   {
     path: '/quiz/results',
     name: 'quiz-results',
+    meta: { requiresQuiz: true },
     component: QuizResultsView,
   },
   {
     path: '/routine',
     name: 'recommended-routine',
+    meta: { requiresQuiz: true },
     component: RecommendedRoutineView,
   },
   {
@@ -213,6 +219,7 @@ const routes = [
     path: '/account/profile',
     name: 'skin-profile',
     component: SkinProfileView,
+    meta: { requiresAuth: true },
   },
   {
     path: '/skin-profile',
@@ -226,6 +233,7 @@ const routes = [
     path: '/account/journal',
     name: 'skincare-journal',
     component: SkincareJournalView,
+    meta: { requiresAuth: true },
   },
   {
     path: '/journal',
@@ -250,6 +258,7 @@ const routes = [
     path: '/account',
     name: 'my-account',
     component: MyAccountView,
+    meta: { requiresAuth: true },
   },
   {
     path: '/account/overview',
@@ -259,11 +268,14 @@ const routes = [
     path: '/account/orders',
     name: 'my-orders',
     component: MyOrdersView,
+    meta: { requiresAuth: true },
   },
+  { path: '/track/:orderNumber', name: 'guest-order-tracking', component: OrderDetailsView },
   {
     path: '/account/orders/:orderNumber',
     name: 'order-details',
     component: OrderDetailsView,
+    meta: { requiresAuth: true },
   },
   {
     path: '/orders',
@@ -325,6 +337,26 @@ const router = createRouter({
       return { top: 0, behavior: 'smooth' }
     }
   },
+})
+
+router.beforeEach(async (to, from, next) => {
+  if (to.meta.requiresQuiz) {
+    try {
+      if (!JSON.parse(localStorage.getItem(privateStorageKey('skin_profile')) || 'null')?.completed) return next('/quiz')
+    } catch { return next('/quiz') }
+  }
+  const auth = useAuthStore()
+  const isAuthenticated = auth.token ? await auth.ensureSession() : false
+
+  if (to.matched.some(record => record.meta?.requiresAuth)) {
+    if (!isAuthenticated) {
+      return next({
+        path: '/login',
+        query: { redirect: to.fullPath },
+      })
+    }
+  }
+  next()
 })
 
 export default router

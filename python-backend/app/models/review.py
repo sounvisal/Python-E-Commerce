@@ -34,3 +34,8 @@ class Review(Base):
     updated_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
 
     product_rel = relationship("Product", foreign_keys=[product_id])
+
+class ReviewVote(Base):
+    __tablename__ = 'review_votes'
+    user_id = Column(Integer, ForeignKey('users.id'), primary_key=True)
+    review_id = Column(Integer, ForeignKey('reviews.id'), primary_key=True)

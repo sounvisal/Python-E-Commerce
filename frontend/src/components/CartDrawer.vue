@@ -1,5 +1,5 @@
 <template>
-  <div class="drawer-container" :class="{ 'is-active': cartStore.isDrawerOpen }">
+  <div class="drawer-container" :class="{ 'is-active': cartStore.isDrawerOpen }" :inert="!cartStore.isDrawerOpen">
     <!-- Backdrop Overlay -->
     <div class="drawer-backdrop" @click="cartStore.closeDrawer"></div>
 
@@ -29,7 +29,8 @@
         <div class="progress-bar-bg">
           <div
             class="progress-bar-fill"
-            :style="{ width: Math.min(100, (cartStore.subtotal / cartStore.freeShippingThreshold) * 100) + '%' }"
+            :style="{ transform: `scaleX(${shippingProgress})` }"
+            aria-hidden="true"
           ></div>
         </div>
       </div>
@@ -74,11 +75,11 @@
               <div class="item-bottom">
                 <!-- Quantity Controls -->
                 <div class="qty-control">
-                  <button @click="cartStore.updateQuantity(item.id, item.quantity - 1)" class="qty-btn">
+                  <button @click="cartStore.updateQuantity(item.id, item.quantity - 1)" class="qty-btn" :aria-label="`Decrease quantity of ${item.name}`">
                     <Minus :size="13" />
                   </button>
                   <span class="qty-val">{{ item.quantity }}</span>
-                  <button @click="cartStore.updateQuantity(item.id, item.quantity + 1)" class="qty-btn">
+                  <button @click="cartStore.updateQuantity(item.id, item.quantity + 1)" class="qty-btn" :aria-label="`Increase quantity of ${item.name}`">
                     <Plus :size="13" />
                   </button>
                 </div>
@@ -106,7 +107,7 @@
           </div>
           <div v-else class="promo-applied">
             <span class="applied-tag">
-              <Check :size="14" /> {{ cartStore.discountCode }} Applied (-10%)
+              <Check :size="14" /> {{ cartStore.discountCode }} applied (−${{ cartStore.discountAmount.toFixed(2) }})
             </span>
             <button class="remove-promo" @click="cartStore.removePromoCode">Remove</button>
           </div>
@@ -147,7 +148,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { computed, ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useCartStore } from '@/stores/cart'
 import { useNotificationStore } from '@/stores/notification'
@@ -156,6 +157,10 @@ import { X, Trash2, Plus, Minus, ShoppingBag, Check, Sparkles } from 'lucide-vue
 const router = useRouter()
 const cartStore = useCartStore()
 const notificationStore = useNotificationStore()
+const shippingProgress = computed(() => {
+  if (cartStore.subtotal >= cartStore.freeShippingThreshold) return 1
+  return Math.max(0, cartStore.subtotal / cartStore.freeShippingThreshold)
+})
 
 onMounted(() => {
   cartStore.fetchSettings()
@@ -163,9 +168,9 @@ onMounted(() => {
 
 const promoInput = ref('')
 
-const applyPromo = () => {
+const applyPromo = async () => {
   if (!promoInput.value) return
-  const result = cartStore.applyPromoCode(promoInput.value)
+  const result = await cartStore.applyPromoCode(promoInput.value)
   if (result.success) {
     notificationStore.addToast(result.message, 'success')
     promoInput.value = ''
@@ -187,15 +192,17 @@ const goToCheckout = () => {
 
 <style scoped>
 .drawer-container {
+  --drawer-duration: 240ms;
   position: fixed;
   inset: 0;
   z-index: 999;
   visibility: hidden;
-  transition: visibility var(--transition-normal);
+  transition: visibility 0s var(--drawer-duration);
 }
 
 .drawer-container.is-active {
   visibility: visible;
+  transition-delay: 0s;
 }
 
 .drawer-backdrop {
@@ -204,7 +211,7 @@ const goToCheckout = () => {
   background: rgba(18, 19, 22, 0.5);
   backdrop-filter: blur(4px);
   opacity: 0;
-  transition: opacity var(--transition-normal);
+  transition: opacity var(--drawer-duration) var(--ease-out);
 }
 
 .drawer-container.is-active .drawer-backdrop {
@@ -223,7 +230,7 @@ const goToCheckout = () => {
   display: flex;
   flex-direction: column;
   transform: translateX(100%);
-  transition: transform var(--transition-smooth);
+  transition: transform var(--drawer-duration) var(--ease-drawer);
 }
 
 .drawer-container.is-active .drawer-panel {
@@ -298,7 +305,32 @@ const goToCheckout = () => {
   height: 100%;
   background: var(--accent-gold);
   border-radius: var(--radius-full);
-  transition: width 0.4s ease;
+  transform-origin: left;
+  transition: transform var(--transition-fast);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .drawer-container {
+    --drawer-duration: 120ms;
+  }
+
+  .drawer-panel,
+  .drawer-container.is-active .drawer-panel {
+    transform: none;
+    transition: opacity var(--drawer-duration) var(--ease-out);
+  }
+
+  .drawer-panel {
+    opacity: 0;
+  }
+
+  .drawer-container.is-active .drawer-panel {
+    opacity: 1;
+  }
+
+  .progress-bar-fill {
+    transition: none;
+  }
 }
 
 .drawer-body {

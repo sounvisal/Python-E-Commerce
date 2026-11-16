@@ -108,7 +108,7 @@
               <button class="btn btn-outline btn-sm" @click="applyPromo">Apply</button>
             </div>
             <div v-else class="promo-badge">
-              <span>Code <strong>{{ cartStore.discountCode }}</strong> (-10%)</span>
+              <span>Code <strong>{{ cartStore.discountCode }}</strong> (−${{ cartStore.discountAmount.toFixed(2) }})</span>
               <button @click="cartStore.removePromoCode" class="remove-btn">Remove</button>
             </div>
           </div>
@@ -156,9 +156,9 @@ const cartStore = useCartStore()
 const notificationStore = useNotificationStore()
 const promoInput = ref('')
 
-const applyPromo = () => {
+const applyPromo = async () => {
   if (!promoInput.value) return
-  const result = cartStore.applyPromoCode(promoInput.value)
+  const result = await cartStore.applyPromoCode(promoInput.value)
   if (result.success) {
     notificationStore.addToast(result.message, 'success')
     promoInput.value = ''

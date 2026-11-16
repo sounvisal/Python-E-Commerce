@@ -1,6 +1,11 @@
 <template>
   <div class="lumea-article-detail-page">
-    <div class="container article-page-container">
+    <div v-if="loading" class="container article-page-container" role="status">Loading article…</div>
+    <div v-else-if="!article" class="container article-page-container">
+      <h1 class="article-main-title">{{ loadError }}</h1>
+      <router-link to="/articles">Back to articles</router-link>
+    </div>
+    <div v-else class="container article-page-container">
       <!-- Top Breadcrumbs -->
       <nav class="article-breadcrumb" aria-label="Breadcrumb">
         <router-link to="/">Home</router-link>
@@ -63,7 +68,7 @@
         <aside class="article-left-aside">
           <div class="left-sticky-box">
             <!-- Table of Contents -->
-            <div class="toc-card">
+            <div v-if="tocItems.length" class="toc-card">
               <h3 class="toc-title">In This Article</h3>
               <nav class="toc-links-list">
                 <button
@@ -108,120 +113,14 @@
             />
           </div>
 
-          <!-- Article Lead Paragraph -->
-          <div class="article-intro-lead">
-            <p>
-              A good skincare routine doesn't have to be complicated. It's about understanding your skin, choosing the right products, and using them consistently. Whether you're dealing with dryness, oiliness, or sensitivity, the right routine can help you achieve healthier, brighter skin over time.
-            </p>
-          </div>
-
-          <!-- Section: Why a Skincare Routine Matters -->
-          <section id="matters" class="content-section-block">
-            <h2 class="content-heading">Why a Skincare Routine Matters</h2>
-            <p>
-              Your skin faces many challenges every day — pollution, UV rays, stress, and more. A consistent skincare routine helps to:
-            </p>
-
-            <div class="checklist-grid">
-              <div class="check-item">
-                <Check :size="16" class="check-icon" />
-                <span>Keep your skin clean and healthy</span>
-              </div>
-              <div class="check-item">
-                <Check :size="16" class="check-icon" />
-                <span>Prevent common skin concerns like acne, dryness, and premature aging</span>
-              </div>
-              <div class="check-item">
-                <Check :size="16" class="check-icon" />
-                <span>Support your skin barrier against environmental stressors</span>
-              </div>
-              <div class="check-item">
-                <Check :size="16" class="check-icon" />
-                <span>Help skincare products work effectively and synergistically</span>
-              </div>
-            </div>
-          </section>
-
-          <!-- Section: Step 1: Know Your Skin Type -->
-          <section id="step1" class="content-section-block">
-            <h2 class="content-heading">Step 1: Know Your Skin Type</h2>
-            <p>
-              Before investing in formulations, diagnosing your baseline skin type ensures targeted results:
-            </p>
-            <div class="skin-types-box-grid">
-              <div class="skin-type-card">
-                <h5>Dry Skin</h5>
-                <p>Feels tight, lacks natural sebum, easily dehydrated. Thrives with ceramide creams and hyaluronic acid toners.</p>
-              </div>
-              <div class="skin-type-card">
-                <h5>Oily Skin</h5>
-                <p>Excess sebum sheen, visible pores, prone to congestion. Benefits from BHA exfoliants and gel hydrators.</p>
-              </div>
-              <div class="skin-type-card">
-                <h5>Combination</h5>
-                <p>Oily T-zone paired with normal to dry cheeks. Requires balancing niacinamide and adaptable hydration.</p>
-              </div>
-              <div class="skin-type-card">
-                <h5>Sensitive Skin</h5>
-                <p>Readily irritated, reactive to strong fragrances. Demands soothing Centella Asiatica and madecassoside.</p>
-              </div>
-            </div>
-          </section>
-
-          <!-- Section: Step 2: Choose the Right Products -->
-          <section id="step2" class="content-section-block">
-            <h2 class="content-heading">Step 2: Choose the Right Products</h2>
-            <p>
-              Focus on the core trio: a gentle cleanser that respects skin pH (around 5.5), an emollient moisturizer to prevent trans-epidermal water loss, and a broad-spectrum daily SPF 50 sunscreen.
-            </p>
-          </section>
-
-          <!-- Section: Step 3: Follow the Right Order -->
-          <section id="step3" class="content-section-block">
-            <h2 class="content-heading">Step 3: Follow the Right Order</h2>
-            <p>
-              Rule of thumb: layer formulations from thinnest to thickest texture:
-            </p>
-            <ol class="ordered-step-list">
-              <li><strong>Cleanser:</strong> Double cleanse in evening if wearing makeup or sunscreen.</li>
-              <li><strong>Toner / Essence:</strong> Preps and softens stratum corneum.</li>
-              <li><strong>Serums / Ampoules:</strong> Concentrated actives (Vitamin C, Niacinamide, Retinol).</li>
-              <li><strong>Moisturizer:</strong> Seals in moisture and reinforces the lipid barrier.</li>
-              <li><strong>Sunscreen:</strong> Non-negotiable morning shield against photoaging.</li>
-            </ol>
-          </section>
-
-          <!-- Section: Sample Routines by Skin Type -->
-          <section id="routines" class="content-section-block">
-            <h2 class="content-heading">Sample Routines by Skin Type</h2>
-            <p>
-              Consistency is key. Allow 4 to 6 weeks for cellular turnover before expecting dramatic clinical transformation.
-            </p>
-          </section>
-
-          <!-- Section: Common Mistakes to Avoid -->
-          <section id="mistakes" class="content-section-block">
-            <h2 class="content-heading">Common Mistakes to Avoid</h2>
-            <p>
-              Avoid over-exfoliating with physical scrubs or combining strong AHA/BHA acids with pure retinol simultaneously. Introduce one active at a time to prevent barrier inflammation.
-            </p>
-          </section>
-
-          <!-- Section: Expert Tips -->
-          <section id="expert-tips" class="content-section-block">
-            <h2 class="content-heading">Expert Tips</h2>
-            <blockquote class="atelier-quote">
-              &ldquo;Healthy skin is a marathon, not a sprint. Prioritize barrier repair and sun protection above high-percentage acids.&rdquo;
-              <footer>— Sophea Meas, Luméa Atelier Director</footer>
-            </blockquote>
-          </section>
-
-          <!-- Section: Final Thoughts -->
-          <section id="final-thoughts" class="content-section-block">
-            <h2 class="content-heading">Final Thoughts</h2>
-            <p>
-              Embrace the ritual of daily skincare as a mindful act of self-care. When you listen to your skin's changing needs throughout the seasons, radiance follows naturally.
-            </p>
+          <section
+            v-for="section in sections"
+            :id="section.id"
+            :key="section.id"
+            class="content-section-block"
+          >
+            <h2 v-if="section.title" class="content-heading">{{ section.title }}</h2>
+            <p v-for="(paragraph, index) in section.paragraphs" :key="index" class="article-paragraph">{{ paragraph }}</p>
           </section>
         </article>
 
@@ -288,7 +187,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted, watch } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import {
   Calendar,
@@ -298,38 +197,33 @@ import {
   Share2,
   Link2,
   Leaf,
-  Check,
   Mail
 } from 'lucide-vue-next'
 
 const route = useRoute()
 
-const article = ref({
-  title: 'How to Build a Skincare Routine for Your Skin Type',
-  subtitle: 'A simple guide to finding the right products, in the right order, for healthier, happier skin.',
-  category: 'Skincare Basics',
-  read_time: '8 min read',
-  views_count: '12.4K views',
-  author_name: 'Sophea Meas',
-  author_role: 'Skincare Expert',
-  author_avatar: '/images/avatar-sreynich.jpg',
-  published_at: 'Jun 15, 2025',
-  hero_image: '/images/article-details-hero.jpg'
-})
-
-const tocItems = ref([
-  { id: 'matters', title: 'Why a Skincare Routine Matters' },
-  { id: 'step1', title: 'Step 1: Know Your Skin Type' },
-  { id: 'step2', title: 'Step 2: Choose the Right Products' },
-  { id: 'step3', title: 'Step 3: Follow the Right Order' },
-  { id: 'routines', title: 'Sample Routines by Skin Type' },
-  { id: 'mistakes', title: 'Common Mistakes to Avoid' },
-  { id: 'expert-tips', title: 'Expert Tips' },
-  { id: 'final-thoughts', title: 'Final Thoughts' }
-])
-
+const article = ref(null)
+const loading = ref(true)
+const loadError = ref('')
 const relatedArticles = ref([])
-const activeHeadingId = ref('matters')
+const activeHeadingId = ref('')
+
+const sections = computed(() => {
+  const body = article.value?.content?.trim() || ''
+  if (!body) return []
+
+  return body.split(/\r?\n(?=#{1,6} )/).map((block, index) => {
+    const heading = block.match(/^#{1,6} ([^\r\n]+)\r?\n?/)
+    const text = heading ? block.slice(heading[0].length) : block
+    return {
+      id: `article-section-${index + 1}`,
+      title: heading?.[1] || '',
+      paragraphs: text.trim().split(/\r?\n\s*\r?\n/).filter(Boolean)
+    }
+  })
+})
+const tocItems = computed(() => sections.value.filter(section => section.title))
+
 const copied = ref(false)
 const newsletterEmail = ref('')
 const isSubscribed = ref(false)
@@ -370,31 +264,32 @@ function handleSubscribe() {
   }
 }
 
-async function loadArticle() {
-  const slug = route.params.slug || 'how-to-build-a-skincare-routine-for-your-skin-type'
+watch(() => route.params.slug, async (slug, _previous, onCleanup) => {
+  const request = new AbortController()
+  onCleanup(() => request.abort())
+  loading.value = true
+  article.value = null
+  relatedArticles.value = []
+  loadError.value = ''
+  activeHeadingId.value = ''
   try {
-    const res = await fetch(`/api/articles/${slug}`)
-    if (res.ok) {
-      const data = await res.json()
-      article.value = data.data
-      if (data.data.toc && data.data.toc.length) {
-        tocItems.value = data.data.toc
-      }
-      relatedArticles.value = data.related || []
+    const res = await fetch(`/api/articles/${encodeURIComponent(slug)}`, { signal: request.signal })
+    if (res.status === 404) {
+      loadError.value = 'Article not found'
+      return
     }
-  } catch (err) {
-    console.warn('[ArticleDetailView] Using fallback:', err)
+    if (!res.ok) throw new Error('Article request failed')
+    const data = await res.json()
+    if (request.signal.aborted) return
+    article.value = data.data
+    relatedArticles.value = data.related || []
+    activeHeadingId.value = tocItems.value[0]?.id || ''
+  } catch {
+    if (!request.signal.aborted) loadError.value = 'Unable to load this article'
+  } finally {
+    if (!request.signal.aborted) loading.value = false
   }
-}
-
-watch(() => route.params.slug, () => {
-  loadArticle()
-  window.scrollTo({ top: 0, behavior: 'smooth' })
-})
-
-onMounted(() => {
-  loadArticle()
-})
+}, { immediate: true })
 </script>
 
 <style scoped>
@@ -730,6 +625,10 @@ onMounted(() => {
   font-weight: 600;
   color: #1C1917;
   margin: 0 0 1rem;
+}
+
+.article-paragraph {
+  white-space: pre-line;
 }
 
 .content-section-block p {

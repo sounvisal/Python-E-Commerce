@@ -4,25 +4,7 @@ import { ref } from 'vue'
 
 export const useAdminStore = defineStore('admin', () => {
   // Stats
-  const stats = ref({
-    metrics: {
-      total_revenue: 3721.7,
-      total_orders: 5,
-      total_products: 8,
-      total_customers: 3,
-      low_stock_count: 2,
-      average_order_value: 744.34,
-    },
-    orders_by_status: {
-      delivered: 1,
-      shipped: 1,
-      processing: 1,
-      confirmed: 2,
-    },
-    timeline: [],
-    categories: [],
-    recent_orders: [],
-  })
+  const stats = ref({ metrics: { total_revenue: 0, total_orders: 0, total_products: 0, total_customers: 0, low_stock_count: 0, average_order_value: 0 }, orders_by_status: {}, timeline: [], categories: [], recent_orders: [] })
   const statsLoading = ref(false)
 
   // Orders
@@ -49,22 +31,10 @@ export const useAdminStore = defineStore('admin', () => {
 
   // Reviews
   const reviews = ref([])
-  const reviewsKpis = ref({
-    total_reviews: 1248,
-    average_rating: 4.6,
-    approved: 892,
-    pending_approval: 156,
-    rejected_hidden: 32
-  })
-  const reviewsBreakdown = ref({
-    5: { count: 848, percentage: 68 },
-    4: { count: 250, percentage: 20 },
-    3: { count: 100, percentage: 8 },
-    2: { count: 37, percentage: 3 },
-    1: { count: 13, percentage: 1 }
-  })
+  const reviewsKpis = ref({ total_reviews: 0, average_rating: 0, approved: 0, pending_approval: 0, rejected_hidden: 0 })
+  const reviewsBreakdown = ref({ 5: { count: 0, percentage: 0 }, 4: { count: 0, percentage: 0 }, 3: { count: 0, percentage: 0 }, 2: { count: 0, percentage: 0 }, 1: { count: 0, percentage: 0 } })
   const reviewsRecent = ref([])
-  const reviewsMeta = ref({ total: 1248, page: 1, limit: 10, total_pages: 125 })
+  const reviewsMeta = ref({ total: 0, page: 1, limit: 10, total_pages: 1 })
   const reviewsLoading = ref(false)
 
   // Quizzes
@@ -165,7 +135,7 @@ export const useAdminStore = defineStore('admin', () => {
         // Update local state
         const idx = orders.value.findIndex((o) => o.id === orderId)
         if (idx !== -1) {
-          orders.value[idx].status = status
+          Object.assign(orders.value[idx], res.data.data)
         }
         addToast(`Order #${res.data.data.order_number} status updated to ${status}`, 'success')
         fetchStats() // refresh overview numbers
@@ -173,7 +143,7 @@ export const useAdminStore = defineStore('admin', () => {
       }
       return { success: false }
     } catch (err) {
-      const msg = err.response?.data?.message || 'Failed to update order status'
+      const msg = err.response?.data?.detail || 'Failed to update order status'
       addToast(msg, 'error')
       return { success: false, message: msg }
     }
@@ -208,7 +178,7 @@ export const useAdminStore = defineStore('admin', () => {
       }
       return { success: false }
     } catch (err) {
-      const msg = err.response?.data?.message || 'Failed to create product'
+      const msg = err.response?.data?.detail || 'Failed to create product'
       addToast(msg, 'error')
       return { success: false, message: msg }
     }
@@ -224,7 +194,7 @@ export const useAdminStore = defineStore('admin', () => {
       }
       return { success: false }
     } catch (err) {
-      const msg = err.response?.data?.message || 'Failed to update product'
+      const msg = err.response?.data?.detail || 'Failed to update product'
       addToast(msg, 'error')
       return { success: false, message: msg }
     }
@@ -241,7 +211,7 @@ export const useAdminStore = defineStore('admin', () => {
       }
       return { success: false }
     } catch (err) {
-      const msg = err.response?.data?.message || 'Failed to delete product'
+      const msg = err.response?.data?.detail || 'Failed to delete product'
       addToast(msg, 'error')
       return { success: false, message: msg }
     }
@@ -274,7 +244,7 @@ export const useAdminStore = defineStore('admin', () => {
       }
       return { success: false }
     } catch (err) {
-      const msg = err.response?.data?.message || 'Failed to create category'
+      const msg = err.response?.data?.detail || 'Failed to create category'
       addToast(msg, 'error')
       return { success: false, message: msg }
     }
@@ -290,7 +260,7 @@ export const useAdminStore = defineStore('admin', () => {
       }
       return { success: false }
     } catch (err) {
-      const msg = err.response?.data?.message || 'Failed to update category'
+      const msg = err.response?.data?.detail || 'Failed to update category'
       addToast(msg, 'error')
       return { success: false, message: msg }
     }
@@ -306,7 +276,7 @@ export const useAdminStore = defineStore('admin', () => {
       }
       return { success: false }
     } catch (err) {
-      const msg = err.response?.data?.message || 'Failed to delete category'
+      const msg = err.response?.data?.detail || 'Failed to delete category'
       addToast(msg, 'error')
       return { success: false, message: msg }
     }
@@ -356,7 +326,7 @@ export const useAdminStore = defineStore('admin', () => {
       }
       return { success: false }
     } catch (err) {
-      const msg = err.response?.data?.message || 'Failed to create brand'
+      const msg = err.response?.data?.detail || 'Failed to create brand'
       addToast(msg, 'error')
       return { success: false, message: msg }
     }
@@ -372,7 +342,7 @@ export const useAdminStore = defineStore('admin', () => {
       }
       return { success: false }
     } catch (err) {
-      const msg = err.response?.data?.message || 'Failed to update brand'
+      const msg = err.response?.data?.detail || 'Failed to update brand'
       addToast(msg, 'error')
       return { success: false, message: msg }
     }
@@ -389,7 +359,7 @@ export const useAdminStore = defineStore('admin', () => {
       }
       return { success: false }
     } catch (err) {
-      const msg = err.response?.data?.message || 'Failed to toggle featured brand'
+      const msg = err.response?.data?.detail || 'Failed to toggle featured brand'
       addToast(msg, 'error')
       return { success: false, message: msg }
     }
@@ -405,7 +375,7 @@ export const useAdminStore = defineStore('admin', () => {
       }
       return { success: false }
     } catch (err) {
-      const msg = err.response?.data?.message || 'Failed to delete brand'
+      const msg = err.response?.data?.detail || 'Failed to delete brand'
       addToast(msg, 'error')
       return { success: false, message: msg }
     }
@@ -446,7 +416,7 @@ export const useAdminStore = defineStore('admin', () => {
       }
       return { success: false }
     } catch (err) {
-      const msg = err.response?.data?.message || 'Failed to update review status'
+      const msg = err.response?.data?.detail || 'Failed to update review status'
       addToast(msg, 'error')
       return { success: false, message: msg }
     }
@@ -465,7 +435,7 @@ export const useAdminStore = defineStore('admin', () => {
       }
       return { success: false }
     } catch (err) {
-      const msg = err.response?.data?.message || 'Failed to reply to review'
+      const msg = err.response?.data?.detail || 'Failed to reply to review'
       addToast(msg, 'error')
       return { success: false, message: msg }
     }
@@ -481,7 +451,7 @@ export const useAdminStore = defineStore('admin', () => {
       }
       return { success: false }
     } catch (err) {
-      const msg = err.response?.data?.message || 'Failed to delete review'
+      const msg = err.response?.data?.detail || 'Failed to delete review'
       addToast(msg, 'error')
       return { success: false, message: msg }
     }
@@ -532,7 +502,7 @@ export const useAdminStore = defineStore('admin', () => {
       }
       return { success: false }
     } catch (err) {
-      const msg = err.response?.data?.message || 'Failed to save quiz'
+      const msg = err.response?.data?.detail || 'Failed to save quiz'
       addToast(msg, 'error')
       return { success: false, message: msg }
     }
@@ -551,7 +521,7 @@ export const useAdminStore = defineStore('admin', () => {
       }
       return { success: false }
     } catch (err) {
-      const msg = err.response?.data?.message || 'Failed to toggle quiz status'
+      const msg = err.response?.data?.detail || 'Failed to toggle quiz status'
       addToast(msg, 'error')
       return { success: false, message: msg }
     }

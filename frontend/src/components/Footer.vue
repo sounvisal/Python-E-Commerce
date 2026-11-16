@@ -70,7 +70,7 @@
           </div>
           <div class="admin-entry-link">
             <span class="pulse-indicator"></span>
-            <a href="http://localhost:5174" target="_blank" rel="noopener">Atelier Console (:5174)</a>
+            <span>Customer care: support@lumea.com</span>
           </div>
         </div>
       </div>

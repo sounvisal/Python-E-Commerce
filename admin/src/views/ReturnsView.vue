@@ -85,7 +85,7 @@ const filteredReturns = computed(() => {
 
   // Tab filter
   if (activeTab.value !== 'all') {
-    list = list.filter(r => (r.status || '').toLowerCase() === activeTab.value.toLowerCase())
+    list = list.filter(r => (r.status || '').toLowerCase() === ({ pending: 'under review', refunded: 'refund completed' }[activeTab.value] || activeTab.value))
   }
 
   // Status dropdown filter
@@ -115,11 +115,11 @@ const filteredReturns = computed(() => {
 })
 
 // Counts for Tabs
-const countAll = computed(() => returns.value.length || 48)
-const countPending = computed(() => returns.value.filter(r => (r.status || '').toLowerCase() === 'pending').length || 12)
-const countApproved = computed(() => returns.value.filter(r => (r.status || '').toLowerCase() === 'approved').length || 32)
-const countRefunded = computed(() => returns.value.filter(r => (r.status || '').toLowerCase() === 'refunded').length || 3)
-const countRejected = computed(() => returns.value.filter(r => (r.status || '').toLowerCase() === 'rejected').length || 1)
+const countAll = computed(() => returns.value.length)
+const countPending = computed(() => returns.value.filter(r => (r.status || '').toLowerCase() === 'under review').length)
+const countApproved = computed(() => returns.value.filter(r => (r.status || '').toLowerCase() === 'approved').length)
+const countRefunded = computed(() => returns.value.filter(r => (r.status || '').toLowerCase() === 'refund completed').length)
+const countRejected = computed(() => returns.value.filter(r => (r.status || '').toLowerCase() === 'rejected').length)
 
 // Multi-select
 const allSelected = computed(() => {
@@ -150,22 +150,28 @@ async function updateStatus(returnItem, newStatus) {
   try {
     const res = await apiClient.patch(`/returns/${returnItem.id}/status`, {
       status: newStatus,
+      refund_reference: ['refunded', 'Refund Completed'].includes(newStatus) ? prompt('Enter the completed manual refund reference:') : null,
       note: `Status updated to ${newStatus} from Atelier Console`
     })
     if (res.data?.success) {
       adminStore.addToast(`Return #${returnItem.request_number} updated to ${newStatus}`, 'success')
-      returnItem.status = newStatus
+      Object.assign(returnItem, res.data)
       if (inspectingReturn.value?.id === returnItem.id) {
-        inspectingReturn.value.status = newStatus
+        Object.assign(inspectingReturn.value, res.data)
       }
     }
   } catch (err) {
-    adminStore.addToast('Failed to update return status', 'error')
+    adminStore.addToast(err.response?.data?.detail || 'Failed to update return status', 'error')
   } finally {
     isUpdating.value = false
   }
 }
 
+function nextReturnStatus(item) {
+  const stages = ['Under Review', 'Approved', 'Return in Transit', 'Item Received', 'Refund Processing', 'Refund Completed']
+  const index = stages.findIndex(s => s.toLowerCase() === item.status.toLowerCase())
+  return index >= 0 && index < stages.length - 1 ? stages[index + 1] : null
+}
 // Process new return
 async function submitProcessReturn() {
   try {
@@ -245,6 +251,7 @@ function formatRequestedDate(dateStr) {
 
 <template>
   <div class="returns-page">
+    <p>Refund completion records a manual refund reference; it does not send money through a bank.</p>
       <!-- BREADCRUMB -->
       <div class="breadcrumb-bar">
         <span class="crumb-parent">Service</span>
@@ -265,7 +272,7 @@ function formatRequestedDate(dateStr) {
             <span class="quote-line-1">Hassle-free returns.</span>
             <span class="quote-line-2">Happier customers.</span>
           </div>
-          <button class="btn-process-top" @click="showProcessModal = true">
+          <button class="btn-process-top" disabled title="Customers submit returns from their purchased items">
             <Plus class="w-4 h-4 mr-1" />
             <span>Process Return</span>
           </button>
@@ -426,7 +433,7 @@ function formatRequestedDate(dateStr) {
               </button>
               <button
                 class="tab-pill"
-                :class="{ active: activeTab === 'pending' }"
+                :class="{ active: activeTab === 'under review' }"
                 @click="activeTab = 'pending'"
               >
                 Pending ({{ countPending }})
@@ -440,7 +447,7 @@ function formatRequestedDate(dateStr) {
               </button>
               <button
                 class="tab-pill"
-                :class="{ active: activeTab === 'refunded' }"
+                :class="{ active: activeTab === 'refund completed' }"
                 @click="activeTab = 'refunded'"
               >
                 Refunded ({{ countRefunded }})
@@ -553,9 +560,9 @@ function formatRequestedDate(dateStr) {
                     <span
                       class="badge-status"
                       :class="{
-                        'status-pending': (item.status || '').toLowerCase() === 'pending',
+                        'status-pending': (item.status || '').toLowerCase() === 'under review',
                         'status-approved': (item.status || '').toLowerCase() === 'approved',
-                        'status-refunded': (item.status || '').toLowerCase() === 'refunded',
+                        'status-refunded': (item.status || '').toLowerCase() === 'refund completed',
                         'status-rejected': (item.status || '').toLowerCase() === 'rejected'
                       }"
                     >
@@ -593,7 +600,7 @@ function formatRequestedDate(dateStr) {
                             @click="updateStatus(item, 'approved')"
                           >
                             <CheckCircle2 class="w-4 h-4 mr-2" />
-                            <span>Approve Return</span>
+                            <span>Advance to next stage</span>
                           </button>
                           <button
                             v-if="(item.status || '').toLowerCase() !== 'refunded'"
@@ -601,7 +608,7 @@ function formatRequestedDate(dateStr) {
                             @click="updateStatus(item, 'refunded')"
                           >
                             <DollarSign class="w-4 h-4 mr-2" />
-                            <span>Disburse Refund</span>
+                            <span>Record manual refund</span>
                           </button>
                           <button
                             v-if="(item.status || '').toLowerCase() !== 'rejected'"
@@ -849,21 +856,21 @@ function formatRequestedDate(dateStr) {
           <div class="modal-footer">
             <button class="btn-secondary" @click="inspectingReturn = null">Close</button>
             <button
-              v-if="(inspectingReturn.status || '').toLowerCase() !== 'approved'"
+              v-if="nextReturnStatus(inspectingReturn)"
               class="btn-approve"
-              @click="updateStatus(inspectingReturn, 'approved')"
+              @click="updateStatus(inspectingReturn, nextReturnStatus(inspectingReturn))"
             >
-              Approve Return
+              {{ nextReturnStatus(inspectingReturn) }}
             </button>
             <button
-              v-if="(inspectingReturn.status || '').toLowerCase() !== 'refunded'"
+              v-if="false"
               class="btn-refund"
               @click="updateStatus(inspectingReturn, 'refunded')"
             >
-              Disburse Refund
+              Record manual refund
             </button>
             <button
-              v-if="(inspectingReturn.status || '').toLowerCase() !== 'rejected'"
+              v-if="(inspectingReturn.status || '').toLowerCase() === 'under review'"
               class="btn-reject"
               @click="updateStatus(inspectingReturn, 'rejected')"
             >

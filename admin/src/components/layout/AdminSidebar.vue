@@ -79,6 +79,7 @@ const menuGroups = [
     title: 'SERVICE',
     items: [
       { name: 'Returns', path: '/returns', icon: RotateCcw },
+      { name: 'Customer inquiries', path: '/support', icon: MessageSquare },
     ]
   },
   {

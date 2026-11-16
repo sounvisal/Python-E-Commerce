@@ -1,5 +1,5 @@
 from pydantic import BaseModel, EmailStr, field_validator
-from typing import Optional, List
+from typing import Optional, List, Dict, Any
 from datetime import datetime
 import re
 import html
@@ -60,7 +60,13 @@ class UserLogin(BaseModel):
     email: EmailStr
     password: str
 
+class ProfileUpdate(BaseModel):
+    name: Optional[str] = None
+    phone: Optional[str] = None
+    addresses: Optional[List[Dict[str, Any]]] = None
+
 class UserOut(UserBase):
+    profile_data: Optional[Dict[str, Any]] = None
     id: int
     first_name: Optional[str] = None
     last_name: Optional[str] = None

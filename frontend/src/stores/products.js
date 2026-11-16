@@ -673,10 +673,10 @@ export const BRANDS_DIRECTORY = [
 
 export const useProductStore = defineStore('products', {
   state: () => ({
-    products: FALLBACK_PRODUCTS,
-    allCatalogProducts: FALLBACK_PRODUCTS,
-    categories: FALLBACK_CATEGORIES,
-    featuredProducts: FALLBACK_PRODUCTS.slice(0, 5),
+    products: [],
+    allCatalogProducts: [],
+    categories: [],
+    featuredProducts: [],
     currentProduct: null,
     relatedProducts: [],
     loading: false,
@@ -715,7 +715,7 @@ export const useProductStore = defineStore('products', {
             p.name.toLowerCase().includes(q) ||
             p.brand.toLowerCase().includes(q) ||
             p.category.toLowerCase().includes(q) ||
-            (p.subcategory && p.subcategory.toLowerCase().includes(q))
+            (p.subcategory && (p.subcategory || '').toLowerCase().includes(q))
         )
       }
 
@@ -726,7 +726,7 @@ export const useProductStore = defineStore('products', {
 
       // Subcategory pill filter
       if (state.filters.subcategory) {
-        result = result.filter((p) => p.subcategory.toLowerCase() === state.filters.subcategory.toLowerCase())
+        result = result.filter((p) => (p.subcategory || '').toLowerCase() === state.filters.subcategory.toLowerCase())
       }
 
       // Brand filter
@@ -798,7 +798,7 @@ export const useProductStore = defineStore('products', {
     async fetchCategories() {
       try {
         const res = await axios.get(`${API_BASE}/categories`)
-        if (res.data?.data && res.data.data.length > 0) {
+        if (Array.isArray(res.data?.data)) {
           this.categories = res.data.data
         }
       } catch (err) {
@@ -811,24 +811,19 @@ export const useProductStore = defineStore('products', {
       this.error = null
 
       try {
-        const queryParams = {
-          ...this.filters,
-          ...params,
-        }
-        const res = await axios.get(`${API_BASE}/products`, { params: queryParams })
-        if (res.data?.data && res.data.data.length > 0) {
-          this.products = res.data.data
-          this.loading = false
-          return
-        }
+        const res = await axios.get(`${API_BASE}/products`, { params: { limit: 10000 } })
+        this.allCatalogProducts = res.data?.data || []
+        this.products = this.allCatalogProducts
+        this.featuredProducts = this.products.filter(p => p.is_featured)
       } catch (err) {
-        console.warn('Could not reach backend /products, falling back to local dataset')
+        this.error = 'The catalog is temporarily unavailable. Please try again.'
+      } finally {
+        this.loading = false
       }
-      this.products = this.filteredProducts
-      this.loading = false
     },
 
     async fetchProductBySlug(slug) {
+      this.currentProduct = null
       this.loading = true
       this.error = null
       try {
@@ -839,15 +834,12 @@ export const useProductStore = defineStore('products', {
           return
         }
       } catch (err) {
-        // Fallback
+        this.currentProduct = null
+        this.relatedProducts = []
+        this.error = err.response?.status === 404 ? 'Product not found' : 'Product temporarily unavailable'
+      } finally {
+        this.loading = false
       }
-
-      const match = this.allCatalogProducts.find((p) => p.slug === slug)
-      this.currentProduct = match || this.allCatalogProducts[0]
-      this.relatedProducts = this.allCatalogProducts
-        .filter((p) => p.id !== this.currentProduct.id && p.category === this.currentProduct.category)
-        .slice(0, 4)
-      this.loading = false
     },
 
     setFilter(key, val) {

@@ -7,11 +7,11 @@
         <span class="bc-sep">›</span>
         <router-link to="/cart">Cart</router-link>
         <span class="bc-sep">›</span>
-        <span class="bc-current">Order Success</span>
+        <span class="bc-current">Order Summary</span>
       </nav>
 
       <!-- Panoramic Hero Banner matching format/Order_Success.png -->
-      <section class="success-hero-banner">
+      <section v-if="isConfirmed" class="success-hero-banner">
         <div class="hero-left-content">
           <div class="success-check-circle">
             <Check :size="28" />
@@ -19,7 +19,7 @@
           <div class="hero-titles-wrap">
             <h1 class="hero-title">Thank You!</h1>
             <h2 class="hero-subtitle">Your order has been placed successfully.</h2>
-            <p class="hero-desc">We’ve received your order and will prepare it soon.</p>
+            <p class="hero-desc">You can find the latest status and delivery details below.</p>
           </div>
         </div>
 
@@ -44,14 +44,14 @@
       </div>
 
       <div v-else-if="order" class="success-card">
-        <div class="icon-wrap">
+        <div v-if="isConfirmed" class="icon-wrap">
           <CheckCircle2 :size="48" class="check-icon" />
         </div>
 
-        <span class="confirmed-badge">Order Confirmed</span>
-        <h1>Thank you, {{ order.customer_name }}</h1>
-        <p class="order-sub">
-          Your order has been received by our atelier. A confirmation receipt and courier tracking details have been dispatched to <strong>{{ order.customer_email }}</strong>.
+        <span v-if="isConfirmed" class="confirmed-badge">Order Confirmed</span>
+        <h1>{{ isConfirmed ? `Thank you, ${order.customer_name}` : 'Order Summary' }}</h1>
+        <p v-if="isConfirmed" class="order-sub">
+          Save your order reference and use the tracking link below for delivery updates.
         </p>
 
         <div class="order-meta-box">
@@ -69,13 +69,13 @@
           </div>
           <div class="meta-item" v-if="order.payment_status">
             <span class="meta-title">Payment Status</span>
-            <span class="meta-value status-tag status-paid">{{ order.payment_status }}</span>
+            <span class="meta-value status-tag" :class="{ 'status-paid': order.payment_status === 'Paid' }">{{ order.payment_status }}</span>
           </div>
           <div class="meta-item" v-if="order.transaction_ref">
             <span class="meta-title">Clearance Ref</span>
             <span class="meta-value mono-ref">{{ order.transaction_ref }}</span>
           </div>
-          <div class="meta-item">
+          <div v-if="isConfirmed && order.status !== 'Delivered'" class="meta-item">
             <span class="meta-title">Estimated Delivery</span>
             <span class="meta-value">3 &ndash; 5 Business Days</span>
           </div>
@@ -103,16 +103,16 @@
         </div>
 
         <div class="order-total-bar">
-          <span>Total Authorized Amount</span>
+          <span>Order Total</span>
           <span class="final-amount">${{ Number(order.total).toFixed(2) }}</span>
         </div>
 
         <div class="action-row">
-          <router-link to="/shop" class="btn btn-primary btn-lg">
-            Continue Exploring Collections
+          <router-link :to="`/track/${order.order_number}`" class="btn btn-primary btn-lg">
+            Track Order &amp; Courier Delivery
           </router-link>
-          <router-link to="/" class="btn btn-outline btn-lg">
-            Return to Atelier Home
+          <router-link to="/shop" class="btn btn-outline btn-lg">
+            Continue Exploring Collections
           </router-link>
         </div>
       </div>
@@ -127,14 +127,18 @@
 </template>
 
 <script setup>
-import { onMounted, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { useRoute } from 'vue-router'
 import axios from 'axios'
+import { orderRequest } from '@/utils/orderAccess'
 import { CheckCircle2, Check } from 'lucide-vue-next'
 
 const route = useRoute()
 const order = ref(null)
 const loading = ref(true)
+const isConfirmed = computed(() =>
+  ['Confirmed', 'Processing', 'Shipped', 'Out for Delivery', 'Delivered'].includes(order.value?.status)
+)
 
 const formatPaymentMethod = (method) => {
   switch (method) {
@@ -154,7 +158,7 @@ onMounted(async () => {
   const orderNumber = route.params.orderNumber
   if (orderNumber) {
     try {
-      const res = await axios.get(`/api/orders/${orderNumber}`)
+      const res = await axios.get(`/api/orders/${orderNumber}`, orderRequest(orderNumber))
       if (res.data?.data) {
         order.value = res.data.data
       }

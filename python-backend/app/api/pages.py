@@ -1,3 +1,4 @@
+from app.api.deps import require_admin
 from typing import Optional, List
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
@@ -35,7 +36,7 @@ def get_page_by_slug(slug: str, db: Session = Depends(get_db)):
         )
     return page
 
-@router.post("", response_model=PageResponse, status_code=status.HTTP_201_CREATED)
+@router.post("", response_model=PageResponse, status_code=status.HTTP_201_CREATED, dependencies=[Depends(require_admin)])
 def create_page(payload: PageCreate, db: Session = Depends(get_db)):
     """
     Create a new CMS page (used by Admin Atelier).
@@ -62,7 +63,7 @@ def create_page(payload: PageCreate, db: Session = Depends(get_db)):
     db.refresh(page)
     return page
 
-@router.put("/{slug}", response_model=PageResponse)
+@router.put("/{slug}", response_model=PageResponse, dependencies=[Depends(require_admin)])
 def update_page(slug: str, payload: PageUpdate, db: Session = Depends(get_db)):
     """
     Update an existing CMS page (used by Admin Atelier).
@@ -80,7 +81,7 @@ def update_page(slug: str, payload: PageUpdate, db: Session = Depends(get_db)):
     db.refresh(page)
     return page
 
-@router.delete("/{slug}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete("/{slug}", status_code=status.HTTP_204_NO_CONTENT, dependencies=[Depends(require_admin)])
 def delete_page(slug: str, db: Session = Depends(get_db)):
     """
     Delete a CMS page.

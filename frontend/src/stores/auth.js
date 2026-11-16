@@ -1,190 +1,120 @@
-import { defineStore } from 'pinia'
+import axios from 'axios'
+import { defineStore, getActivePinia } from 'pinia'
 import { useNotificationStore } from './notification'
-import { safeGetJSON, safeSetJSON, safeRemove } from '@/utils/storage'
 
-const DEFAULT_USER = {
-  name: 'Sreynich Chan',
-  firstName: 'Sreynich',
-  lastName: 'Chan',
-  email: 'sreynich.chan@example.com',
-  phone: '+855 12 345 678',
-  avatar: '/images/avatar-sreynich.jpg',
-  rewardPoints: 320,
-  tier: 'Luméa Radiant Gold',
-  joinedDate: 'May 2024',
-  totalOrders: 12,
-  wishlistCount: 8,
-  savedForLaterCount: 3,
-  addresses: [
-    {
-      id: 1,
-      name: 'Sreynich Chan',
-      tag: 'Home',
-      street: '#123, Street 271',
-      commune: 'Sangkat Boeung Tumpun',
-      district: 'Khan Meanchey',
-      city: 'Phnom Penh',
-      postalCode: '12000',
-      country: 'Cambodia',
-      phone: '+855 12 345 678',
-      isDefault: true,
-    },
-    {
-      id: 2,
-      name: 'Sreynich Chan (Office)',
-      tag: 'Work',
-      street: '#45, Norodom Boulevard',
-      commune: 'Sangkat Phsar Thmei 1',
-      district: 'Khan Daun Penh',
-      city: 'Phnom Penh',
-      postalCode: '12200',
-      country: 'Cambodia',
-      phone: '+855 12 345 678',
-      isDefault: false,
-    }
-  ],
-  paymentMethods: [
-    {
-      id: 1,
-      provider: 'ABA',
-      name: 'ABA Pay',
-      accountNumber: '**** 3456',
-      expiry: '12/28',
-      badge: 'Default',
-      isDefault: true,
-      color: '#005D8E'
-    },
-    {
-      id: 2,
-      provider: 'Mastercard',
-      name: 'Mastercard',
-      accountNumber: '**** 9012',
-      expiry: '11/27',
-      badge: null,
-      isDefault: false,
-      color: '#EB001B'
-    }
-  ]
+function stored(key) {
+  try { return sessionStorage.getItem(key) || localStorage.getItem(key) } catch { return null }
+}
+function mapUser(user) {
+  return { ...user, firstName: user.first_name || user.name?.split(' ')[0] || '',
+    lastName: user.last_name || '', rewardPoints: user.reward_points ?? 0,
+    addresses: user.profile_data?.addresses || [], paymentMethods: [],
+    totalOrders: 0, wishlistCount: 0, savedForLaterCount: 0,
+    joinedDate: user.created_at ? new Date(user.created_at).toLocaleDateString() : '' }
+}
+function errorMessage(error, fallback) {
+  const detail = error.response?.data?.detail
+  return typeof detail === 'string' ? detail : Array.isArray(detail) ? detail.map(d => d.msg).join('. ') : fallback
+}
+function clearPrivateState() {
+  for (const key of ['lumea_orders', 'lumea_skin_profile', 'lumea_journal_entries', 'lumea_wishlist']) localStorage.removeItem(key)
+  const stores = getActivePinia()?._s
+  if (!stores) return
+  if (stores.has('orders')) stores.get('orders').orders = []
+  if (stores.has('wishlist')) stores.get('wishlist').loadProfile?.()
+  if (stores.has('quiz')) stores.get('quiz').loadProfile?.()
+  if (stores.has('journal')) stores.get('journal').loadProfile?.()
 }
 
 export const useAuthStore = defineStore('auth', {
   state: () => {
-    const user = safeGetJSON('lumea_auth_user', null)
-    const token = localStorage.getItem('lumea_auth_token') || null
-    
-    return {
-      user,
-      token,
-      isAuthenticated: !!(token && user),
-    }
+    let user = null
+    try { user = JSON.parse(stored('lumea_auth_user') || 'null') } catch {}
+    const token = stored('lumea_auth_token')
+    if (token) axios.defaults.headers.common.Authorization = `Bearer ${token}`
+    return { user, token, isAuthenticated: !!(token && user), remember: !!localStorage.getItem('lumea_auth_token'), validated: false }
   },
-
   getters: {
-    userName: (state) => state.user?.name || 'Sreynich Chan',
-    userFirstName: (state) => state.user?.firstName || 'Sreynich',
-    userEmail: (state) => state.user?.email || 'sreynich.chan@example.com',
-    userAvatar: (state) => state.user?.avatar || '/images/avatar-sreynich.jpg',
-    defaultAddress: (state) => state.user?.addresses?.find((a) => a.isDefault) || state.user?.addresses?.[0],
-    defaultPayment: (state) => state.user?.paymentMethods?.find((p) => p.isDefault) || state.user?.paymentMethods?.[0],
+    userName: s => s.user?.name || 'Guest', userFirstName: s => s.user?.firstName || 'Guest',
+    userEmail: s => s.user?.email || '', userAvatar: s => s.user?.avatar || '',
+    defaultAddress: s => s.user?.addresses?.find(a => a.isDefault) || s.user?.addresses?.[0],
+    defaultPayment: s => s.user?.paymentMethods?.[0],
   },
-
   actions: {
     persist() {
-      safeSetJSON('lumea_auth_user', this.user)
+      for (const storage of [localStorage, sessionStorage]) {
+        storage.removeItem('lumea_auth_user'); storage.removeItem('lumea_auth_token')
+      }
       if (this.token) {
-        localStorage.setItem('lumea_auth_token', this.token)
-      } else {
-        safeRemove('lumea_auth_token')
+        const storage = this.remember ? localStorage : sessionStorage
+        storage.setItem('lumea_auth_token', this.token)
+        storage.setItem('lumea_auth_user', JSON.stringify(this.user))
+        axios.defaults.headers.common.Authorization = `Bearer ${this.token}`
+      } else delete axios.defaults.headers.common.Authorization
+    },
+    setSession(data, remember = true) {
+      this.user = mapUser(data.user); this.token = data.access_token; this.remember = remember
+      this.isAuthenticated = true; this.validated = true; this.persist(); clearPrivateState()
+    },
+    async ensureSession() {
+      if (!this.token) return false
+      if (this.validated) return this.isAuthenticated
+      try {
+        this.user = mapUser((await axios.get('/api/auth/me')).data)
+        this.isAuthenticated = true; this.validated = true; this.persist(); return true
+      } catch (error) {
+        if (error.response?.status === 401 || error.response?.status === 404) this.logout(false)
+        return false
       }
     },
-
-    login({ email, password, remember = true }) {
-      const notificationStore = useNotificationStore()
-      this.token = 'demo-token-' + Date.now()
-      this.isAuthenticated = true
-      
-      // If logging in with different credentials, update display
-      if (email && email !== this.user?.email) {
-        if (!this.user) this.user = { ...DEFAULT_USER }
-        this.user.email = email
-        this.user.name = email.split('@')[0]
-      } else if (!this.user) {
-        this.user = { ...DEFAULT_USER }
+    async login({ email, password, remember = true }) {
+      try {
+        const { data } = await axios.post('/api/auth/login', { email, password })
+        if (!data.data?.access_token) throw new Error('Missing session')
+        this.setSession(data.data, remember)
+        useNotificationStore().addToast(`Welcome back, ${this.user.firstName}!`, 'success')
+        return true
+      } catch (error) {
+        useNotificationStore().addToast(errorMessage(error, 'Sign-in is unavailable. Please try again.'), 'error')
+        return false
       }
-      
-      if (remember) {
-        this.persist()
+    },
+    async register({ name, email, phone, password }) {
+      try {
+        const { data } = await axios.post('/api/auth/register', { name, email, phone, password })
+        if (!data.data?.access_token) throw new Error('Missing session')
+        this.setSession(data.data)
+        useNotificationStore().addToast(`Welcome to Luméa, ${this.user.firstName}!`, 'success')
+        return true
+      } catch (error) {
+        useNotificationStore().addToast(errorMessage(error, 'Registration is unavailable. Your account has not been created.'), 'error')
+        return false
       }
-      notificationStore.addToast(`Welcome back, ${this.user.firstName}!`, 'success')
-      return true
     },
-
-    register({ name, email, phone, password }) {
-      const notificationStore = useNotificationStore()
-      const parts = name.trim().split(' ')
-      const firstName = parts[0] || 'Member'
-      const lastName = parts.slice(1).join(' ') || ''
-
-      this.user = {
-        ...DEFAULT_USER,
-        name,
-        firstName,
-        lastName,
-        email,
-        phone: phone || '+855 12 000 000',
-        rewardPoints: 100, // welcome bonus points
-        totalOrders: 0,
+    logout(notify = true) {
+      this.token = null; this.user = null; this.isAuthenticated = false; this.validated = false; this.persist(); clearPrivateState()
+      for (const key of Object.keys(sessionStorage)) if (key.startsWith('lumea_order_access_')) sessionStorage.removeItem(key)
+      if (notify) useNotificationStore().addToast('You have been signed out.', 'info')
+    },
+    async updateProfile(updates) {
+      try {
+        const { data } = await axios.patch('/api/auth/me', updates)
+        this.user = mapUser(data); this.persist()
+        useNotificationStore().addToast('Profile saved.', 'success')
+        return true
+      } catch (error) {
+        useNotificationStore().addToast(errorMessage(error, 'Could not save your profile.'), 'error'); return false
       }
-      this.token = 'demo-token-' + Date.now()
-      this.isAuthenticated = true
-      this.persist()
-      notificationStore.addToast(`Welcome to Luméa, ${firstName}! You earned 100 bonus points.`, 'success')
-      return true
     },
-
-    logout() {
-      const notificationStore = useNotificationStore()
-      this.token = null
-      this.user = null
-      this.isAuthenticated = false
-      safeRemove('lumea_auth_token')
-      safeRemove('lumea_auth_user')
-      notificationStore.addToast('You have been signed out.', 'info')
+    async addAddress(address) {
+      const addresses = JSON.parse(JSON.stringify(this.user?.addresses || []))
+      if (address.isDefault) addresses.forEach(a => { a.isDefault = false })
+      addresses.push({ ...address, id: Date.now() })
+      return this.updateProfile({ addresses })
     },
-
-    updateProfile(updates) {
-      const notificationStore = useNotificationStore()
-      this.user = { ...this.user, ...updates }
-      this.persist()
-      notificationStore.addToast('Profile updated successfully.', 'success')
+    addPaymentMethod() {
+      useNotificationStore().addToast('Saved card payments are not available yet.', 'info')
+      return false
     },
-
-    addAddress(newAddr) {
-      const notificationStore = useNotificationStore()
-      const id = Date.now()
-      if (newAddr.isDefault) {
-        this.user.addresses.forEach(a => a.isDefault = false)
-      }
-      this.user.addresses.push({
-        id,
-        ...newAddr
-      })
-      this.persist()
-      notificationStore.addToast('New address saved.', 'success')
-    },
-
-    addPaymentMethod(payment) {
-      const notificationStore = useNotificationStore()
-      const id = Date.now()
-      if (payment.isDefault) {
-        this.user.paymentMethods.forEach(p => p.isDefault = false)
-      }
-      this.user.paymentMethods.push({
-        id,
-        ...payment
-      })
-      this.persist()
-      notificationStore.addToast('New payment method added.', 'success')
-    }
-  }
+  },
 })

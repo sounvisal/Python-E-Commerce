@@ -47,69 +47,8 @@
         <!-- ========================================================= -->
         <!-- LEFT: ACCOUNT NAVIGATION SIDEBAR                          -->
         <!-- ========================================================= -->
-        <aside class="account-sidebar">
-          <div class="user-profile-badge">
-            <img src="/images/avatar-sreynich.jpg" alt="Sreynich Chan" class="user-avatar-img" />
-            <h3 class="user-name">Sreynich Chan</h3>
-            <span class="user-email">sreynich.chan@example.com</span>
-          </div>
-
-          <nav class="account-nav-list">
-            <router-link to="/account/profile" class="nav-item">
-              <Home :size="18" />
-              <span>Overview</span>
-            </router-link>
-            <router-link to="/account/profile" class="nav-item">
-              <Package :size="18" />
-              <span>Orders</span>
-            </router-link>
-            <router-link to="/wishlist" class="nav-item">
-              <Heart :size="18" />
-              <span>Wishlist</span>
-            </router-link>
-            <router-link to="/account/profile" class="nav-item">
-              <MapPin :size="18" />
-              <span>Addresses</span>
-            </router-link>
-            <router-link to="/account/profile" class="nav-item">
-              <CreditCard :size="18" />
-              <span>Payment Methods</span>
-            </router-link>
-            <router-link to="/wishlist" class="nav-item">
-              <Bookmark :size="18" />
-              <span>Saved Items</span>
-            </router-link>
-            <router-link to="/account/profile" class="nav-item is-active">
-              <Sprout :size="18" />
-              <span>Beauty Profile</span>
-            </router-link>
-            <router-link to="/account/journal" class="nav-item">
-              <BookOpen :size="18" />
-              <span>Skincare Journal</span>
-            </router-link>
-            <router-link to="/account/profile" class="nav-item">
-              <Bell :size="18" />
-              <span>Notifications</span>
-            </router-link>
-            <router-link to="/account/profile" class="nav-item">
-              <Settings :size="18" />
-              <span>Account Settings</span>
-            </router-link>
-          </nav>
-
-          <!-- Support Card -->
-          <div class="sidebar-help-card">
-            <div class="help-header">
-              <Headphones :size="20" class="help-icon" />
-              <div>
-                <h4 class="help-title">Need Help?</h4>
-                <p class="help-desc">Our customer support team is here for you.</p>
-              </div>
-            </div>
-            <router-link to="/contact" class="btn-help-contact">
-              Contact Us
-            </router-link>
-          </div>
+        <aside class="sidebar-column">
+          <AccountSidebar currentActive="profile" />
         </aside>
 
         <!-- ========================================================= -->
@@ -370,6 +309,7 @@
 </template>
 
 <script setup>
+import AccountSidebar from '@/components/account/AccountSidebar.vue'
 import { useQuizStore } from '@/stores/quiz'
 import {
   ArrowRight,

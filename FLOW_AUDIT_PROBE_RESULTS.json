@@ -1,0 +1,97 @@
+[
+  {
+    "finding": "Zero-stock product accepted and COD marked Paid",
+    "declared_http_status": 201,
+    "method": "direct route handler with in-memory DB; authentication absence separately inspected",
+    "evidence": {
+      "status": "Confirmed",
+      "payment_status": "Paid",
+      "quantity": 3,
+      "stock_after": 0
+    }
+  },
+  {
+    "finding": "Order list readable without authentication",
+    "declared_http_status": 200,
+    "method": "direct route handler with in-memory DB; authentication absence separately inspected",
+    "evidence": {
+      "count": 1
+    }
+  },
+  {
+    "finding": "Anonymous caller can jump order directly to Delivered",
+    "declared_http_status": 200,
+    "method": "direct route handler with in-memory DB; authentication absence separately inspected",
+    "evidence": {
+      "status": "Delivered"
+    }
+  },
+  {
+    "finding": "Admin customer endpoint readable without authentication",
+    "declared_http_status": 200,
+    "method": "direct route handler with in-memory DB; authentication absence separately inspected",
+    "evidence": {
+      "response_status": "success"
+    }
+  },
+  {
+    "finding": "Caller overrides authoritative product price",
+    "declared_http_status": 201,
+    "method": "direct route handler with in-memory DB; authentication absence separately inspected",
+    "evidence": {
+      "catalog_price": 50,
+      "charged_subtotal": 0.01
+    }
+  },
+  {
+    "finding": "Invented coupon accepted; shipping threshold changes after discount",
+    "declared_http_status": 201,
+    "method": "direct route handler with in-memory DB; authentication absence separately inspected",
+    "evidence": {
+      "subtotal": 50.0,
+      "discount": 10.0,
+      "shipping": 15.0,
+      "total": 55.0,
+      "frontend_total_for_same_cart": 40
+    }
+  },
+  {
+    "finding": "Return accepted for nonexistent order and caller-supplied price",
+    "declared_http_status": 201,
+    "method": "direct route handler with in-memory DB; authentication absence separately inspected",
+    "evidence": {
+      "request_number": "RR26118929",
+      "price": 999.0,
+      "status": "Under Review",
+      "contains_success_key": false
+    }
+  },
+  {
+    "finding": "Return status changes without timeline progression or success key",
+    "declared_http_status": 200,
+    "method": "direct route handler with in-memory DB; authentication absence separately inspected",
+    "evidence": {
+      "status": "Refunded",
+      "current_step": 2,
+      "contains_success_key": false
+    }
+  },
+  {
+    "finding": "Unpurchased anonymous review approved and verified automatically",
+    "declared_http_status": 201,
+    "method": "direct route handler with in-memory DB; authentication absence separately inspected",
+    "evidence": {
+      "status": "approved",
+      "verified_purchase": true
+    }
+  },
+  {
+    "finding": "Public simulation marks payment Paid and revives Delivered order as Confirmed",
+    "declared_http_status": 200,
+    "method": "direct route handler with in-memory DB; authentication absence separately inspected",
+    "evidence": {
+      "paid": true,
+      "status_after": "Confirmed"
+    }
+  }
+]

@@ -3,7 +3,7 @@ from sqlalchemy.orm import Session
 from app.core.database import get_db
 from app.core.security import get_password_hash, verify_password, create_access_token
 from app.models.user import User
-from app.schemas.user import UserCreate, UserLogin, UserOut, Token, AuthResponse
+from app.schemas.user import ProfileUpdate, UserCreate, UserLogin, UserOut, Token, AuthResponse
 from app.api.deps import get_current_user
 
 router = APIRouter(prefix="/auth", tags=["Authentication"])
@@ -28,7 +28,7 @@ def register(user_in: UserCreate, db: Session = Depends(get_db)):
         last_name=last_name,
         email=user_in.email,
         hashed_password=get_password_hash(user_in.password),
-        phone=user_in.phone or "+855 12 345 678",
+        phone=user_in.phone or "",
         role="customer",
         tier="Luméa Member",
         reward_points=50,
@@ -75,4 +75,24 @@ def login(login_in: UserLogin, db: Session = Depends(get_db)):
 @router.get("/me", response_model=UserOut)
 def get_current_user_profile(current_user: User = Depends(get_current_user)):
     """Retrieve the currently authenticated user's profile."""
+    return current_user
+
+@router.patch('/me', response_model=UserOut)
+def update_profile(payload: ProfileUpdate, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    if payload.name is not None:
+        name = payload.name.strip()
+        if not 2 <= len(name) <= 100:
+            raise HTTPException(400, 'Name must have 2 to 100 characters')
+        current_user.name = name
+        current_user.first_name, _, current_user.last_name = name.partition(' ')
+    if payload.phone is not None:
+        current_user.phone = payload.phone[:50]
+    if payload.addresses is not None:
+        if len(payload.addresses) > 20:
+            raise HTTPException(400, 'Too many saved addresses')
+        allowed = {'id', 'name', 'tag', 'street', 'commune', 'district', 'city', 'postalCode', 'country', 'phone', 'isDefault'}
+        addresses = [{k: v for k, v in address.items() if k in allowed} for address in payload.addresses]
+        current_user.profile_data = {**(current_user.profile_data or {}), 'addresses': addresses}
+    db.commit()
+    db.refresh(current_user)
     return current_user

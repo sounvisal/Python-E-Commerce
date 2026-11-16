@@ -2,6 +2,8 @@
 
 > A full-stack contemporary e-commerce application featuring a **Python FastAPI REST API** backend, a **Vue 3 + Vite** storefront (Port 5173), and a dedicated **Vue 3 + Vite** Admin Atelier Dashboard (Port 5174).
 
+See the [free hosting setup](DEPLOYMENT.md) for Render and Postgres.
+
 ---
 
 ## 🏗️ Architecture Overview
@@ -17,7 +19,7 @@ Python-E-Commerce/
 │   │   └── seed/              # Catalog fixture data and seeder
 │   ├── lumea.db               # SQLite database (zero-config, portable)
 │   ├── run.py                 # Uvicorn server launcher
-│   └── test_api.py            # Automated test suite (26/26 passing, 100% success)
+│   └── tests/                 # Backend API integration tests
 │
 ├── frontend/                  # Vue 3 Storefront SPA + Vite (Port 5173)
 │   ├── src/
@@ -61,7 +63,7 @@ python run.py
 - API Base URL: `http://127.0.0.1:8000/api`
 - Interactive Swagger UI: `http://127.0.0.1:8000/docs`
 - Service Health Check: `http://127.0.0.1:8000/api/health`
-- Run Automated Test Suite: `python test_api.py` (12/12 tests passing)
+- Run Backend API Tests: `python -m pytest tests`. Point `DATABASE_URL` at a disposable SQLite file before running the suite.
 
 ### 2. Frontend Storefront Setup & Run (Vue 3)
 
@@ -91,10 +93,14 @@ npm run dev
   - Email: `sreynich.chan@example.com`
   - Password: `password123`
   - Tier: *Luméa Radiant Gold* (320 pts)
-- **Admin Atelier (Dashboard)**:
-  - Email: `admin@lumea.com`
-  - Password: `admin123`
-  - *(Or use the 1-Click Demo Login on the login screen)*
+
+To set up the admin console, start the backend to initialize the database, then run this from `python-backend`:
+
+```powershell
+.\venv\Scripts\python.exe create_admin.py admin@example.com --name "Store Administrator"
+```
+
+Enter and confirm a password at the prompt, then sign in to the admin console with that account.
 
 ---
 

@@ -17,6 +17,9 @@ class Settings(BaseSettings):
     
     # Security: Read from .env, generate secure cryptographic fallback if missing
     SECRET_KEY: str = os.getenv("SECRET_KEY", "")
+    PRODUCTION: bool = False
+    SERVE_BUILT_APPS: bool = False
+    ENABLE_DEMO_PAYMENTS: bool = False
     ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24 * 7  # 7 days
     
@@ -37,6 +40,14 @@ class Settings(BaseSettings):
         extra = "ignore"
 
 settings = Settings()
+
+if settings.PRODUCTION:
+    if len(settings.SECRET_KEY.encode("utf-8")) < 32:
+        raise RuntimeError("Set a persistent SECRET_KEY of at least 32 bytes in production.")
+    if not settings.DATABASE_URL.startswith(("postgresql://", "postgres://", "postgresql+psycopg://")):
+        raise RuntimeError("Set a persistent PostgreSQL DATABASE_URL in production.")
+    if settings.ENABLE_DEMO_PAYMENTS:
+        raise RuntimeError("Demo payments must be disabled in production.")
 
 if not settings.SECRET_KEY:
     # Generate cryptographically strong key if none provided in environment

@@ -189,7 +189,7 @@ function backupStoreData() {
   document.body.appendChild(link)
   link.click()
   document.body.removeChild(link)
-  adminStore.addToast('Store database backup generated and downloaded', 'success')
+  adminStore.addToast('Settings snapshot downloaded (does not include orders or customers)', 'success')
 }
 </script>
 
@@ -626,7 +626,7 @@ function backupStoreData() {
                 </div>
                 <div class="action-text-wrap">
                   <span class="action-title">Backup Store Data</span>
-                  <span class="action-desc">Download a backup of your store data.</span>
+                  <span class="action-desc">Download settings only. Orders, customers, and files are excluded.</span>
                 </div>
               </div>
 

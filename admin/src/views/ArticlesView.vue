@@ -33,6 +33,7 @@ import {
 } from 'lucide-vue-next'
 
 const adminStore = useAdminStore()
+const hostedDeployment = import.meta.env.VITE_HOSTED_DEPLOYMENT === 'true'
 
 // View Mode: 'list' | 'editor'
 const currentView = ref('list')
@@ -148,179 +149,21 @@ const articleKpis = [
 ]
 
 // Mock & Seed Articles Data matching Skincare Articles Management Dashboard.png
-const articlesList = ref([
-  {
-    id: 1,
-    title: '10 Skincare Tips for Glowing Skin',
-    subtitle: 'Simple daily habits for healthier, brighter skin.',
-    slug: '10-skincare-tips-for-glowing-skin',
-    category: 'Skincare Tips',
-    category_badge: 'badge-tips',
-    author: 'Sophea Chhun',
-    author_avatar: '/images/avatar-sreynich.jpg',
-    views: '2,845',
-    likes: 210,
-    comments: 28,
-    status: 'Published',
-    date: 'Aug 28, 2025',
-    time: '10:24 AM',
-    thumb: '/images/article-thumb-sleep.jpg'
-  },
-  {
-    id: 2,
-    title: 'The Right Sunscreen for Your Skin Type',
-    subtitle: 'Find the perfect SPF for your unique needs.',
-    slug: 'the-right-sunscreen-for-your-skin-type',
-    category: 'Sun Care',
-    category_badge: 'badge-sun',
-    author: 'Dara Kim',
-    author_avatar: '/images/avatar-super-admin.jpg',
-    views: '1,982',
-    likes: 145,
-    comments: 17,
-    status: 'Published',
-    date: 'Aug 25, 2025',
-    time: '02:15 PM',
-    thumb: '/images/article-thumb-centella.jpg'
-  },
-  {
-    id: 3,
-    title: 'How to Build a Skincare Routine',
-    subtitle: 'A step-by-step guide for beginners.',
-    slug: 'how-to-build-a-skincare-routine-for-your-skin-type',
-    category: 'Skincare Routine',
-    category_badge: 'badge-routine',
-    author: 'Sophea Chhun',
-    author_avatar: '/images/avatar-sreynich.jpg',
-    views: '3,421',
-    likes: 302,
-    comments: 36,
-    status: 'Published',
-    date: 'Aug 20, 2025',
-    time: '09:30 AM',
-    thumb: '/images/article-thumb-sleep.jpg'
-  },
-  {
-    id: 4,
-    title: 'Top 5 Ingredients for Healthy Skin',
-    subtitle: 'Science-backed ingredients that work.',
-    slug: 'top-5-ingredients-for-healthy-skin',
-    category: 'Ingredients',
-    category_badge: 'badge-ingredients',
-    author: 'Mony Roth',
-    author_avatar: '/images/avatar-sreynich.jpg',
-    views: '1,567',
-    likes: 98,
-    comments: 12,
-    status: 'Draft',
-    date: 'Aug 18, 2025',
-    time: '—',
-    thumb: '/images/article-thumb-centella.jpg'
-  },
-  {
-    id: 5,
-    title: 'How to Treat Acne Naturally',
-    subtitle: 'Gentle and effective solutions for clearer skin.',
-    slug: 'how-to-treat-acne-naturally',
-    category: 'Acne Care',
-    category_badge: 'badge-acne',
-    author: 'Dara Kim',
-    author_avatar: '/images/avatar-super-admin.jpg',
-    views: '2,104',
-    likes: 176,
-    comments: 24,
-    status: 'Published',
-    date: 'Aug 15, 2025',
-    time: '11:20 AM',
-    thumb: '/images/article-thumb-sleep.jpg'
-  },
-  {
-    id: 6,
-    title: 'Morning vs. Night Skincare Routine',
-    subtitle: "What's the difference and why it matters.",
-    slug: 'morning-vs-night-skincare-routine',
-    category: 'Skincare Routine',
-    category_badge: 'badge-routine',
-    author: 'Mony Roth',
-    author_avatar: '/images/avatar-sreynich.jpg',
-    views: '1,298',
-    likes: 88,
-    comments: 9,
-    status: 'Scheduled',
-    date: 'Sep 1, 2025',
-    time: '08:00 AM',
-    thumb: '/images/article-thumb-centella.jpg'
-  },
-  {
-    id: 7,
-    title: 'Natural Ingredients That Actually Work',
-    subtitle: 'Discover the power of nature in skincare.',
-    slug: 'natural-ingredients-that-actually-work',
-    category: 'Natural Care',
-    category_badge: 'badge-natural',
-    author: 'Sophea Chhun',
-    author_avatar: '/images/avatar-sreynich.jpg',
-    views: '976',
-    likes: 64,
-    comments: 8,
-    status: 'Published',
-    date: 'Aug 10, 2025',
-    time: '04:10 PM',
-    thumb: '/images/article-thumb-sleep.jpg'
-  },
-  {
-    id: 8,
-    title: 'How to Choose Products for Sensitive Skin',
-    subtitle: 'Expert advice for calm, healthy skin.',
-    slug: 'how-to-choose-products-for-sensitive-skin',
-    category: 'Sensitive Skin',
-    category_badge: 'badge-sensitive',
-    author: 'Dara Kim',
-    author_avatar: '/images/avatar-super-admin.jpg',
-    views: '1,732',
-    likes: 120,
-    comments: 12,
-    status: 'Archived',
-    date: 'Aug 5, 2025',
-    time: '01:45 PM',
-    thumb: '/images/article-thumb-centella.jpg'
-  }
-])
-
-onMounted(async () => {
+const articlesList = ref([])
+async function fetchArticles() {
   try {
-    const res = await apiClient.get('/articles?limit=100')
-    if (res.data?.success && res.data.data?.length > 0) {
-      // Merge with real database articles
-      const dbArts = res.data.data
-      dbArts.forEach((da, idx) => {
-        if (!articlesList.value.some(a => a.slug === da.slug)) {
-          articlesList.value.push({
-            id: da.id || 10 + idx,
-            title: da.title,
-            subtitle: da.subtitle || da.excerpt?.slice(0, 50),
-            slug: da.slug,
-            category: da.category || 'Skincare Science',
-            category_badge: 'badge-tips',
-            author: da.author_name || 'Dr. Celine Laurent',
-            author_avatar: da.author_avatar || '/images/avatar-sreynich.jpg',
-            views: da.views_count || '1,200',
-            likes: 85,
-            comments: 10,
-            status: 'Published',
-            date: da.published_at || 'Aug 28, 2025',
-            time: '10:00 AM',
-            thumb: da.thumbnail || '/images/article-thumb-sleep.jpg'
-          })
-        }
-      })
+    const all = []
+    for (let page = 1; ; page++) {
+      const { data } = await apiClient.get('/articles', { params: { include_unpublished: true, limit: 50, page } })
+      all.push(...data.data)
+      if (!data.data.length || all.length >= data.total) break
     }
-  } catch (err) {
-    console.warn('Using initial articles list:', err)
-  }
-})
+    articlesList.value = all.map(a => ({ ...a, subtitle: a.excerpt, author: a.author_name, thumb: a.hero_image,
+      views: a.views_count, likes: 0, comments: 0, date: a.published_at, time: '', category_badge: 'badge-tips' }))
+  } catch (error) { adminStore.addToast('Could not load articles.', 'error') }
+}
+onMounted(fetchArticles)
 
-// Filtered Articles
 const filteredArticles = computed(() => {
   let list = [...articlesList.value]
 
@@ -393,6 +236,9 @@ const openCreateArticle = () => {
 const openEditArticle = (art) => {
   editorMode.value = 'edit'
   articleForm.id = art.id
+  articleForm.content = art.content || ''
+  articleForm.tags = [...(art.tags || [])]
+  articleForm.original_slug = art.slug
   articleForm.title = art.title
   articleForm.slug = art.slug
   articleForm.excerpt = art.subtitle || ''
@@ -414,49 +260,23 @@ const removeTag = (index) => {
   articleForm.tags.splice(index, 1)
 }
 
-const saveDraft = () => {
-  articleForm.status = 'Draft'
-  adminStore.addToast(`Article "${articleForm.title}" saved as draft`, 'success')
-  currentView.value = 'list'
+async function saveArticle(status) {
+  if (!articleForm.title.trim()) return adminStore.addToast('Enter an article title.', 'error')
+  const payload = { title: articleForm.title, slug: articleForm.slug || articleForm.title.toLowerCase().replace(/[^a-z0-9]+/g, '-'),
+    excerpt: articleForm.excerpt, subtitle: articleForm.excerpt, content: articleForm.content,
+    category: articleForm.category, author_name: articleForm.author, hero_image: articleForm.featured_image,
+    thumbnail: articleForm.featured_image, tags: articleForm.tags, status, views_count: '0',
+    published_at: status === 'Published' ? new Date().toISOString() : '' }
+  try {
+    if (editorMode.value === 'create') await apiClient.post('/articles', payload)
+    else await apiClient.put(`/articles/${articleForm.original_slug}`, payload)
+    await fetchArticles()
+    currentView.value = 'list'
+    adminStore.addToast(status === 'Draft' ? 'Draft saved. It is not visible in the storefront.' : 'Article published.', 'success')
+  } catch (error) { adminStore.addToast(error.response?.data?.detail || 'Unable to save. Your edits have been kept.', 'error') }
 }
-
-const publishArticle = () => {
-  if (!articleForm.title) {
-    alert('Please enter an article title.')
-    return
-  }
-
-  if (editorMode.value === 'create') {
-    articlesList.value.unshift({
-      id: Date.now(),
-      title: articleForm.title,
-      subtitle: articleForm.excerpt,
-      slug: articleForm.slug || articleForm.title.toLowerCase().replace(/\s+/g, '-'),
-      category: articleForm.category,
-      category_badge: 'badge-tips',
-      author: articleForm.author,
-      author_avatar: '/images/avatar-sreynich.jpg',
-      views: '1',
-      likes: 0,
-      comments: 0,
-      status: 'Published',
-      date: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
-      time: 'Just now',
-      thumb: articleForm.featured_image
-    })
-    adminStore.addToast('Article published to Skincare Journal!', 'success')
-  } else {
-    const item = articlesList.value.find(a => a.id === articleForm.id)
-    if (item) {
-      item.title = articleForm.title
-      item.subtitle = articleForm.excerpt
-      item.category = articleForm.category
-      item.status = 'Published'
-    }
-    adminStore.addToast('Article updated and published!', 'success')
-  }
-  currentView.value = 'list'
-}
+const saveDraft = () => saveArticle('Draft')
+const publishArticle = () => saveArticle('Published')
 </script>
 
 <template>
@@ -936,15 +756,20 @@ const publishArticle = () => {
             <div class="featured-img-preview-box">
               <img :src="articleForm.featured_image" class="featured-img" />
             </div>
+            <div v-if="hostedDeployment" class="form-group">
+              <label for="featured-image-url" class="form-label">Image URL or Asset Path</label>
+              <input id="featured-image-url" v-model.trim="articleForm.featured_image" type="text" class="atelier-input" />
+            </div>
             <div class="featured-img-actions">
               <input
+                v-if="!hostedDeployment"
                 type="file"
                 ref="articleFileInput"
                 @change="handleArticleImageUpload"
                 accept="image/*"
                 style="display: none"
               />
-              <button class="btn-img-action" @click="triggerArticleImageUpload" :disabled="isUploadingImage">
+              <button v-if="!hostedDeployment" class="btn-img-action" @click="triggerArticleImageUpload" :disabled="isUploadingImage">
                 <Upload :size="13" />
                 <span>{{ isUploadingImage ? 'Uploading...' : 'Change Image' }}</span>
               </button>
@@ -1020,7 +845,7 @@ const publishArticle = () => {
                 class="atelier-input"
               />
               <label class="checkbox-schedule">
-                <input type="checkbox" v-model="articleForm.is_scheduled" />
+                <input type="checkbox" v-model="articleForm.is_scheduled" disabled />
                 <span>Schedule for later</span>
               </label>
             </div>

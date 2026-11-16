@@ -148,11 +148,18 @@ img {
   white-space: nowrap;
 }
 
-.btn:active,
-button:active,
-.clickable:active {
-  transform: scale(0.97) !important;
-  transition: transform 120ms var(--ease-out) !important;
+:is(a, button):focus-visible {
+  outline: 2px solid var(--accent-terracotta);
+  outline-offset: 3px;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .btn:active,
+  button:active,
+  .clickable:active {
+    transform: scale(0.97) !important;
+    transition: transform 120ms var(--ease-out) !important;
+  }
 }
 
 .btn-primary {
@@ -294,17 +301,18 @@ button:active,
 /* Toast System */
 .toast-container {
   position: fixed;
-  bottom: 2rem;
-  right: 2rem;
+  bottom: max(1rem, env(safe-area-inset-bottom));
+  right: max(1rem, env(safe-area-inset-right));
+  left: max(1rem, env(safe-area-inset-left));
   z-index: 1000;
   display: flex;
   flex-direction: column;
+  align-items: flex-end;
   gap: 0.75rem;
   pointer-events: none;
 }
 
 .toast {
-  pointer-events: auto;
   display: flex;
   align-items: center;
   gap: 0.75rem;
@@ -315,18 +323,8 @@ button:active,
   box-shadow: var(--shadow-lg);
   font-size: 0.875rem;
   font-weight: 500;
-  animation: slideInUp 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-}
-
-@keyframes slideInUp {
-  from {
-    transform: translateY(20px);
-    opacity: 0;
-  }
-  to {
-    transform: translateY(0);
-    opacity: 1;
-  }
+  max-width: min(100%, 400px);
+  overflow-wrap: anywhere;
 }
 
 /* Skeletons */

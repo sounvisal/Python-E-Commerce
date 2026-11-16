@@ -93,19 +93,12 @@
           <p class="pdp-formula-sub">{{ product.formula_tag || `Clinically proven ${product.category_name || 'skincare'} formulation for balanced radiance.` }}</p>
 
           <!-- Ratings Row -->
-          <div class="pdp-rating-row">
-            <div class="rating-stars">
-              <Star v-for="i in 5" :key="i" :size="14" class="star-gold" />
+          <div v-if="reviewMetrics" class="pdp-rating-row">
+            <div v-if="reviewMetrics.total_reviews" class="rating-stars" aria-hidden="true">
+              <Star v-for="i in 5" :key="i" :size="14" :class="i <= Math.round(reviewMetrics.average_rating) ? 'star-gold' : 'star-muted'" />
             </div>
-            <span class="rating-score">4.8</span>
-            <span class="rating-count">({{ product.reviews || '1,243' }} reviews)</span>
-            <span class="pipe-sep">|</span>
-            <span class="sold-count">10K+ sold</span>
-          </div>
-
-          <div class="pdp-best-seller-tag">
-            <span class="tag-hash">#1 Best Seller</span>
-            <span class="tag-cat">in {{ product.category_name || 'Skincare' }}</span>
+            <span v-if="reviewMetrics.total_reviews" class="rating-score">{{ reviewMetrics.average_rating.toFixed(1) }}</span>
+            <span class="rating-count">{{ reviewCountLabel }}</span>
           </div>
 
           <!-- Price -->
@@ -367,25 +360,21 @@
                   <th>Brand</th>
                   <td>{{ product.brand }}</td>
                 </tr>
-                <tr>
+                <tr v-if="product.category_name">
                   <th>Product Type</th>
-                  <td>{{ product.category_name || 'Essence' }}</td>
+                  <td>{{ product.category_name }}</td>
                 </tr>
-                <tr>
+                <tr v-if="product.skin_type?.length">
                   <th>Skin Type</th>
-                  <td>{{ product.skin_type || 'All skin types' }}</td>
+                  <td>{{ product.skin_type.join(', ') }}</td>
                 </tr>
-                <tr>
+                <tr v-if="product.skin_concern?.length">
                   <th>Skin Concerns</th>
-                  <td>{{ product.concerns || 'Dullness, Uneven texture, Aging' }}</td>
+                  <td>{{ product.skin_concern.join(', ') }}</td>
                 </tr>
                 <tr>
                   <th>Size</th>
-                  <td>75 ml / 160 ml / 230 ml</td>
-                </tr>
-                <tr>
-                  <th>Made In</th>
-                  <td>Japan</td>
+                  <td>{{ selectedSize.label }}</td>
                 </tr>
               </tbody>
             </table>
@@ -567,15 +556,15 @@
         <div v-else-if="activeMidTab === 'reviews'" class="tab-reviews-panel">
           <!-- Top Summary Card -->
           <div class="reviews-summary-card">
-            <div class="overall-rating-block">
-              <span class="big-score">{{ reviewMetrics.average_rating || '4.8' }}</span>
-              <div class="stars-gold-row">
-                <Star v-for="i in 5" :key="i" :size="18" class="star-gold" />
+            <div v-if="reviewMetrics" class="overall-rating-block">
+              <span v-if="reviewMetrics.total_reviews" class="big-score">{{ reviewMetrics.average_rating.toFixed(1) }}</span>
+              <div v-if="reviewMetrics.total_reviews" class="stars-gold-row" aria-hidden="true">
+                <Star v-for="i in 5" :key="i" :size="18" :class="i <= Math.round(reviewMetrics.average_rating) ? 'star-gold' : 'star-muted'" />
               </div>
-              <span class="total-rev-caption">Based on {{ reviewMetrics.total_reviews || productReviews.length }} verified reviews</span>
+              <span class="total-rev-caption">{{ reviewCountLabel }}</span>
             </div>
 
-            <div class="rating-breakdown-bars">
+            <div v-if="reviewMetrics" class="rating-breakdown-bars">
               <div v-for="star in [5, 4, 3, 2, 1]" :key="star" class="star-bar-row">
                 <span class="star-num">{{ star }} Star</span>
                 <div class="bar-track">
@@ -591,10 +580,13 @@
             <div class="write-review-cta-col">
               <h4>Share Your Ritual</h4>
               <p>Help other atelier clientele choose the ideal formulation for their skin journey.</p>
-              <button class="btn-write-review" @click="openWriteReview">
+              <button v-if="authStore.user" class="btn-write-review" @click="showReviewModal = true">
                 <Edit3 :size="16" />
                 <span>Write a Review</span>
               </button>
+              <router-link v-else class="btn-write-review" :to="{ path: '/login', query: { redirect: route.fullPath } }">
+                Sign in to write a review
+              </router-link>
             </div>
           </div>
 
@@ -605,13 +597,11 @@
           </div>
 
           <!-- Empty State -->
+          <p v-else-if="!reviewMetrics" role="status">Reviews are temporarily unavailable.</p>
           <div v-else-if="productReviews.length === 0" class="empty-reviews-card">
             <MessageSquare :size="32" class="empty-rev-icon" />
             <h3>No Reviews Yet</h3>
             <p>Be the first customer to share your thoughts on this formulation.</p>
-            <button class="btn-write-review-clean" @click="openWriteReview">
-              Write the First Review
-            </button>
           </div>
 
           <!-- Reviews Feed -->
@@ -752,6 +742,8 @@
                 :key="s"
                 type="button"
                 class="star-pick-btn"
+                :aria-label="`${s} out of 5 stars`"
+                :aria-pressed="reviewForm.rating === s"
                 @mouseenter="hoverStar = s"
                 @mouseleave="hoverStar = 0"
                 @click="reviewForm.rating = s"
@@ -791,29 +783,6 @@
             ></textarea>
           </div>
 
-          <div class="form-row-2">
-            <div class="form-group">
-              <label class="form-label" for="revName">Your Name</label>
-              <input
-                id="revName"
-                v-model="reviewForm.customer_name"
-                type="text"
-                placeholder="e.g. Sreynich Chan"
-                class="form-input"
-              />
-            </div>
-            <div class="form-group">
-              <label class="form-label" for="revEmail">Your Email</label>
-              <input
-                id="revEmail"
-                v-model="reviewForm.customer_email"
-                type="email"
-                placeholder="e.g. patron@example.com"
-                class="form-input"
-              />
-            </div>
-          </div>
-
           <!-- Skin Type Selector -->
           <div class="form-group">
             <label class="form-label">Your Skin Profile (Helps other patrons)</label>
@@ -832,7 +801,7 @@
           </div>
 
           <!-- Video Review Upload Option -->
-          <div class="form-group">
+          <div v-if="!hostedDeployment" class="form-group">
             <label class="form-label">Attach Texture / Video Review (Optional)</label>
             <div class="video-upload-area">
               <div v-if="!reviewForm.video_url" class="video-drop-zone">
@@ -987,6 +956,10 @@
       </div>
     </div>
   </div>
+  <section v-else class="container" role="status">
+    <p>{{ productStore.loading ? 'Loading product...' : (productStore.error || 'Product unavailable') }}</p>
+    <router-link to="/shop">Return to catalog</router-link>
+  </section>
 </template>
 
 <script setup>
@@ -1035,6 +1008,7 @@ import { useAuthStore } from '@/stores/auth'
 import { useNotificationStore } from '@/stores/notification'
 
 const route = useRoute()
+const hostedDeployment = import.meta.env.VITE_HOSTED_DEPLOYMENT === 'true'
 const productStore = useProductStore()
 const cartStore = useCartStore()
 const authStore = useAuthStore()
@@ -1059,16 +1033,11 @@ const isUploadingVideo = ref(false)
 
 // Reviews & Ratings state
 const productReviews = ref([])
-const reviewMetrics = ref({
-  total_reviews: 0,
-  average_rating: 4.8,
-  distribution: {
-    '5': { count: 0, percentage: 0 },
-    '4': { count: 0, percentage: 0 },
-    '3': { count: 0, percentage: 0 },
-    '2': { count: 0, percentage: 0 },
-    '1': { count: 0, percentage: 0 },
-  }
+const reviewMetrics = ref(null)
+const reviewCountLabel = computed(() => {
+  const count = reviewMetrics.value?.total_reviews
+  if (!count) return 'No reviews yet'
+  return `${count.toLocaleString()} ${count === 1 ? 'review' : 'reviews'}`
 })
 const loadingReviews = ref(false)
 const showReviewModal = ref(false)
@@ -1080,9 +1049,7 @@ const reviewForm = reactive({
   rating: 5,
   title: '',
   comment: '',
-  customer_name: '',
-  customer_email: '',
-  skin_type: 'Combination',
+  skin_type: '',
   video_url: '',
   video_thumbnail: '',
   video_duration: '',
@@ -1238,16 +1205,14 @@ async function fetchReviews(productId) {
   loadingReviews.value = true
   try {
     const res = await axios.get('/api/reviews', { params: { product_id: productId } })
-    if (res.data?.status === 'success') {
+    if (product.value?.id === productId && res.data?.status === 'success') {
       productReviews.value = res.data.data || []
-      if (res.data.metrics) {
-        reviewMetrics.value = res.data.metrics
-      }
+      reviewMetrics.value = res.data.metrics || null
     }
   } catch (err) {
     console.error('Failed to load reviews:', err)
   } finally {
-    loadingReviews.value = false
+    if (product.value?.id === productId) loadingReviews.value = false
   }
 }
 
@@ -1265,6 +1230,9 @@ watch(() => route.params.slug, () => {
 const product = computed(() => productStore.currentProduct)
 
 watch(() => product.value?.id, (newId) => {
+  productReviews.value = []
+  reviewMetrics.value = null
+  showReviewModal.value = false
   if (newId) {
     fetchReviews(newId)
   }
@@ -1305,8 +1273,6 @@ const sizeOptions = computed(() => {
   const base = Number(product.value?.price || 45)
   return [
     { label: 'Standard (Full Size)', price: base },
-    { label: 'Deluxe Atelier Edition', price: Math.round(base * 1.6) },
-    { label: 'Travel Size', price: Math.max(10, Math.round(base * 0.6)) },
   ]
 })
 const selectedSize = computed(() => sizeOptions.value[selectedSizeIdx.value] || sizeOptions.value[0])
@@ -1340,22 +1306,12 @@ const midTabs = computed(() => [
   { id: 'ingredients', label: 'Ingredients' },
   { id: 'how-to-use', label: 'How to Use' },
   { id: 'benefits', label: 'Benefits' },
-  { id: 'reviews', label: `Reviews (${reviewMetrics.value.total_reviews || product.value?.reviews || '7'})` },
+  { id: 'reviews', label: reviewMetrics.value ? `Reviews (${reviewMetrics.value.total_reviews})` : 'Reviews' },
   { id: 'qa', label: 'Q&A (28)' },
 ])
 
-function openWriteReview() {
-  if (authStore.user) {
-    reviewForm.customer_name = authStore.userName || 'Sreynich Chan'
-    reviewForm.customer_email = authStore.userEmail || 'sreynich.chan@example.com'
-  } else {
-    reviewForm.customer_name = 'Luméa Patron'
-    reviewForm.customer_email = 'patron@example.com'
-  }
-  showReviewModal.value = true
-}
-
 async function submitReview() {
+  if (!product.value || !authStore.user) return
   if (!reviewForm.title || !reviewForm.comment) {
     notificationStore.addToast('Please enter both a title and review comment.', 'error')
     return
@@ -1363,24 +1319,23 @@ async function submitReview() {
   submittingReview.value = true
   try {
     const payload = {
-      product_id: product.value?.id || 201,
+      product_id: product.value.id,
       rating: reviewForm.rating,
       title: reviewForm.title,
       comment: reviewForm.comment,
-      customer_name: reviewForm.customer_name || 'Luméa Patron',
-      customer_email: reviewForm.customer_email || 'patron@example.com',
-      customer_avatar: authStore.user?.avatar || '/images/avatar-sreynich.jpg',
-      skin_type: reviewForm.skin_type || 'Combination',
+      skin_type: reviewForm.skin_type || undefined,
       video_url: reviewForm.video_url || undefined,
       video_duration: reviewForm.video_duration || undefined,
       video_thumbnail: reviewForm.video_thumbnail || undefined,
     }
     const res = await axios.post('/api/reviews', payload)
     if (res.data?.status === 'success') {
-      notificationStore.addToast('Thank you! Your review has been recorded.', 'success')
+      notificationStore.addToast('Thank you! Your review is awaiting moderation.', 'success')
       showReviewModal.value = false
       reviewForm.title = ''
       reviewForm.comment = ''
+      reviewForm.rating = 5
+      reviewForm.skin_type = ''
       reviewForm.video_url = ''
       reviewForm.video_duration = ''
       if (product.value?.id) {
@@ -1681,36 +1636,6 @@ function toggleItemWishlist(id) {
 }
 
 .rating-count {
-  color: #78716C;
-}
-
-.pipe-sep {
-  color: #C4B5AA;
-}
-
-.sold-count {
-  font-weight: 600;
-  color: #1C1917;
-}
-
-.pdp-best-seller-tag {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.4rem;
-  margin-bottom: 1.25rem;
-}
-
-.tag-hash {
-  background: #8E4A3E;
-  color: #FFFFFF;
-  font-size: 0.72rem;
-  font-weight: 700;
-  padding: 0.2rem 0.55rem;
-  border-radius: 4px;
-}
-
-.tag-cat {
-  font-size: 0.78rem;
   color: #78716C;
 }
 
@@ -2815,18 +2740,6 @@ function toggleItemWishlist(id) {
   margin-bottom: 0.5rem;
 }
 
-.btn-write-review-clean {
-  background: #8E4A3E;
-  color: #FFFFFF;
-  border: none;
-  padding: 0.6rem 1.2rem;
-  border-radius: 8px;
-  font-size: 0.82rem;
-  font-weight: 600;
-  cursor: pointer;
-  margin-top: 0.75rem;
-}
-
 .reviews-list-grid {
   display: flex;
   flex-direction: column;
@@ -3145,12 +3058,6 @@ function toggleItemWishlist(id) {
 .form-textarea:focus {
   border-color: #8E4A3E;
   background: #FFFFFF;
-}
-
-.form-row-2 {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 1rem;
 }
 
 .modal-actions {

@@ -19,7 +19,9 @@
       <button
         class="card-heart-btn"
         :class="{ 'is-active': isWishlisted }"
+        :aria-pressed="isWishlisted"
         @click.stop="toggleWishlist"
+        :aria-label="`Wishlist: ${product.name}`"
         :title="isWishlisted ? 'Remove from Wishlist' : 'Add to Wishlist'"
       >
         <Heart :size="16" :stroke-width="1.6" :fill="isWishlisted ? '#9E5D4E' : 'none'" />
@@ -193,29 +195,6 @@ const handleAddToCart = () => {
   position: relative;
   display: flex;
   flex-direction: column;
-  transition: transform 0.32s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.32s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.28s ease;
-  animation: cardEntrance 0.45s cubic-bezier(0.16, 1, 0.3, 1) both;
-}
-
-@keyframes cardEntrance {
-  from {
-    opacity: 0;
-    transform: translateY(14px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-.product-card:hover {
-  transform: translateY(-6px);
-  box-shadow: 0 16px 36px -6px rgba(36, 39, 33, 0.12), 0 4px 14px rgba(28, 25, 23, 0.04);
-  border-color: rgba(142, 74, 62, 0.22);
-}
-
-.product-card:active {
-  transform: scale(0.985);
 }
 
 .image-wrapper {
@@ -243,11 +222,6 @@ const handleAddToCart = () => {
   width: 100%;
   height: 100%;
   object-fit: cover;
-  transition: transform 0.42s cubic-bezier(0.16, 1, 0.3, 1);
-}
-
-.product-card:hover .product-img {
-  transform: scale(1.07);
 }
 
 .card-heart-btn {
@@ -268,15 +242,6 @@ const handleAddToCart = () => {
   z-index: 5;
   padding: 0;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
-  transition: color 0.2s ease, transform 0.24s cubic-bezier(0.16, 1, 0.3, 1), background-color 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
-}
-
-.card-heart-btn:hover {
-  color: #8E4A3E;
-  background: #FFFFFF;
-  border-color: rgba(142, 74, 62, 0.3);
-  transform: scale(1.15);
-  box-shadow: 0 4px 12px rgba(142, 74, 62, 0.18);
 }
 
 .card-heart-btn.is-active {
@@ -284,13 +249,6 @@ const handleAddToCart = () => {
   background: #FFFFFF;
   border-color: rgba(142, 74, 62, 0.35);
   box-shadow: 0 4px 14px rgba(142, 74, 62, 0.22);
-  animation: heartPop 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-}
-
-@keyframes heartPop {
-  0% { transform: scale(1); }
-  45% { transform: scale(1.35); }
-  100% { transform: scale(1); }
 }
 
 .badge-stack {
@@ -456,25 +414,30 @@ const handleAddToCart = () => {
   font-weight: 600;
   color: #1C1917;
   cursor: pointer;
-  transition: all 0.24s cubic-bezier(0.16, 1, 0.3, 1);
-}
-
-.btn-card-add:hover:not(:disabled) {
-  background: #242721;
-  color: #FFFFFF;
-  border-color: #242721;
-  transform: translateY(-2px);
-  box-shadow: 0 5px 14px rgba(36, 39, 33, 0.18);
-}
-
-.btn-card-add:active:not(:disabled) {
-  transform: scale(0.97);
 }
 
 .btn-card-add.btn-added {
   background: #242721;
   color: #FFFFFF;
   border-color: #242721;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .product-card:hover {
+    border-color: rgba(142, 74, 62, 0.22);
+  }
+
+  .card-heart-btn:hover {
+    color: #8E4A3E;
+    background: #FFFFFF;
+    border-color: rgba(142, 74, 62, 0.35);
+  }
+
+  .btn-card-add:hover:not(:disabled) {
+    background: #242721;
+    color: #FFFFFF;
+    border-color: #242721;
+  }
 }
 
 .btn-card-add:disabled {

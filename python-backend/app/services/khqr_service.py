@@ -1,10 +1,16 @@
 import os
+import sys
 import json
 import asyncio
+import subprocess
+import logging
 from typing import Optional, Dict, Any
 from dotenv import load_dotenv
-from sqlalchemy.orm import Session
+from app.core.database import SessionLocal
 from app.models.order import Order
+from app.services.order_lifecycle import settle_payment
+
+logger = logging.getLogger("lumea.khqr")
 
 # Load local environment if present (gitignored)
 load_dotenv()
@@ -12,6 +18,9 @@ load_dotenv()
 DEFAULT_MERCHANT_NAME = os.getenv("BAKONG_MERCHANT_NAME", "LUMEA ATELIER")
 DEFAULT_MERCHANT_ID = os.getenv("BAKONG_ACCOUNT_ID", "000000000000000")
 DEFAULT_PAYWAY_URL = os.getenv("ABA_PAYWAY_URL", "")
+
+# Registry for active live background monitoring processes: order_number -> subprocess.Popen
+ACTIVE_PAYMENT_PROCS: Dict[str, subprocess.Popen] = {}
 
 def crc16_emvco(data: str) -> str:
     """
@@ -81,11 +90,67 @@ def build_instant_bakong_khqr(
     crc = crc16_emvco(raw_payload)
     return f"{raw_payload}{crc}"
 
+def _sync_watch_approval(proc: subprocess.Popen, order_number: str):
+    """
+    Synchronous worker executed in background thread to monitor PayWay approval.
+    """
+    logger.info(f"Started live PayWay background monitoring thread for order {order_number}...")
+    try:
+        while proc.poll() is None:
+            line = proc.stdout.readline()
+            if not line:
+                break
+            text = line.strip()
+            if not text:
+                continue
+            try:
+                data = json.loads(text)
+                event = data.get("event")
+                if event == "paid" or data.get("action") == "approved":
+                    client_id = data.get("client_id") or "LIVE"
+                    logger.info(f"Payment APPROVED for {order_number}! Client ID: {client_id}")
+
+                    # Mark order as Paid in database
+                    db = SessionLocal()
+                    try:
+                        order = db.query(Order).filter(Order.order_number == order_number).first()
+                        if order:
+                            settle_payment(db, order, f"ABA-LIVE-{client_id}")
+                            db.commit()
+                    finally:
+                        db.close()
+                    break
+                elif event == "timeout":
+                    logger.info(f"PayWay session timed out (5 mins) for order {order_number}")
+                    break
+            except json.JSONDecodeError:
+                pass
+    except Exception as e:
+        logger.warning(f"PayWay monitor thread exception for {order_number}: {e}")
+    finally:
+        ACTIVE_PAYMENT_PROCS.pop(order_number, None)
+        try:
+            if proc.poll() is None:
+                proc.kill()
+        except Exception:
+            pass
+
+def cancel_payment_session(order_number: str):
+    """Cancels and terminates any running background browser session for this order."""
+    proc = ACTIVE_PAYMENT_PROCS.pop(order_number, None)
+    if proc:
+        try:
+            if proc.poll() is None:
+                proc.kill()
+        except Exception:
+            pass
+
 async def get_bakong_khqr_data(amount: float, order_number: str = "LUM-000000", try_live: bool = True) -> Dict[str, Any]:
     """
     Obtains KHQR payment data.
-    If ABA_PAYWAY_URL is configured in environment, attempts bridge generation.
-    Otherwise, instantly returns compliant Dynamic Bakong KHQR.
+    If ABA_PAYWAY_URL is configured in environment, extracts authentic live ABA PayWay QR
+    via the Playwright bridge in a non-blocking worker thread.
+    Otherwise, returns compliant Dynamic Bakong KHQR.
     """
     merchant_name = os.getenv("BAKONG_MERCHANT_NAME", DEFAULT_MERCHANT_NAME)
     payway_url = os.getenv("ABA_PAYWAY_URL", DEFAULT_PAYWAY_URL)
@@ -104,34 +169,60 @@ async def get_bakong_khqr_data(amount: float, order_number: str = "LUM-000000", 
             "payway_url": payway_url or ""
         }
 
-    # Attempt live bridge only if payway_url is configured and script exists
-    bridge_path = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), "..", "payway_bridge.js")
-    bridge_path = os.path.abspath(bridge_path)
+    # Locate bridge script (prefers extract_full_data.js, falls back to payway_bridge.js)
+    root_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
+    bridge_script = os.path.join(root_dir, "extract_full_data.js")
+    if not os.path.exists(bridge_script):
+        bridge_script = os.path.join(root_dir, "payway_bridge.js")
 
-    if os.path.exists(bridge_path):
+    if os.path.exists(bridge_script):
+        cancel_payment_session(order_number)
+
         try:
-            proc = await asyncio.create_subprocess_exec(
-                "node", bridge_path, "generate", str(amount), payway_url,
-                stdout=asyncio.subprocess.PIPE,
-                stderr=asyncio.subprocess.PIPE
+            logger.info(f"Extracting live ABA PayWay KHQR for {order_number} (${amount:.2f}) via {bridge_script}...")
+
+            # Use subprocess.Popen with thread execution to guarantee 100% Windows asyncio compatibility
+            proc = subprocess.Popen(
+                ["node", bridge_script, "session", str(amount), order_number, payway_url],
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                text=True,
+                encoding="utf-8",
+                errors="replace",
+                bufsize=1
             )
-            stdout, _ = await asyncio.wait_for(proc.communicate(), timeout=14.0)
-            if stdout:
-                res = json.loads(stdout.decode("utf-8").strip())
-                if res.get("success") and res.get("qr_string"):
+
+            # Read line 1 asynchronously in a worker thread
+            def _read_first_line():
+                return proc.stdout.readline()
+
+            line = await asyncio.wait_for(asyncio.to_thread(_read_first_line), timeout=25.0)
+
+            if line:
+                res = json.loads(line.strip())
+                if (res.get("event") == "qr_ready" or res.get("success")) and res.get("qr_string"):
+                    ACTIVE_PAYMENT_PROCS[order_number] = proc
+
+                    # Spawn background monitoring thread to detect customer payment approval
+                    asyncio.create_task(asyncio.to_thread(_sync_watch_approval, proc, order_number))
+
                     return {
                         "success": True,
                         "qr_string": res["qr_string"],
                         "amount": amount,
                         "currency": "USD",
-                        "merchant_name": merchant_name,
+                        "merchant_name": res.get("merchant_name") or merchant_name,
                         "order_number": order_number,
                         "client_id": res.get("client_id"),
                         "source": "live_aba_payway",
                         "payway_url": payway_url
                     }
-        except Exception:
-            pass
+                else:
+                    logger.warning(f"Bridge returned non-ready response: {res}")
+            else:
+                logger.warning("Bridge returned empty stdout.")
+        except Exception as ex:
+            logger.exception(f"Live PayWay extraction exception: {ex}")
 
     return {
         "success": True,

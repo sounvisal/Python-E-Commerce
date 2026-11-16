@@ -1,3 +1,4 @@
+from app.api.deps import require_admin
 from typing import Optional, List
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
@@ -56,7 +57,7 @@ def get_banner(
         )
     return SingleBannerResponse(status="success", data=banner)
 
-@router.post("", response_model=SingleBannerResponse, status_code=status.HTTP_201_CREATED)
+@router.post("", response_model=SingleBannerResponse, status_code=status.HTTP_201_CREATED, dependencies=[Depends(require_admin)])
 def create_banner(
     payload: BannerCreate,
     db: Session = Depends(get_db)
@@ -77,7 +78,7 @@ def create_banner(
     db.refresh(banner)
     return SingleBannerResponse(status="success", data=banner)
 
-@router.put("/{identifier}", response_model=SingleBannerResponse)
+@router.put("/{identifier}", response_model=SingleBannerResponse, dependencies=[Depends(require_admin)])
 def update_banner(
     identifier: str,
     payload: BannerUpdate,
@@ -107,7 +108,7 @@ def update_banner(
     db.refresh(banner)
     return SingleBannerResponse(status="success", data=banner)
 
-@router.delete("/{identifier}", status_code=status.HTTP_200_OK)
+@router.delete("/{identifier}", status_code=status.HTTP_200_OK, dependencies=[Depends(require_admin)])
 def delete_banner(
     identifier: str,
     db: Session = Depends(get_db)

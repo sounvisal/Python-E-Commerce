@@ -8,6 +8,8 @@ class ReturnRequest(Base):
     id = Column(Integer, primary_key=True, index=True)
     request_number = Column(String(50), unique=True, index=True, nullable=False)
     order_number = Column(String(50), index=True, nullable=False)
+    order_item_id = Column(Integer, nullable=True)
+    refund_reference = Column(String(150), nullable=True)
     customer_name = Column(String(150), default="Sreynich Chan")
     customer_email = Column(String(150), default="sreynich.chan@example.com")
     product_name = Column(String(255), nullable=False)

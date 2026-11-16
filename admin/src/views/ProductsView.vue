@@ -30,6 +30,8 @@ import {
 } from 'lucide-vue-next'
 
 const adminStore = useAdminStore()
+const hostedDeployment = import.meta.env.VITE_HOSTED_DEPLOYMENT === 'true'
+const productImageUrl = ref('')
 
 // View Mode: 'list' | 'editor'
 const currentView = ref('list')
@@ -243,7 +245,8 @@ const openAddProduct = () => {
   productForm.skin_concerns = ['Dryness', 'Brightening']
   productForm.ingredients = 'Hyaluronic Acid, Vitamin C, Niacinamide'
   productForm.how_to_use = 'Gently smooth onto face and neck after cleansing.'
-  productForm.images = ['/images/prod-sk2.jpg']
+  productForm.images = hostedDeployment ? [] : ['/images/prod-sk2.jpg']
+  productImageUrl.value = ''
   productForm.video_url = ''
   productForm.video_title = ''
   productForm.video_thumbnail = ''
@@ -274,7 +277,8 @@ const openEditProduct = (prod) => {
   productForm.skin_concerns = prod.skin_concerns || ['Brightening', 'Pores']
   productForm.ingredients = prod.ingredients || 'Pitera, Niacinamide, Botanical Extracts'
   productForm.how_to_use = prod.how_to_use || 'Dispense 2-3 drops into palm and press into clean skin.'
-  productForm.images = prod.image_url ? [prod.image_url] : ['/images/prod-sk2.jpg']
+  productForm.images = [...new Set([prod.image_url, ...(prod.gallery || [])].filter(Boolean))]
+  productImageUrl.value = ''
   productForm.video_url = prod.video_url || ''
   productForm.video_title = prod.video_title || ''
   productForm.video_thumbnail = prod.video_thumbnail || ''
@@ -306,7 +310,11 @@ const saveProduct = async () => {
     image_url: productForm.images[0] || '/images/prod-sk2.jpg',
     description: productForm.description || productForm.short_description,
     short_description: productForm.short_description,
-    is_featured: false,
+    skin_type: productForm.skin_types,
+    skin_concern: productForm.skin_concerns,
+    subcategory: productForm.subcategory,
+    gallery: productForm.images,
+    ...(editorMode.value === 'add' ? { is_featured: false } : {}),
     rating: productForm.rating,
     reviews: productForm.reviews,
     video_url: productForm.video_url || null,
@@ -423,6 +431,17 @@ const handleProductVideoUpload = async (e) => {
 
 const removeImage = (index) => {
   productForm.images.splice(index, 1)
+}
+
+const addProductImage = () => {
+  const url = productImageUrl.value.trim()
+  if (!url) return
+  if (url.length > 255 || !(url.startsWith('/images/') || /^https:\/\/[^\s]+$/i.test(url))) {
+    adminStore.addToast('Use an HTTPS image URL or a bundled path starting with /images/.', 'error')
+    return
+  }
+  if (!productForm.images.includes(url)) productForm.images.push(url)
+  productImageUrl.value = ''
 }
 
 const toggleSkinType = (type) => {
@@ -1119,7 +1138,21 @@ const toggleSkinConcern = (concern) => {
           <div class="card editor-card">
             <h3 class="editor-card-title">Product Images</h3>
 
-            <div class="dropzone-box" @click="triggerImageUpload">
+            <div v-if="hostedDeployment" class="form-group">
+              <label for="product-image-url" class="form-label">Image URL or Asset Path</label>
+              <input
+                id="product-image-url"
+                v-model="productImageUrl"
+                type="text"
+                placeholder="/images/prod-sk2.jpg"
+                class="atelier-input"
+                @keydown.enter.prevent="addProductImage"
+              />
+              <button type="button" class="btn-outline" :disabled="!productImageUrl.trim()" @click="addProductImage">
+                Add Image
+              </button>
+            </div>
+            <div v-else class="dropzone-box" @click="triggerImageUpload">
               <input
                 type="file"
                 ref="fileInputRef"
@@ -1155,7 +1188,7 @@ const toggleSkinConcern = (concern) => {
           <!-- Texture & Demonstration Video Card -->
           <div class="card editor-card">
             <h3 class="editor-card-title">Texture &amp; Demonstration Video</h3>
-            <p class="editor-card-sub">Upload sensory texture demonstrations or routine reels.</p>
+            <p class="editor-card-sub">Add a texture demonstration or routine reel.</p>
 
             <div class="form-group mb-3">
               <label class="form-label">Video Title / Routine Caption</label>
@@ -1168,7 +1201,7 @@ const toggleSkinConcern = (concern) => {
             </div>
 
             <!-- Video File Upload Box -->
-            <div class="video-dropzone-box" @click="triggerVideoUpload">
+            <div v-if="!hostedDeployment" class="video-dropzone-box" @click="triggerVideoUpload">
               <input
                 type="file"
                 ref="videoFileInputRef"
@@ -1182,7 +1215,7 @@ const toggleSkinConcern = (concern) => {
             </div>
 
             <div class="form-group mt-3">
-              <label class="form-label">Or Direct Video URL</label>
+              <label class="form-label">Direct Video URL</label>
               <input
                 v-model="productForm.video_url"
                 type="text"

@@ -20,7 +20,7 @@ const adminStore = useAdminStore()
           <Info v-else :size="18" />
         </div>
         <div class="toast-content">{{ toast.message }}</div>
-        <button class="toast-close" @click="adminStore.removeToast(toast.id)">
+        <button class="toast-close" type="button" aria-label="Dismiss notification" @click="adminStore.removeToast(toast.id)">
           <X :size="14" />
         </button>
       </div>
@@ -37,7 +37,7 @@ const adminStore = useAdminStore()
   display: flex;
   flex-direction: column;
   gap: 10px;
-  max-width: 400px;
+  max-width: min(400px, calc(100% - 48px));
   pointer-events: none;
 }
 
@@ -79,6 +79,7 @@ const adminStore = useAdminStore()
 
 .toast-content {
   flex: 1;
+  overflow-wrap: anywhere;
 }
 
 .toast-close {
@@ -92,18 +93,24 @@ const adminStore = useAdminStore()
   color: var(--text-main);
 }
 
-.toast-enter-active,
+.toast-enter-active {
+  transition: opacity 200ms cubic-bezier(0.23, 1, 0.32, 1), transform 200ms cubic-bezier(0.23, 1, 0.32, 1);
+}
+
 .toast-leave-active {
-  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  transition: opacity 150ms cubic-bezier(0.23, 1, 0.32, 1), transform 150ms cubic-bezier(0.23, 1, 0.32, 1);
 }
 
-.toast-enter-from {
-  opacity: 0;
-  transform: translateY(20px) scale(0.95);
-}
-
+.toast-enter-from,
 .toast-leave-to {
   opacity: 0;
-  transform: translateX(50px);
+  transform: translateY(8px);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .toast-enter-from,
+  .toast-leave-to {
+    transform: none;
+  }
 }
 </style>

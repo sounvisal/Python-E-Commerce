@@ -5,7 +5,12 @@ from sqlalchemy.orm import Session
 from sqlalchemy import func, desc
 
 from app.core.database import get_db
-from app.models.review import Review
+from app.models.review import Review, ReviewVote
+from app.models.order import Order, OrderItem
+from app.models.user import User
+from app.api.deps import get_current_user
+from sqlalchemy import update
+from sqlalchemy.exc import IntegrityError
 from app.models.product import Product
 
 router = APIRouter(prefix="/reviews", tags=["Customer Reviews"])
@@ -60,7 +65,7 @@ def get_public_reviews(
     avg_rating = db.query(func.avg(Review.rating)).filter(Review.status == "approved")
     if product_id is not None:
         avg_rating = avg_rating.filter(Review.product_id == product_id)
-    avg_rating_val = round(float(avg_rating.scalar() or 5.0), 1)
+    avg_rating_val = round(float(avg_rating.scalar() or 0.0), 1)
 
     # 5-star distribution breakdown
     distribution = {}
@@ -71,7 +76,7 @@ def get_public_reviews(
 
     return {
         "status": "success",
-        "data": reviews,
+        "data": [{key: value for key, value in r.__dict__.items() if key not in ("_sa_instance_state", "customer_email")} for r in reviews],
         "metrics": {
             "total_reviews": total_approved,
             "average_rating": avg_rating_val,
@@ -86,23 +91,27 @@ def get_public_reviews(
     }
 
 @router.post("", status_code=status.HTTP_201_CREATED)
-def submit_review(payload: ReviewSubmission, db: Session = Depends(get_db)):
+def submit_review(payload: ReviewSubmission, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     """
     Customer submission from Storefront: Creates a new review pending Atelier moderation.
     """
     # Lookup product details
     product = db.query(Product).filter(Product.id == payload.product_id).first()
-    product_name = product.name if product else "Luméa Skincare Formulation"
+    if not product:
+        raise HTTPException(404, 'Product not found')
+    purchased = db.query(OrderItem).join(Order).filter(Order.user_id == current_user.id,
+        Order.status == 'Delivered', Order.payment_status == 'Paid', OrderItem.product_id == product.id).first() is not None
+    product_name = product.name
     product_image = product.image_url if product else "/images/prod-sk2.jpg"
 
     new_review = Review(
         product_id=payload.product_id,
         product_name=product_name,
         product_image=product_image,
-        customer_name=payload.customer_name or "Verified Customer",
-        customer_email=payload.customer_email or "customer@lumea.com",
-        customer_avatar=payload.customer_avatar or "/images/avatar-sreynich.jpg",
-        verified_purchase=True,
+        customer_name=current_user.name,
+        customer_email=current_user.email,
+        customer_avatar=current_user.avatar,
+        verified_purchase=purchased,
         rating=payload.rating,
         title=payload.title,
         comment=payload.comment,
@@ -110,7 +119,7 @@ def submit_review(payload: ReviewSubmission, db: Session = Depends(get_db)):
         video_thumbnail=payload.video_thumbnail,
         video_duration=payload.video_duration,
         skin_type=payload.skin_type,
-        status="approved",  # auto-approved for instant satisfaction, editable by admin
+        status="pending",
         helpful_count=0
     )
 
@@ -125,16 +134,22 @@ def submit_review(payload: ReviewSubmission, db: Session = Depends(get_db)):
     }
 
 @router.post("/{review_id}/helpful")
-def vote_helpful(review_id: int, db: Session = Depends(get_db)):
+def vote_helpful(review_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     """
     Mark a review as helpful on the storefront.
     """
     review = db.query(Review).filter(Review.id == review_id).first()
-    if not review:
+    if not review or review.status != 'approved':
         raise HTTPException(status_code=404, detail="Review not found")
     
-    review.helpful_count = (review.helpful_count or 0) + 1
-    db.commit()
+    try:
+        db.add(ReviewVote(user_id=current_user.id, review_id=review_id))
+        db.flush()
+        db.execute(update(Review).where(Review.id == review_id).values(helpful_count=Review.helpful_count + 1))
+        db.commit()
+    except IntegrityError:
+        db.rollback()
+    db.refresh(review)
 
     return {
         "status": "success",

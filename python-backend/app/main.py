@@ -1,14 +1,19 @@
 import os
 import time
 import logging
+import asyncio
+from contextlib import suppress
 from contextlib import asynccontextmanager
+from pathlib import Path
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import RedirectResponse
 from fastapi.staticfiles import StaticFiles
+from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from app.core.config import settings
 from app.core.database import engine, Base, SessionLocal
+from app.core.migrations import migrate_schema
 from app.core.rate_limit import RateLimitMiddleware
 from app.api import (
     system,
@@ -28,6 +33,24 @@ from app.api import (
     payments
 )
 from app.seed.seed_data import seed_database
+from app.api import promotions, contact
+from app.services.order_lifecycle import expire_pending_orders
+
+def sweep_expired_checkouts():
+    db = SessionLocal()
+    try:
+        expire_pending_orders(db)
+        db.commit()
+    except Exception:
+        db.rollback()
+        logger.exception('Could not expire pending checkouts')
+    finally:
+        db.close()
+
+async def checkout_expiry_worker():
+    while True:
+        await asyncio.to_thread(sweep_expired_checkouts)
+        await asyncio.sleep(30)
 
 # Configure structured logging
 logging.basicConfig(
@@ -41,25 +64,35 @@ logger = logging.getLogger("lumea.server")
 async def lifespan(app: FastAPI):
     # 1. Startup: Create tables if not exist
     Base.metadata.create_all(bind=engine)
+    migrate_schema(engine, seed_demo_promotions=not settings.PRODUCTION)
     
     # 2. Seed database with initial catalog data
-    db = SessionLocal()
-    try:
-        seed_database(db)
-    finally:
-        db.close()
+    if not settings.PRODUCTION:
+        with SessionLocal() as db:
+            seed_database(db)
         
     logger.info("Luméa Atelier E-Commerce backend service initialized successfully.")
-    yield
+    if settings.PRODUCTION:
+        # Hosted checkout uses COD and has no pending KHQR sessions to poll.
+        yield
+    else:
+        expiry_worker = asyncio.create_task(checkout_expiry_worker())
+        try:
+            yield
+        finally:
+            expiry_worker.cancel()
+            with suppress(asyncio.CancelledError):
+                await expiry_worker
     logger.info("Luméa Atelier E-Commerce backend service shutting down.")
 
 app = FastAPI(
     title=settings.PROJECT_NAME,
     version=settings.VERSION,
-    description="RESTful API for the Luméa E-Commerce Platform built with Python FastAPI, SQLAlchemy, and SQLite.",
+    description="RESTful API for the Luméa E-Commerce Platform.",
     lifespan=lifespan,
-    docs_url="/docs",
-    redoc_url="/redoc"
+    docs_url=None if settings.PRODUCTION else "/docs",
+    redoc_url=None if settings.PRODUCTION else "/redoc",
+    openapi_url=None if settings.PRODUCTION else "/openapi.json",
 )
 
 # 1. Security Headers & Request Timing Middleware
@@ -79,7 +112,7 @@ async def security_and_timing_middleware(request: Request, call_next):
     response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
 
     # Structured request logging
-    if not request.url.path.startswith("/images") and not request.url.path.startswith("/videos"):
+    if not request.url.path.startswith(("/images", "/videos")) and request.url.path != f"{settings.API_V1_STR}/live":
         logger.info(f"{request.method} {request.url.path} -> {response.status_code} ({duration_ms:.1f}ms)")
 
     return response
@@ -112,17 +145,46 @@ app.include_router(reviews.router, prefix=settings.API_V1_STR)
 app.include_router(quizzes.router, prefix=settings.API_V1_STR)
 app.include_router(settings_api.router, prefix=settings.API_V1_STR)
 app.include_router(payments.router, prefix=settings.API_V1_STR)
+app.include_router(promotions.router, prefix=settings.API_V1_STR)
+app.include_router(contact.router, prefix=settings.API_V1_STR)
 
-# Serve static images and videos directly from backend for direct API inspection
-static_images_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "frontend", "public", "images"))
-if os.path.exists(static_images_dir):
-    app.mount("/images", StaticFiles(directory=static_images_dir), name="images")
+class VueFiles(StaticFiles):
+    async def get_response(self, path, scope):
+        try:
+            return await super().get_response(path, scope)
+        except StarletteHTTPException as error:
+            first_segment = Path(path).parts[:1]
+            if error.status_code != 404 or Path(path).suffix or first_segment in {
+                ("api",), ("assets",), ("images",), ("videos",)
+            }:
+                raise
+            return await super().get_response("index.html", scope)
 
-static_videos_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "frontend", "public", "videos"))
-os.makedirs(static_videos_dir, exist_ok=True)
-app.mount("/videos", StaticFiles(directory=static_videos_dir), name="videos")
 
-@app.get("/", include_in_schema=False)
-def root_redirect():
-    """Redirect root to interactive Swagger UI documentation."""
-    return RedirectResponse(url="/docs")
+project_root = Path(__file__).resolve().parents[2]
+if settings.SERVE_BUILT_APPS:
+    admin_build = project_root / "admin" / "dist"
+    storefront_build = project_root / "frontend" / "dist"
+
+    # Both apps use root-relative catalog paths. Prefer the storefront copy
+    # on overlap while serving admin-specific images from its build.
+    class SharedImages(StaticFiles):
+        def __init__(self):
+            super().__init__(directory=storefront_build / "images")
+            self.all_directories.append(admin_build / "images")
+
+    app.mount("/images", SharedImages(), name="images")
+    app.mount("/atelier", VueFiles(directory=admin_build, html=True), name="admin")
+    app.mount("/", VueFiles(directory=storefront_build, html=True), name="storefront")
+else:
+    static_images_dir = project_root / "frontend" / "public" / "images"
+    if static_images_dir.exists():
+        app.mount("/images", StaticFiles(directory=static_images_dir), name="images")
+
+    static_videos_dir = project_root / "frontend" / "public" / "videos"
+    static_videos_dir.mkdir(parents=True, exist_ok=True)
+    app.mount("/videos", StaticFiles(directory=static_videos_dir), name="videos")
+
+    @app.get("/", include_in_schema=False)
+    def root_redirect():
+        return RedirectResponse(url="/docs")

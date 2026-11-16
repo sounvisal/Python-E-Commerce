@@ -1,4 +1,4 @@
-import pytest
+from app.core.config import settings
 from fastapi.testclient import TestClient
 from app.services.khqr_service import crc16_emvco, build_instant_bakong_khqr
 
@@ -26,34 +26,34 @@ def test_bakong_khqr_payload_generation():
     # 4-character CRC at the end
     assert len(qr) > 60
 
-def test_khqr_generate_endpoint(client: TestClient):
-    """Verify /api/payments/khqr/generate API returns valid QR payload."""
-    res = client.post("/api/payments/khqr/generate", json={
-        "order_number": "LUM-TEST-PAY",
-        "amount": 25.50
-    })
-    assert res.status_code == 200
-    data = res.json()["data"]
-    assert "qr_string" in data
-    assert data["amount"] == 25.50
-    assert data["currency"] == "USD"
+def test_khqr_generate_endpoint(client: TestClient, monkeypatch, place_guest_order):
+    order = place_guest_order("khqr")
 
-def test_khqr_simulate_approval_endpoint(client: TestClient):
-    """Verify /api/payments/khqr/simulate-approve demo defense flow."""
-    # Create order first
-    order_res = client.post("/api/orders", json={
-        "customer_name": "Demo Buyer",
-        "customer_email": "demo@example.com",
-        "shipping_address": "Street 200",
-        "shipping_city": "Phnom Penh",
-        "items": [{"product_id": 201, "product_name": "Essence", "price": 50.0, "quantity": 1}]
-    })
-    order_num = order_res.json()["data"]["order_number"]
+    async def verified_gateway(amount, order_number, try_live):
+        assert order_number == order["order_number"]
+        return {"source": "live_aba_payway", "qr_string": "test-qr", "amount": amount, "currency": "USD"}
 
-    # Simulate bank clearance
-    sim_res = client.post("/api/payments/khqr/simulate-approve", json={
-        "order_number": order_num
-    })
-    assert sim_res.status_code == 200
-    assert sim_res.json()["paid"] is True
-    assert "BAKONG" in sim_res.json()["transaction_ref"]
+    monkeypatch.setattr("app.api.payments.get_bakong_khqr_data", verified_gateway)
+    payload = {"order_number": order["order_number"], "amount": order["total"]}
+    assert client.post("/api/payments/khqr/generate", json=payload).status_code == 404
+
+    res = client.post("/api/payments/khqr/generate", json=payload, headers={"X-Order-Token": order["access_token"]})
+    assert res.status_code == 200, res.text
+    assert res.json()["data"]["qr_string"] == "test-qr"
+
+
+def test_khqr_simulate_approval_endpoint(client: TestClient, monkeypatch, admin_headers, place_guest_order):
+    order = place_guest_order("khqr")
+    payload = {"order_number": order["order_number"]}
+
+    # Avoid contacting a bank or leaving a live polling session during the test.
+    monkeypatch.setattr("app.api.payments.cancel_payment_session", lambda order_number: None)
+    monkeypatch.setattr(settings, "ENABLE_DEMO_PAYMENTS", False)
+    assert client.post("/api/payments/khqr/simulate-approve", json=payload, headers=admin_headers).status_code == 403
+
+    monkeypatch.setattr(settings, "ENABLE_DEMO_PAYMENTS", True)
+    assert client.post("/api/payments/khqr/simulate-approve", json=payload).status_code == 401
+    res = client.post("/api/payments/khqr/simulate-approve", json=payload, headers=admin_headers)
+    assert res.status_code == 200, res.text
+    assert res.json()["paid"] is True
+    assert res.json()["transaction_ref"].startswith("DEMO-")

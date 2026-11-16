@@ -5,6 +5,7 @@ import DashboardView from '@/views/DashboardView.vue'
 import LoginView from '@/views/LoginView.vue'
 import OrdersView from '@/views/OrdersView.vue'
 import ProductsView from '@/views/ProductsView.vue'
+import SupportView from '@/views/SupportView.vue'
 import SettingsView from '@/views/SettingsView.vue'
 import ReturnsView from '@/views/ReturnsView.vue'
 import ArticlesView from '@/views/ArticlesView.vue'
@@ -17,6 +18,7 @@ import SkinQuizView from '@/views/SkinQuizView.vue'
 import { createRouter, createWebHistory } from 'vue-router'
 
 const routes = [
+  { path: '/support', name: 'support', component: SupportView, meta: { requiresAuth: true, title: 'Customer inquiries' } },
   {
     path: '/login',
     name: 'login',

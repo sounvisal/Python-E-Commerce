@@ -19,22 +19,23 @@ export const useBannerStore = defineStore('banners', {
           image_url: banner.image_url || fallback.image_url || '',
           cta_text: banner.cta_text || fallback.cta_text || '',
           cta_link: banner.cta_link || fallback.cta_link || '',
+          is_active: true,
         }
       }
-      return fallback
+      return banner ? { ...fallback, is_active: false } : fallback
     },
   },
 
   actions: {
     async fetchBanners() {
       // Don't re-fetch if we already have banners populated
-      if (Object.keys(this.banners).length > 0) return
+
 
       this.isLoading = true
       this.error = null
 
       try {
-        const response = await fetch('/api/banners')
+        const response = await fetch('/api/banners?active_only=false')
         if (response.ok) {
           const resData = await response.json()
           if (resData.status === 'success' && Array.isArray(resData.data)) {

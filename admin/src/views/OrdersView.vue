@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed, reactive, onMounted } from 'vue'
+import { ref, computed, reactive, onMounted, watch } from 'vue'
 import { useAdminStore } from '@/stores/admin'
 import {
   Search,
@@ -27,10 +27,7 @@ import {
   User,
   CreditCard,
   MapPin,
-  ArrowUpRight,
-  ArrowDownRight,
-  Check,
-  Sparkles
+  Check
 } from 'lucide-vue-next'
 
 const adminStore = useAdminStore()
@@ -45,7 +42,7 @@ const selectedOrderStatus = ref('All Statuses')
 const selectedPaymentStatus = ref('All Payments')
 const selectedDeliveryStatus = ref('All Deliveries')
 const activeTab = ref('all') // 'all', 'pending', 'processing', 'shipped', 'delivered', 'cancelled', 'returned'
-const selectedDateRange = ref('Aug 1, 2025 - Aug 31, 2025')
+const selectedDateRange = ref('All dates')
 
 // Pagination
 const currentPage = ref(1)
@@ -88,46 +85,44 @@ const formatCurrency = (val) => {
 
 // 4 Top KPIs
 const orderKpis = computed(() => {
-  const totalOrders = adminStore.stats?.metrics?.total_orders || 342
-  const totalRev = adminStore.stats?.metrics?.total_revenue || 12840
-  const pendingCount = adminStore.stats?.orders_by_status?.confirmed || 28
-  const shippedCount = adminStore.stats?.orders_by_status?.shipped || 56
+  const totalOrders = adminStore.stats?.metrics?.total_orders ?? 0
+  const totalRev = adminStore.stats?.metrics?.total_revenue ?? 0
+  const statuses = adminStore.stats?.orders_by_status ?? {}
+  const pendingCount = (statuses.pending ?? 0) + (statuses.confirmed ?? 0)
+  const shippedCount = statuses.shipped ?? 0
 
   return [
     {
       label: 'Total Orders',
       val: totalOrders,
-      trend: '+12%',
-      trendUp: true,
       icon: ShoppingBag,
       color: 'pill-peach'
     },
     {
       label: 'Total Revenue',
       val: `$${formatCurrency(totalRev)}`,
-      trend: '+18%',
-      trendUp: true,
       icon: DollarSign,
       color: 'pill-crimson'
     },
     {
       label: 'Pending Orders',
       val: pendingCount,
-      trend: '-8%',
-      trendUp: false,
       icon: Clock,
       color: 'pill-amber'
     },
     {
       label: 'Shipped Orders',
       val: shippedCount,
-      trend: '+24%',
-      trendUp: true,
       icon: Truck,
       color: 'pill-rose'
     }
   ]
 })
+
+const orderTab = (order) => {
+  const status = order.status?.toLowerCase()
+  return status === 'confirmed' ? 'pending' : status
+}
 
 // Filtered orders list
 const filteredOrders = computed(() => {
@@ -135,7 +130,7 @@ const filteredOrders = computed(() => {
 
   // Filter by Tab
   if (activeTab.value !== 'all') {
-    list = list.filter(o => (o.status || '').toLowerCase() === activeTab.value)
+    list = list.filter(o => orderTab(o) === activeTab.value)
   }
 
   // Filter by Search Query
@@ -154,6 +149,9 @@ const filteredOrders = computed(() => {
     list = list.filter(o => (o.status || '').toLowerCase() === selectedOrderStatus.value.toLowerCase())
   }
 
+  if (selectedPaymentStatus.value !== 'All Payments') {
+    list = list.filter(o => selectedPaymentStatus.value === 'COD' ? o.payment_method === 'cod' : o.payment_status === selectedPaymentStatus.value)
+  }
   return list
 })
 
@@ -161,13 +159,13 @@ const filteredOrders = computed(() => {
 const tabCounts = computed(() => {
   const all = adminStore.orders || []
   return {
-    all: all.length || 342,
-    pending: all.filter(o => (o.status || '').toLowerCase() === 'pending' || (o.status || '').toLowerCase() === 'confirmed').length || 28,
-    processing: all.filter(o => (o.status || '').toLowerCase() === 'processing').length || 46,
-    shipped: all.filter(o => (o.status || '').toLowerCase() === 'shipped').length || 56,
-    delivered: all.filter(o => (o.status || '').toLowerCase() === 'delivered').length || 198,
-    cancelled: all.filter(o => (o.status || '').toLowerCase() === 'cancelled').length || 14,
-    returned: all.filter(o => (o.status || '').toLowerCase() === 'returned').length || 10
+    all: all.length,
+    pending: all.filter(o => orderTab(o) === 'pending').length,
+    processing: all.filter(o => (o.status || '').toLowerCase() === 'processing').length,
+    shipped: all.filter(o => (o.status || '').toLowerCase() === 'shipped').length,
+    delivered: all.filter(o => (o.status || '').toLowerCase() === 'delivered').length,
+    cancelled: all.filter(o => (o.status || '').toLowerCase() === 'cancelled').length,
+    returned: all.filter(o => (o.status || '').toLowerCase() === 'returned').length
   }
 })
 
@@ -179,6 +177,10 @@ const paginatedOrders = computed(() => {
 
 const totalPages = computed(() => {
   return Math.ceil(filteredOrders.value.length / itemsPerPage.value) || 1
+})
+
+watch([activeTab, searchQuery, selectedOrderStatus, selectedPaymentStatus], () => {
+  currentPage.value = 1
 })
 
 const resetFilters = () => {
@@ -253,15 +255,15 @@ const currentStageIndex = computed(() => {
   if (s === 'shipped') return 3
   if (s === 'out for delivery') return 4
   if (s === 'delivered') return 5
-  if (s === 'cancelled' || s === 'returned') return -1
-  return 1
+  return -1
 })
 
 const nextAction = computed(() => {
   if (!activeOrder.value) return null
+  if (activeOrder.value.payment_method !== 'cod' && activeOrder.value.payment_status !== 'Paid') return null
   const s = (activeOrder.value.status || '').toLowerCase()
   if (s === 'pending') {
-    return { label: 'Confirm Order', nextStatus: 'Confirmed', icon: CheckCircle2, btnClass: 'btn-advance-confirm' }
+    return null
   }
   if (s === 'confirmed') {
     return { label: 'Pack & Move to Processing', nextStatus: 'Processing', icon: Package, btnClass: 'btn-advance-processing' }
@@ -273,45 +275,26 @@ const nextAction = computed(() => {
     return { label: 'Mark Out for Delivery', nextStatus: 'Out for Delivery', icon: MapPin, btnClass: 'btn-advance-out' }
   }
   if (s === 'out for delivery') {
-    return { label: 'Confirm Delivered', nextStatus: 'Delivered', icon: CheckCircle2, btnClass: 'btn-advance-delivered' }
+    return { label: activeOrder.value.payment_method === 'cod' && activeOrder.value.payment_status !== 'Paid' ? 'Record Cash Collection & Delivery' : 'Confirm Delivered', nextStatus: 'Delivered', icon: CheckCircle2, btnClass: 'btn-advance-delivered' }
   }
   return null
 })
 
+const canCancelOrder = computed(() =>
+  ['Pending', 'Confirmed', 'Processing'].includes(activeOrder.value?.status) &&
+  activeOrder.value.payment_status !== 'Paid'
+)
+
+const orderEvents = computed(() => activeOrder.value?.events || [])
+
 function getStageTimestamp(index) {
-  if (!activeOrder.value) return 'Pending'
-  if (currentStageIndex.value < index) return 'Pending'
-
-  const baseDate = activeOrder.value.created_at ? new Date(activeOrder.value.created_at) : new Date(2025, 7, 31, 10, 24)
-  const timeOffsetMinutes = [0, 41, 246, 1371, 2766, 3141]
-  const d = new Date(baseDate.getTime() + (timeOffsetMinutes[index] || 0) * 60000)
-
-  const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
-  const month = monthNames[d.getMonth()]
-  const day = d.getDate()
-  let hours = d.getHours()
-  const minutes = d.getMinutes().toString().padStart(2, '0')
-  const ampm = hours >= 12 ? 'PM' : 'AM'
-  hours = hours % 12
-  hours = hours ? hours : 12
-
-  return `${month} ${day}, ${hours}:${minutes} ${ampm}`
+  const event = orderEvents.value.find(event => event.status === orderStages[index].key)
+  return event ? new Date(event.at).toLocaleString() : ''
 }
 
 const advanceOrder = async () => {
   if (!nextAction.value?.nextStatus) return
   await updateStatus(nextAction.value.nextStatus)
-}
-
-const fastForwardToDelivered = async () => {
-  await updateStatus('Delivered')
-  adminStore.addToast(`⚡ Demo Mode: Order #${activeOrder.value.order_number} fast-forwarded to Delivered. Timeline & reports updated!`, 'success')
-}
-
-const onStageClick = async (stage) => {
-  if (isUpdatingStatus.value) return
-  if (activeOrder.value.status === stage.key) return
-  await updateStatus(stage.key)
 }
 
 const printInvoice = () => {
@@ -367,13 +350,6 @@ const exportOrders = () => {
           <div class="kpi-meta">
             <span class="kpi-label">{{ kpi.label }}</span>
             <strong class="kpi-val">{{ kpi.val }}</strong>
-            <div class="kpi-trend-row">
-              <span class="trend-indicator" :class="kpi.trendUp ? 'text-green' : 'text-red'">
-                <component :is="kpi.trendUp ? ArrowUpRight : ArrowDownRight" :size="13" />
-                {{ kpi.trend }}
-              </span>
-              <span class="trend-sub">vs last month</span>
-            </div>
           </div>
         </div>
       </div>
@@ -415,7 +391,7 @@ const exportOrders = () => {
           </div>
 
           <div class="select-wrap">
-            <select v-model="selectedDeliveryStatus" class="atelier-select">
+            <select disabled title="Courier assignments are not available yet" v-model="selectedDeliveryStatus" class="atelier-select">
               <option value="All Deliveries">All Deliveries</option>
               <option value="J&T Express">J&T Express</option>
               <option value="GrabExpress">GrabExpress</option>
@@ -424,7 +400,7 @@ const exportOrders = () => {
             <ChevronDown :size="14" class="select-arrow" />
           </div>
 
-          <button class="date-range-btn">
+          <button disabled title="Date range filtering is not available yet" class="date-range-btn">
             <Calendar :size="14" />
             <span>{{ selectedDateRange }}</span>
           </button>
@@ -580,12 +556,12 @@ const exportOrders = () => {
               <td class="text-right">
                 <div class="order-total-cell">
                   <strong class="total-amount">${{ Number(order.total).toFixed(2) }}</strong>
-                  <span class="total-items-sub">{{ (order.items || []).length || 1 }} items</span>
+                  <span class="total-items-sub">{{ (order.items || []).length }} items</span>
                 </div>
               </td>
               <td class="text-center">
-                <span class="payment-pill" :class="getPaymentBadgeClass(order.payment_method === 'COD' ? 'cod' : 'paid')">
-                  {{ order.payment_method === 'COD' ? 'COD' : 'Paid' }}
+                <span class="payment-pill" :class="getPaymentBadgeClass((order.payment_status || 'Unpaid').toLowerCase())">
+                  {{ order.payment_status || 'Unpaid' }}
                 </span>
               </td>
               <td>
@@ -602,9 +578,9 @@ const exportOrders = () => {
               <td>
                 <div class="date-cell">
                   <span class="date-txt">
-                    {{ order.created_at ? new Date(order.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'Aug 31, 2025' }}
+                    {{ order.created_at ? new Date(order.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '—' }}
                   </span>
-                  <span class="time-txt">10:24 AM</span>
+                  <span v-if="order.created_at" class="time-txt">{{ new Date(order.created_at).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }) }}</span>
                 </div>
               </td>
               <td class="text-right">
@@ -639,7 +615,7 @@ const exportOrders = () => {
         <!-- Pagination Footer -->
         <div class="pagination-footer">
           <span class="pagination-summary">
-            Showing {{ (currentPage - 1) * itemsPerPage + 1 }} to {{ Math.min(currentPage * itemsPerPage, filteredOrders.length) }} of {{ filteredOrders.length }} orders
+            Showing {{ filteredOrders.length ? (currentPage - 1) * itemsPerPage + 1 : 0 }} to {{ Math.min(currentPage * itemsPerPage, filteredOrders.length) }} of {{ filteredOrders.length }} orders
           </span>
 
           <div class="pagination-controls">
@@ -728,36 +704,14 @@ const exportOrders = () => {
               <span>{{ isUpdatingStatus ? 'Updating...' : nextAction.label }}</span>
             </button>
 
-            <!-- ⚡ University Defense Demo Fast-Forward -->
             <button
-              v-if="(activeOrder.status || '').toLowerCase() !== 'delivered'"
-              class="btn-demo-action"
-              title="Instant Demo: Fast-forward order to Delivered for defense demonstration"
+              v-if="canCancelOrder"
+              class="btn-outline-action"
               :disabled="isUpdatingStatus"
-              @click="fastForwardToDelivered"
+              @click="updateStatus('Cancelled')"
             >
-              <Sparkles :size="13" class="sparkle-gold" />
-              <span>⚡ Demo: Mark Delivered</span>
+              Cancel Order
             </button>
-
-            <!-- Status Dropdown with Live DB update -->
-            <div class="select-status-wrap">
-              <select
-                :value="activeOrder.status"
-                class="btn-update-status"
-                :disabled="isUpdatingStatus"
-                @change="updateStatus($event.target.value)"
-              >
-                <option value="Pending">Pending</option>
-                <option value="Confirmed">Confirmed</option>
-                <option value="Processing">Processing</option>
-                <option value="Shipped">Shipped</option>
-                <option value="Out for Delivery">Out for Delivery</option>
-                <option value="Delivered">Delivered</option>
-                <option value="Cancelled">Cancelled</option>
-                <option value="Returned">Returned</option>
-              </select>
-            </div>
           </div>
         </div>
 
@@ -766,7 +720,6 @@ const exportOrders = () => {
           <div class="stepper-header-row">
             <div class="stepper-title-info">
               <span class="stepper-headline">Fulfillment Progress Tracker</span>
-              <span class="stepper-subline">Click any stage node to set status or use the action button above.</span>
             </div>
             <div class="stepper-current-chip" :class="getStatusBadgeClass(activeOrder.status)">
               <span>Current: <strong>{{ activeOrder.status }}</strong></span>
@@ -791,11 +744,8 @@ const exportOrders = () => {
                 :class="{
                   completed: currentStageIndex > idx || (currentStageIndex === 5 && idx === 5),
                   active: currentStageIndex === idx && idx < 5,
-                  pending: currentStageIndex < idx,
-                  clickable: true
+                  pending: currentStageIndex < idx
                 }"
-                :title="`Click to set order status to '${stage.label}'`"
-                @click="onStageClick(stage)"
               >
                 <div class="step-icon-circle">
                   <CheckCircle2
@@ -854,7 +804,7 @@ const exportOrders = () => {
                 <div class="info-group">
                   <span class="info-lbl">Payment Status</span>
                   <div>
-                    <span class="payment-pill pay-paid">Paid</span>
+                    <span class="payment-pill">{{ activeOrder.payment_status || 'Unpaid' }}</span>
                   </div>
                 </div>
                 <div class="info-group">
@@ -875,7 +825,7 @@ const exportOrders = () => {
             <!-- 2. Order Items Card -->
             <div class="card detail-panel-card">
               <div class="card-header-row">
-                <h3 class="panel-card-title">Order Items ({{ (activeOrder.items || []).length || 3 }})</h3>
+                <h3 class="panel-card-title">Order Items ({{ (activeOrder.items || []).length }})</h3>
                 <button class="btn-edit-items-text">Edit Items</button>
               </div>
 
@@ -1025,7 +975,7 @@ const exportOrders = () => {
             <div class="card detail-panel-card">
               <div class="card-header-row">
                 <h3 class="panel-card-title">Payment Information</h3>
-                <span class="payment-pill pay-paid">Paid</span>
+                <span class="payment-pill">{{ activeOrder.payment_status || 'Unpaid' }}</span>
               </div>
 
               <div class="payment-details-list">
@@ -1033,16 +983,12 @@ const exportOrders = () => {
                   <CreditCard :size="14" class="text-muted" />
                   <strong>{{ activeOrder.payment_method || 'ABA Pay' }}</strong>
                 </div>
-                <div class="pay-row-kv">
-                  <span class="pay-kv-lbl">Transaction ID</span>
-                  <span class="pay-kv-val">202508311024556789</span>
+                <div v-if="activeOrder.transaction_ref" class="pay-row-kv">
+                  <span class="pay-kv-lbl">Transaction Reference</span>
+                  <span class="pay-kv-val">{{ activeOrder.transaction_ref }}</span>
                 </div>
                 <div class="pay-row-kv">
-                  <span class="pay-kv-lbl">Paid on</span>
-                  <span class="pay-kv-val">Aug 31, 2025, 10:25 AM</span>
-                </div>
-                <div class="pay-row-kv">
-                  <span class="pay-kv-lbl">Amount Paid</span>
+                  <span class="pay-kv-lbl">{{ activeOrder.payment_status === 'Paid' ? 'Amount Paid' : 'Order Total' }}</span>
                   <strong class="pay-kv-val">${{ Number(activeOrder.total).toFixed(2) }}</strong>
                 </div>
               </div>
@@ -1052,54 +998,15 @@ const exportOrders = () => {
             <div class="card detail-panel-card">
               <div class="card-header-row">
                 <h3 class="panel-card-title">Order Timeline</h3>
-                <span class="view-all-link">View All</span>
               </div>
 
               <div class="timeline-events-list">
-                <div class="timeline-evt completed">
+                <p v-if="!orderEvents.length" class="text-muted">No fulfillment events recorded.</p>
+                <div v-for="(event, index) in orderEvents" :key="index" class="timeline-evt completed">
                   <div class="evt-dot"><Check :size="10" /></div>
                   <div class="evt-meta">
-                    <strong>Order Placed</strong>
-                    <span>Aug 31, 2025, 10:24 AM</span>
-                  </div>
-                </div>
-                <div class="timeline-evt completed">
-                  <div class="evt-dot"><Check :size="10" /></div>
-                  <div class="evt-meta">
-                    <strong>Payment Confirmed</strong>
-                    <span>Aug 31, 2025, 10:25 AM</span>
-                  </div>
-                </div>
-                <div class="timeline-evt completed">
-                  <div class="evt-dot"><Check :size="10" /></div>
-                  <div class="evt-meta">
-                    <strong>Order Confirmed</strong>
-                    <span>Aug 31, 2025, 11:05 AM</span>
-                  </div>
-                </div>
-                <div class="timeline-evt active">
-                  <div class="evt-dot-active"><span class="active-pulse-dot"></span></div>
-                  <div class="evt-meta">
-                    <strong>Processing</strong>
-                    <span>Aug 31, 2025, 02:30 PM</span>
-                  </div>
-                </div>
-                <div class="timeline-evt pending">
-                  <div class="evt-dot-pending">○</div>
-                  <div class="evt-meta">
-                    <span class="text-muted">Shipped</span>
-                  </div>
-                </div>
-                <div class="timeline-evt pending">
-                  <div class="evt-dot-pending">○</div>
-                  <div class="evt-meta">
-                    <span class="text-muted">Out for Delivery</span>
-                  </div>
-                </div>
-                <div class="timeline-evt pending">
-                  <div class="evt-dot-pending">○</div>
-                  <div class="evt-meta">
-                    <span class="text-muted">Delivered</span>
+                    <strong>{{ event.status }}</strong>
+                    <span>{{ new Date(event.at).toLocaleString() }}</span>
                   </div>
                 </div>
               </div>
@@ -1241,23 +1148,7 @@ const exportOrders = () => {
   color: #2D2621;
 }
 
-.kpi-trend-row {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 11.5px;
-}
-
-.trend-indicator {
-  display: inline-flex;
-  align-items: center;
-  gap: 2px;
-  font-weight: 600;
-}
-
-.text-green { color: #2E7D32; }
 .text-red { color: #D32F2F; }
-.trend-sub { color: #8C847E; }
 
 /* Filter Toolbar */
 .filter-toolbar {

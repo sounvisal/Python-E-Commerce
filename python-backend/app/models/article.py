@@ -8,6 +8,8 @@ class Article(Base):
     id = Column(Integer, primary_key=True, index=True)
     slug = Column(String(150), unique=True, index=True, nullable=False)
     title = Column(String(255), nullable=False)
+    tags = Column(JSON, default=list)
+    status = Column(String(30), default="Published", nullable=False)
     subtitle = Column(Text, nullable=True)
     category = Column(String(100), nullable=False)  # e.g. "Skincare Basics", "Ingredients", "Sun Care"
     read_time = Column(String(50), default="5 min read")

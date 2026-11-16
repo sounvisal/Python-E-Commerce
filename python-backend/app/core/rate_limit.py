@@ -4,6 +4,7 @@ from typing import Dict, List, Tuple
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
 from starlette.responses import JSONResponse
+from app.core.config import settings
 
 class InMemoryRateLimiter:
     """
@@ -64,6 +65,7 @@ RATE_LIMIT_RULES = [
     # Payments & Orders: max 40 per minute
     ("/api/payments", 40, 60),
     ("/api/orders", 40, 60),
+    ("/api/upload", 8, 60),
     # Default API limit: max 200 per minute
     ("/api", 200, 60),
 ]
@@ -71,7 +73,7 @@ RATE_LIMIT_RULES = [
 class RateLimitMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next):
         # Bypass rate limiter during unit test executions
-        if request.headers.get("X-Test-Client") == "true":
+        if not settings.PRODUCTION and request.headers.get("X-Test-Client") == "true":
             return await call_next(request)
 
         path = request.url.path
@@ -79,7 +81,7 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
 
         # Forwarded header support for reverse proxies
         forwarded_for = request.headers.get("X-Forwarded-For")
-        if forwarded_for:
+        if forwarded_for and not settings.PRODUCTION:
             client_ip = forwarded_for.split(",")[0].strip()
 
         # Find matching rate limit rule

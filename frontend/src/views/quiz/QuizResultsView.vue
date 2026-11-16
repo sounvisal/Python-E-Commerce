@@ -1,5 +1,7 @@
 <template>
   <div class="lumea-quiz-results-view">
+    <p class="container">Suggestions match available products to your skin type, concerns, goals, and routine length. Formulation preferences are saved but are not verified by this matching tool.</p>
+    <p v-if="!productStore.loading && !recommendedProducts.length" class="container" role="status">No matching in-stock products are available. Try the catalog or retake the quiz.</p>
     <!-- ============================================================= -->
     <!-- 1. BREADCRUMBS & EDITORIAL HERO BANNER                        -->
     <!-- ============================================================= -->
@@ -302,144 +304,25 @@ const categoryTabs = [
 ]
 
 // Active concerns display
-const activeConcerns = [
-  { name: 'Pores', icon: Sparkles },
-  { name: 'Uneven Tone', icon: Sun },
-  { name: 'Occasional Breakouts', icon: Flame }
-]
-
-// Active goals display
-const activeGoals = [
-  { name: 'Clearer Skin', icon: Sparkles },
-  { name: 'Brighter Tone', icon: Sun },
-  { name: 'Hydration', icon: Droplets }
-]
+const activeConcerns = computed(() => quizStore.answers.concerns.map(name => ({ name, icon: Sparkles })))
+const activeGoals = computed(() => quizStore.answers.goals.map(name => ({ name, icon: Sun })))
 
 // Routine Steps lookup
-const morningSteps = [
-  { number: 1, title: 'Cleanser', desc: 'Gently removes oil and impurities' },
-  { number: 2, title: 'Treatment', desc: 'Targets pores and uneven tone' },
-  { number: 3, title: 'Moisturizer', desc: 'Keeps skin balanced and hydrated' },
-  { number: 4, title: 'Sunscreen', desc: 'Protects from UV and environment damage' }
-]
-
-const eveningSteps = [
-  { number: 1, title: 'Cleanser', desc: 'Dissolves pollutants and SPF residue' },
-  { number: 2, title: 'Toner & Essence', desc: 'Preps cellular barrier for active treatments' },
-  { number: 3, title: 'Active Serum', desc: 'Cellular repair and brightening treatment' },
-  { number: 4, title: 'Night Cream', desc: 'Intensive overnight lipid replenishment' }
-]
-
-const currentRoutineSteps = computed(() => {
-  return routineTime.value === 'morning' ? morningSteps : eveningSteps
-})
+const currentRoutineSteps = computed(() => (routineTime.value === 'morning'
+  ? quizStore.recommendedRoutineProducts : quizStore.eveningRoutineProducts)
+  .map(p => ({ number: p.step, title: p.stepName, desc: p.tagline })))
 
 // Products mapped from product catalog
 const allCatalogProducts = computed(() => productStore.products)
 
-const recommendedProducts = computed(() => {
-  // Recommend 4 core hero products matching format mockup
-  return [
-    allCatalogProducts.value.find(p => p.id === 204) || {
-      id: 204,
-      name: 'CeraVe Foaming Facial Cleanser',
-      brand: 'CeraVe',
-      category: 'cleansers',
-      price: 16.00,
-      rating: 4.8,
-      reviews: 1200,
-      image_url: '/images/prod-cerave-cleanser.jpg',
-      slug: 'cerave-foaming-facial-cleanser',
-      badge: 'Step 1'
-    },
-    allCatalogProducts.value.find(p => p.id === 202) || {
-      id: 202,
-      name: 'The Ordinary Niacinamide 10% + Zinc 1%',
-      brand: 'The Ordinary',
-      category: 'treatments',
-      price: 17.80,
-      rating: 4.7,
-      reviews: 2400,
-      image_url: '/images/prod-ordinary.jpg',
-      slug: 'the-ordinary-niacinamide-10-zinc-1',
-      badge: 'Step 2'
-    },
-    allCatalogProducts.value.find(p => p.id === 203) || {
-      id: 203,
-      name: 'Laneige Water Bank Moisture Cream',
-      brand: 'Laneige',
-      category: 'moisturizers',
-      price: 32.00,
-      rating: 4.8,
-      reviews: 987,
-      image_url: '/images/prod-laneige.jpg',
-      slug: 'laneige-water-bank-moisture-cream',
-      badge: 'Step 3'
-    },
-    allCatalogProducts.value.find(p => p.id === 208) || {
-      id: 208,
-      name: 'La Roche-Posay Anthelios SPF 50+',
-      brand: 'La Roche-Posay',
-      category: 'sunscreens',
-      price: 29.50,
-      rating: 4.9,
-      reviews: 1800,
-      image_url: '/images/prod-laroche-effaclar.jpg',
-      slug: 'la-roche-posay-anthelios-spf-50',
-      badge: 'Step 4'
-    }
-  ]
-})
+const recommendedProducts = computed(() => quizStore.recommendedRoutineProducts)
 
 const filteredProducts = computed(() => {
   if (activeTab.value === 'all') return recommendedProducts.value
   return recommendedProducts.value.filter(p => p.category === activeTab.value)
 })
 
-const alsoLikeProducts = computed(() => {
-  return [
-    allCatalogProducts.value.find(p => p.id === 205) || {
-      id: 205,
-      name: 'Anua Heartleaf 77% Soothing Toner',
-      brand: 'Anua',
-      price: 24.00,
-      rating: 4.9,
-      reviews: 892,
-      image_url: '/images/prod-anua-toner.jpg',
-      slug: 'anua-heartleaf-77-soothing-toner'
-    },
-    allCatalogProducts.value.find(p => p.id === 206) || {
-      id: 206,
-      name: 'COSRX Advanced Snail 92 Cream',
-      brand: 'COSRX',
-      price: 25.00,
-      rating: 4.8,
-      reviews: 1450,
-      image_url: '/images/prod-cosrx-snail.jpg',
-      slug: 'cosrx-advanced-snail-92-cream'
-    },
-    allCatalogProducts.value.find(p => p.id === 201) || {
-      id: 201,
-      name: 'SK-II Facial Treatment Essence',
-      brand: 'SK-II',
-      price: 99.00,
-      rating: 4.8,
-      reviews: 1200,
-      image_url: '/images/prod-sk2.jpg',
-      slug: 'sk-ii-facial-treatment-essence'
-    },
-    allCatalogProducts.value.find(p => p.id === 207) || {
-      id: 207,
-      name: 'Beauty of Joseon Calming Serum',
-      brand: 'Beauty of Joseon',
-      price: 22.00,
-      rating: 4.7,
-      reviews: 640,
-      image_url: '/images/prod-boj.jpg',
-      slug: 'beauty-of-joseon-calming-serum'
-    }
-  ]
-})
+const alsoLikeProducts = computed(() => productStore.allCatalogProducts.filter(p => p.stock > 0 && !recommendedProducts.value.some(r => r.id === p.id)).slice(0, 4))
 
 function scrollSlider(direction) {
   if (carouselRef.value) {

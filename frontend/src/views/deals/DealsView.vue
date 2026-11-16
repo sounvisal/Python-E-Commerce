@@ -303,7 +303,8 @@ import {
   Tag,
   Truck
 } from 'lucide-vue-next'
-import { onMounted, onUnmounted, ref } from 'vue'
+import { useProductStore } from '@/stores/products'
+import { onMounted, onUnmounted, ref, computed } from 'vue'
 
 const cartStore = useCartStore()
 const wishlistStore = useWishlistStore()
@@ -355,80 +356,7 @@ function padZero(num) {
 // The Ordinary ($7.20 / $9.00) 20% OFF
 // CeraVe ($16.00 / $24.50) 35% OFF
 // Innisfree ($28.00 / $56.00) 50% OFF
-const featuredDealsList = [
-  {
-    id: 201,
-    brand: 'SK-II',
-    name: 'Facial Treatment Essence',
-    price: 99.00,
-    compare_at_price: 142.00,
-    discount: '30% OFF',
-    rating: 4.8,
-    reviews: '1.2K',
-    image_url: '/images/prod-sk2.jpg',
-    slug: 'sk-ii-facial-treatment-essence'
-  },
-  {
-    id: 207,
-    brand: 'Estée Lauder',
-    name: 'Advanced Night Repair Synchronized Complex',
-    price: 78.00,
-    compare_at_price: 104.00,
-    discount: '25% OFF',
-    rating: 4.7,
-    reviews: '892',
-    image_url: '/images/prod-dermalogica.jpg',
-    slug: 'estee-lauder-advanced-night-repair'
-  },
-  {
-    id: 203,
-    brand: 'Laneige',
-    name: 'Lip Sleeping Mask Intense Moisture',
-    price: 18.00,
-    compare_at_price: 30.00,
-    discount: '40% OFF',
-    rating: 4.8,
-    reviews: '1.5K',
-    image_url: '/images/prod-laneige.jpg',
-    slug: 'laneige-lip-sleeping-mask'
-  },
-  {
-    id: 202,
-    brand: 'The Ordinary',
-    name: 'Niacinamide 10% + Zinc 1%',
-    price: 7.20,
-    compare_at_price: 9.00,
-    discount: '20% OFF',
-    rating: 4.7,
-    reviews: '9.8K',
-    image_url: '/images/prod-ordinary.jpg',
-    slug: 'the-ordinary-niacinamide-10-zinc-1'
-  },
-  {
-    id: 204,
-    brand: 'CeraVe',
-    name: 'Moisturizing Cream Barrier Defense',
-    price: 16.00,
-    compare_at_price: 24.50,
-    discount: '35% OFF',
-    rating: 4.8,
-    reviews: '6.2K',
-    image_url: '/images/prod-cerave.jpg',
-    slug: 'cerave-moisturizing-cream'
-  },
-  {
-    id: 208,
-    brand: 'Innisfree',
-    name: 'Green Tea Seed Serum Intensive Hydration',
-    price: 28.00,
-    compare_at_price: 56.00,
-    discount: '50% OFF',
-    rating: 4.6,
-    reviews: '2.1K',
-    image_url: '/images/prod-innisfree-cleanser.jpg',
-    slug: 'innisfree-green-tea-seed-serum'
-  }
-]
+const featuredDealsList = computed(() => useProductStore().allCatalogProducts.filter(p => p.compare_at_price > p.price))
 
 function addToCart(item) {
   cartStore.addItem({

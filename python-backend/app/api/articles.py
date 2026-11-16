@@ -1,3 +1,4 @@
+from app.api.deps import require_admin, get_optional_user
 from typing import Optional, List
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
@@ -33,13 +34,20 @@ def get_articles(
     sort: Optional[str] = Query("latest", description="Sort order: 'latest', 'popular', 'title'"),
     page: int = Query(1, ge=1),
     limit: int = Query(6, ge=1, le=50),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    include_unpublished: bool = False,
+    current_user=Depends(get_optional_user)
 ):
     """
     Retrieve paginated Skincare Journal articles with search, category filtering,
     sort options, and popular sidebar items.
     """
     query = db.query(Article)
+    if include_unpublished:
+        if not current_user or current_user.role != 'admin':
+            raise HTTPException(403, 'Administrator access required')
+    else:
+        query = query.filter(Article.status == 'Published')
 
     # 1. Search filter
     if search:
@@ -72,7 +80,7 @@ def get_articles(
     # Retrieve popular articles for sidebar widget
     popular_articles = (
         db.query(Article)
-        .filter(Article.is_popular == True)
+        .filter(Article.is_popular == True, Article.status == 'Published')
         .order_by(asc(Article.popular_rank), desc(Article.id))
         .limit(4)
         .all()
@@ -93,19 +101,19 @@ def get_popular_articles(db: Session = Depends(get_db)):
     """
     return (
         db.query(Article)
-        .filter(Article.is_popular == True)
+        .filter(Article.is_popular == True, Article.status == 'Published')
         .order_by(asc(Article.popular_rank), desc(Article.id))
         .limit(4)
         .all()
     )
 
 @router.get("/{slug}", response_model=ArticleDetailResponse)
-def get_article_by_slug(slug: str, db: Session = Depends(get_db)):
+def get_article_by_slug(slug: str, db: Session = Depends(get_db), current_user=Depends(get_optional_user)):
     """
     Retrieve full article reader view with related articles by slug.
     """
     article = db.query(Article).filter(Article.slug == slug).first()
-    if not article:
+    if not article or (article.status != 'Published' and (not current_user or current_user.role != 'admin')):
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Article with slug '{slug}' not found."
@@ -114,7 +122,7 @@ def get_article_by_slug(slug: str, db: Session = Depends(get_db)):
     # Related articles (prioritizing same category, excluding current)
     related = (
         db.query(Article)
-        .filter(Article.id != article.id)
+        .filter(Article.id != article.id, Article.status == 'Published')
         .filter(
             or_(
                 Article.category == article.category,
@@ -131,7 +139,7 @@ def get_article_by_slug(slug: str, db: Session = Depends(get_db)):
         related=related
     )
 
-@router.post("", response_model=ArticleResponse, status_code=status.HTTP_201_CREATED)
+@router.post("", response_model=ArticleResponse, status_code=status.HTTP_201_CREATED, dependencies=[Depends(require_admin)])
 def create_article(payload: ArticleCreate, db: Session = Depends(get_db)):
     """
     Create a new journal article (Admin Atelier).
@@ -149,7 +157,7 @@ def create_article(payload: ArticleCreate, db: Session = Depends(get_db)):
     db.refresh(article)
     return article
 
-@router.put("/{slug}", response_model=ArticleResponse)
+@router.put("/{slug}", response_model=ArticleResponse, dependencies=[Depends(require_admin)])
 def update_article(slug: str, payload: ArticleUpdate, db: Session = Depends(get_db)):
     """
     Update an existing journal article (Admin Atelier).
@@ -169,7 +177,7 @@ def update_article(slug: str, payload: ArticleUpdate, db: Session = Depends(get_
     db.refresh(article)
     return article
 
-@router.delete("/{slug}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete("/{slug}", status_code=status.HTTP_204_NO_CONTENT, dependencies=[Depends(require_admin)])
 def delete_article(slug: str, db: Session = Depends(get_db)):
     """
     Delete a journal article.

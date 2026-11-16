@@ -398,7 +398,7 @@ const isSubmitting = ref(false)
 
 const loginForm = ref({
   email: 'sreynich.chan@example.com',
-  password: '••••••••••••',
+  password: 'password123',
   rememberMe: true
 })
 
@@ -417,41 +417,46 @@ function fillDemoAccount() {
   handleLogin()
 }
 
-function handleLogin() {
+async function handleLogin() {
   isSubmitting.value = true
-  setTimeout(() => {
-    authStore.login({
+  try {
+    const success = await authStore.login({
       email: loginForm.value.email,
       password: loginForm.value.password,
       remember: loginForm.value.rememberMe
     })
+    if (success) {
+      const redirectTarget = route.query.redirect ? decodeURIComponent(route.query.redirect) : '/account'
+      router.push(redirectTarget)
+    }
+  } finally {
     isSubmitting.value = false
-    router.push('/account')
-  }, 400)
+  }
 }
 
-function handleRegister() {
+async function handleRegister() {
   isSubmitting.value = true
-  setTimeout(() => {
-    authStore.register({
+  try {
+    const success = await authStore.register({
       name: registerForm.value.name,
       email: registerForm.value.email,
       phone: registerForm.value.phone,
       password: registerForm.value.password
     })
+    if (success) {
+      const redirectTarget = route.query.redirect ? decodeURIComponent(route.query.redirect) : '/account'
+      router.push(redirectTarget)
+    }
+  } finally {
     isSubmitting.value = false
-    router.push('/account')
-  }, 400)
+  }
 }
 
-function handleSocialLogin(provider) {
-  notificationStore.addToast(`Connected with ${provider}. Welcome back, Sreynich!`, 'success')
-  authStore.login({ email: 'sreynich.chan@example.com' })
-  router.push('/account')
+function handleSocialLogin() {
+  notificationStore.addToast('Social sign-in is not available yet. Use your email and password.', 'info')
 }
-
 function openForgotModal() {
-  notificationStore.addToast('Password reset link sent to your email address.', 'info')
+  notificationStore.addToast('Password reset email is not configured. Please contact support for account recovery.', 'info')
 }
 </script>
 

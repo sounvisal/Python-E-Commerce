@@ -1,6 +1,8 @@
 <template>
   <div class="lumea-return-wizard-page">
     <div class="container wizard-container">
+      <p v-if="submitError" role="alert">{{ submitError }}</p>
+      <p v-if="!selectableOrders.length">No delivered orders are available. You can return paid orders within 30 days of delivery (purchase date for older records).</p>
       <!-- Breadcrumb Navigation -->
       <nav class="wizard-breadcrumb" aria-label="Breadcrumb">
         <router-link to="/">Home</router-link>
@@ -70,11 +72,12 @@
 
               <!-- Order Selector Dropdown -->
               <div class="order-select-box">
-                <label class="field-label">Delivered Order</label>
+                <label class="field-label">Select Order to Return</label>
                 <div class="custom-select-wrap">
                   <select v-model="selectedOrderNumber" class="order-dropdown">
-                    <option value="LM24081234">Order #LM24081234 &bull; Aug 12, 2024 &bull; 2 items &bull; Delivered</option>
-                    <option value="LM-072646">Order #LM-072646 &bull; Oct 14, 2026 &bull; 2 items &bull; Delivered</option>
+                    <option v-for="ord in selectableOrders" :key="ord.orderNumber" :value="ord.orderNumber">
+                      Order #{{ ord.orderNumber }} &bull; {{ ord.placedAt }} &bull; {{ (ord.items || []).length }} item(s) &bull; {{ ord.status }}
+                    </option>
                   </select>
                   <ChevronDown :size="16" class="dropdown-chevron" />
                 </div>
@@ -217,7 +220,7 @@
                 ></textarea>
               </div>
 
-              <div class="photos-upload-group">
+              <div v-if="!hostedDeployment" class="photos-upload-group">
                 <label class="field-label">Proof Photos (Optional)</label>
                 <div class="photos-preview-row">
                   <div class="photo-preview-box" v-for="(photo, pidx) in uploadedPhotos" :key="pidx">
@@ -348,8 +351,11 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, watch, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
+import axios from 'axios'
+import { useAuthStore } from '@/stores/auth'
+import { useOrdersStore } from '@/stores/orders'
 import {
   Check,
   ChevronDown,
@@ -362,6 +368,10 @@ import {
 
 const router = useRouter()
 const route = useRoute()
+const ordersStore = useOrdersStore()
+const authStore = useAuthStore()
+const submitError = ref('')
+const ordersLoaded = ref(false)
 
 const steps = [
   { num: 1, label: 'Select Item' },
@@ -373,27 +383,52 @@ const steps = [
 
 const currentStep = ref(1)
 
-const selectedOrderNumber = ref(route.query.order ? String(route.query.order) : 'LM24081234')
+const selectableOrders = computed(() => {
+  return (ordersLoaded.value ? ordersStore.orders : []).filter(o => o.status === 'Delivered' && o.paymentStatus === 'Paid' && Date.now() - new Date(o.deliveredAt || o.date).getTime() <= 30 * 86400000)
+})
+
+const defaultOrder = computed(() => {
+  if (route.query.order) return String(route.query.order)
+  return selectableOrders.value[0]?.orderNumber || ''
+})
+
+const selectedOrderNumber = ref(defaultOrder.value)
 const selectedItemId = ref(1)
-const uploadedPhotos = ref(['/images/returns-workflow-bottles.jpg'])
+const hostedDeployment = import.meta.env.VITE_HOSTED_DEPLOYMENT === 'true'
+const uploadedPhotos = ref([])
 const isUploadingPhoto = ref(false)
 
-const availableItems = ref([
-  {
-    id: 1,
-    name: 'SK-II Facial Treatment Essence',
-    variant: '230ml',
-    price: 125.0,
-    image: '/images/prod-sk2.jpg'
+const availableItems = ref([])
+
+watch(
+  () => [selectedOrderNumber.value, ordersStore.orders, ordersLoaded.value],
+  ([newNum]) => {
+    availableItems.value = []
+    if (!newNum || !ordersLoaded.value) return
+    const ord = ordersStore.getOrderById(newNum)
+    if (ord && ord.items && ord.items.length > 0) {
+      availableItems.value = ord.items.map((item, idx) => ({
+        id: item.orderItemId,
+        name: item.name,
+        variant: item.volume || 'Standard Size',
+        price: Math.round(item.price * (ord.subtotal - (ord.discount || 0)) / ord.subtotal * 100) / 100,
+        image: item.image_url || '/images/prod-sk2.jpg'
+      }))
+      selectedItemId.value = availableItems.value[0]?.id || 1
+    }
   },
-  {
-    id: 2,
-    name: 'The Ordinary Niacinamide 10% + Zinc 1%',
-    variant: '30ml',
-    price: 12.0,
-    image: '/images/prod-ordinary.jpg'
+  { immediate: true }
+)
+
+onMounted(async () => {
+  ordersLoaded.value = Boolean(await ordersStore.fetchOrders(authStore.userEmail))
+  if (!ordersLoaded.value) { submitError.value = 'Unable to load your orders. Please reload to try again.'; return }
+  selectedOrderNumber.value = String(route.query.order || selectableOrders.value[0]?.orderNumber || '')
+  if (route.query.order) {
+    await ordersStore.fetchOrderByNumber(route.query.order)
+    selectedOrderNumber.value = String(route.query.order)
   }
-])
+})
 
 const reasonsList = [
   'Product is damaged',
@@ -408,23 +443,10 @@ const reasonsList = [
 
 const selectedReason = ref('Product is damaged')
 
-const resolutionsList = [
-  {
-    title: 'Refund to original payment method',
-    desc: 'Funds returned to your credit card or payment account within 3-5 business days.'
-  },
-  {
-    title: 'Exchange for the same product',
-    desc: 'We will ship a fresh, inspected replacement bottle immediately.'
-  },
-  {
-    title: 'Replacement (same product)',
-    desc: 'Receive immediate Luméa Atelier store credit with bonus loyalty points.'
-  }
-]
+const resolutionsList = [{ title: 'Refund to original payment method', desc: 'Your refund request will be reviewed before processing.' }]
 
 const selectedResolution = ref('Refund to original payment method')
-const returnDescription = ref('The bottle arrived with a crack and some product leaked. Please see the attached photos.')
+const returnDescription = ref('')
 const isSubmitting = ref(false)
 
 const currentSelectedItem = computed(() => {
@@ -449,6 +471,7 @@ async function handlePhotoUpload(e) {
     formData.append('file', file)
     const res = await fetch('/api/upload', {
       method: 'POST',
+      headers: { Authorization: `Bearer ${authStore.token}` },
       body: formData
     })
     if (res.ok) {
@@ -470,11 +493,17 @@ async function handleNextOrSubmit() {
     return
   }
 
+  if (!currentSelectedItem.value?.id) {
+    submitError.value = 'Choose an eligible purchased item.'
+    return
+  }
+  submitError.value = ''
   // Submit to FastAPI backend: POST /api/returns
   isSubmitting.value = true
   try {
     const payload = {
       order_number: selectedOrderNumber.value,
+      order_item_id: currentSelectedItem.value.id,
       product_name: currentSelectedItem.value.name,
       product_image: currentSelectedItem.value.image,
       product_variant: currentSelectedItem.value.variant,
@@ -484,26 +513,14 @@ async function handleNextOrSubmit() {
       resolution: selectedResolution.value,
       description: returnDescription.value,
       photos: uploadedPhotos.value,
-      customer_name: 'Sreynich Chan',
-      customer_email: 'sreynich.chan@example.com'
+      customer_name: authStore.user?.name,
+      customer_email: authStore.userEmail
     }
 
-    const res = await fetch('/api/returns', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload)
-    })
-
-    if (res.ok) {
-      const created = await res.json()
-      router.push(`/returns/status/${created.request_number}`)
-    } else {
-      // Fallback redirect to sample
-      router.push('/returns/status/RR24081234')
-    }
+    const { data: created } = await axios.post('/api/returns', payload)
+    router.push(`/returns/status/${created.request_number}`)
   } catch (err) {
-    console.error('[ReturnWizard] Error submitting return:', err)
-    router.push('/returns/status/RR24081234')
+    submitError.value = err.response?.data?.detail || 'Unable to submit your return. Your details have been kept; please retry.'
   } finally {
     isSubmitting.value = false
   }

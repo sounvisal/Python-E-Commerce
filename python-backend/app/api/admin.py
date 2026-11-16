@@ -1,8 +1,11 @@
+from app.api.deps import require_admin
+from app.services.order_lifecycle import transition_order
+from app.services.review_metrics import refresh_rating
 import math
 from datetime import datetime, timedelta, timezone
 from typing import Optional, List, Dict, Any
 from fastapi import APIRouter, Depends, HTTPException, Query, status
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 from sqlalchemy import func, desc, asc, or_
 
@@ -16,7 +19,7 @@ from app.models.review import Review
 from app.models.quiz import Quiz
 from app.api.settings import load_settings, save_settings
 
-router = APIRouter(prefix="/admin", tags=["Admin Atelier"])
+router = APIRouter(prefix="/admin", tags=["Admin Atelier"], dependencies=[Depends(require_admin)])
 
 # --- Request/Response DTOs ---
 
@@ -24,15 +27,19 @@ class OrderStatusUpdate(BaseModel):
     status: str
 
 class ProductAdminCreate(BaseModel):
+    skin_type: List[str] = []
+    skin_concern: List[str] = []
+    gallery: List[str] = []
+    subcategory: Optional[str] = None
     name: str
     brand: Optional[str] = "Luméa Atelier"
     slug: Optional[str] = None
     category_id: int
     category: Optional[str] = None
     category_name: Optional[str] = None
-    price: float
+    price: float = Field(gt=0)
     compare_at_price: Optional[float] = None
-    stock: Optional[int] = 20
+    stock: Optional[int] = Field(default=20, ge=0)
     image_url: Optional[str] = "/images/prod-sk2.jpg"
     description: Optional[str] = None
     short_description: Optional[str] = None
@@ -44,15 +51,19 @@ class ProductAdminCreate(BaseModel):
     video_title: Optional[str] = None
 
 class ProductAdminUpdate(BaseModel):
+    skin_type: Optional[List[str]] = None
+    skin_concern: Optional[List[str]] = None
+    gallery: Optional[List[str]] = None
+    subcategory: Optional[str] = None
     name: Optional[str] = None
     brand: Optional[str] = None
     slug: Optional[str] = None
     category_id: Optional[int] = None
     category: Optional[str] = None
     category_name: Optional[str] = None
-    price: Optional[float] = None
+    price: Optional[float] = Field(default=None, gt=0)
     compare_at_price: Optional[float] = None
-    stock: Optional[int] = None
+    stock: Optional[int] = Field(default=None, ge=0)
     image_url: Optional[str] = None
     description: Optional[str] = None
     short_description: Optional[str] = None
@@ -124,6 +135,9 @@ def format_order(order: Order) -> dict:
         "total": order.total,
         "status": order.status,
         "payment_method": order.payment_method,
+        "payment_status": order.payment_status,
+        "transaction_ref": order.transaction_ref,
+        "events": order.events or [],
         "created_at": order.created_at.isoformat() if order.created_at else None,
         "items": [
             {
@@ -150,17 +164,18 @@ def get_admin_stats(db: Session = Depends(get_db)):
     total_orders = db.query(Order).count()
     revenue_sum = (
         db.query(func.sum(Order.total))
-        .filter(Order.status != "Cancelled")
+        .filter(Order.payment_status == "Paid", Order.status != "Payment Review")
         .scalar()
         or 0.0
     )
     total_products = db.query(Product).count()
     total_customers = db.query(User).count()
     low_stock_count = db.query(Product).filter(Product.stock <= 5).count()
-    avg_order_val = round(revenue_sum / total_orders, 2) if total_orders > 0 else 0.0
+    paid_count = db.query(Order).filter(Order.payment_status == "Paid", Order.status != "Payment Review").count()
+    avg_order_val = round(revenue_sum / paid_count, 2) if paid_count else 0.0
 
     # Orders grouped by status
-    statuses = ["confirmed", "processing", "shipped", "delivered", "cancelled"]
+    statuses = ["pending", "confirmed", "processing", "shipped", "delivered", "cancelled"]
     orders_by_status = {}
     for s in statuses:
         count = (
@@ -188,8 +203,8 @@ def get_admin_stats(db: Session = Depends(get_db)):
         day = today - timedelta(days=i)
         timeline.append({
             "date": day.strftime("%b %d"),
-            "revenue": round((revenue_sum / 7) * (0.8 + 0.05 * i), 2),
-            "orders": max(1, round((total_orders / 7) * (0.8 + 0.05 * i)))
+            "revenue": round(float(db.query(func.sum(Order.total)).filter(func.date(Order.created_at) == day.date(), Order.payment_status == "Paid", Order.status != "Payment Review").scalar() or 0), 2),
+            "orders": db.query(Order).filter(func.date(Order.created_at) == day.date()).count()
         })
 
     return {
@@ -269,7 +284,7 @@ def update_order_status(
             detail=f"Order #{order_id} not found"
         )
 
-    order.status = payload.status
+    transition_order(db, order, payload.status)
     db.commit()
     db.refresh(order)
 
@@ -291,7 +306,9 @@ def admin_create_product(
     
     # Resolve category info
     cat = db.query(Category).filter(Category.id == payload.category_id).first()
-    cat_slug = cat.slug if cat else "serums"
+    if not cat:
+        raise HTTPException(400, "Choose an existing category")
+    cat_slug = cat.slug
     cat_name = cat.name if cat else "Face Serums"
 
     new_prod = Product(
@@ -303,7 +320,11 @@ def admin_create_product(
         category_id=payload.category_id,
         price=payload.price,
         compare_at_price=payload.compare_at_price,
-        stock=payload.stock or 20,
+        skin_type=payload.skin_type,
+        skin_concern=payload.skin_concern,
+        gallery=payload.gallery,
+        subcategory=payload.subcategory,
+        stock=payload.stock if payload.stock is not None else 20,
         image_url=payload.image_url or "/images/prod-sk2.jpg",
         description=payload.description or payload.short_description or "",
         is_featured=payload.is_featured or False,
@@ -350,7 +371,7 @@ def admin_update_product(
                 prod.category_name = cat.name
         elif key == "short_description" and value:
             prod.description = value
-        elif hasattr(prod, key) and value is not None:
+        elif hasattr(prod, key) and (value is not None or key in ("compare_at_price", "video_url", "video_title", "video_thumbnail", "subcategory")):
             setattr(prod, key, value)
 
     db.commit()
@@ -763,7 +784,10 @@ def admin_update_review_status(review_id: int, payload: ReviewStatusUpdate, db: 
     if not rev:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Review #{review_id} not found")
 
+    if payload.status.lower() not in ('approved', 'pending', 'rejected'):
+        raise HTTPException(400, 'Invalid moderation status')
     rev.status = payload.status.lower()
+    refresh_rating(db, rev.product_id)
     db.commit()
     db.refresh(rev)
     return {
@@ -822,7 +846,7 @@ def admin_create_review(payload: ReviewCreatePayload, db: Session = Depends(get_
         customer_name=payload.customer_name,
         customer_email=payload.customer_email,
         customer_avatar=payload.customer_avatar or "/images/customer-1.jpg",
-        verified_purchase=True,
+        verified_purchase=False,
         rating=max(1, min(5, payload.rating)),
         title=payload.title,
         comment=payload.comment,

@@ -1,8 +1,10 @@
-from typing import Optional, Any, Dict, List
+from typing import Optional, Any, Dict, List, Literal
 from datetime import datetime
 from pydantic import BaseModel
 
 class ArticleBase(BaseModel):
+    status: Literal['Draft', 'Published', 'Archived'] = 'Published'
+    tags: List[str] = []
     slug: str
     title: str
     subtitle: Optional[str] = None
@@ -26,6 +28,8 @@ class ArticleCreate(ArticleBase):
     pass
 
 class ArticleUpdate(BaseModel):
+    status: Optional[Literal['Draft', 'Published', 'Archived']] = None
+    tags: Optional[List[str]] = None
     title: Optional[str] = None
     subtitle: Optional[str] = None
     category: Optional[str] = None

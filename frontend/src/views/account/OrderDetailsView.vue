@@ -1,5 +1,9 @@
 <template>
-  <div class="order-details-page">
+  <div class="order-details-page" v-if="order">
+    <div class="container" v-if="!order.userId">
+      <button v-if="authStore.isAuthenticated" class="btn btn-outline" @click="claimThisOrder">Save this guest order to my account</button>
+      <router-link v-else :to="{ path: '/login', query: { redirect: `/track/${order.orderNumber}` } }">Sign in with your checkout email to save this order</router-link>
+    </div>
     <div class="container account-container">
       <!-- Breadcrumbs matching format/Order Details.png -->
       <nav class="breadcrumb-nav" aria-label="Breadcrumb">
@@ -17,7 +21,7 @@
         <!-- ========================================================= -->
         <!-- LEFT: ACCOUNT SIDEBAR                                     -->
         <!-- ========================================================= -->
-        <aside class="sidebar-column">
+        <aside v-if="authStore.isAuthenticated" class="sidebar-column">
           <AccountSidebar currentActive="orders" />
         </aside>
 
@@ -280,12 +284,97 @@
         </aside>
       </div>
     </div>
+
+    <!-- ========================================================= -->
+    <!-- LIVE COURIER TRACKING MODAL                               -->
+    <!-- ========================================================= -->
+    <div v-if="showTrackingModal" class="tracking-modal-backdrop" @click.self="showTrackingModal = false">
+      <div class="tracking-modal-card">
+        <div class="tracking-modal-header">
+          <div class="header-left-wrap">
+            <div class="carrier-icon-circle">
+              <Truck :size="20" />
+            </div>
+            <div>
+              <h3 class="modal-tracking-title">Live Courier Dispatch</h3>
+              <span class="carrier-name">LUMÉA WHITE-GLOVE COURIER &middot; PHNOM PENH</span>
+            </div>
+          </div>
+          <button class="modal-close-btn" @click="showTrackingModal = false" aria-label="Close">
+            <X :size="18" />
+          </button>
+        </div>
+
+        <div class="tracking-modal-body">
+          <div class="tracking-meta-banner">
+            <div class="meta-banner-col">
+              <span class="meta-label">Tracking Number</span>
+              <strong class="meta-code">LUM-EXP-{{ order.orderNumber }}</strong>
+            </div>
+            <div class="meta-banner-col">
+              <span class="meta-label">Fulfillment Status</span>
+              <span class="status-badge-live" :class="order.statusType">{{ order.status }}</span>
+            </div>
+            <div class="meta-banner-col">
+              <span class="meta-label">Est. Arrival</span>
+              <strong class="meta-val">{{ order.deliveredAt }}</strong>
+            </div>
+          </div>
+
+          <!-- Multi-stage Delivery Timeline -->
+          <div class="courier-timeline-wrap">
+            <div
+              v-for="(step, idx) in order.timeline"
+              :key="idx"
+              class="courier-stage-node"
+              :class="{ 'is-done': step.completed, 'is-active': !step.completed && idx === activeStepIndex }"
+            >
+              <div class="stage-bullet-wrap">
+                <div class="stage-bullet">
+                  <Check v-if="step.completed" :size="12" />
+                  <span v-else class="stage-bullet-inner"></span>
+                </div>
+                <div v-if="idx < order.timeline.length - 1" class="stage-line" :class="{ 'is-done': step.completed }"></div>
+              </div>
+              <div class="stage-info-content">
+                <div class="stage-title-row">
+                  <strong class="stage-step-name">{{ step.step }}</strong>
+                  <span class="stage-timestamp">{{ step.date }} <template v-if="step.time">&middot; {{ step.time }}</template></span>
+                </div>
+                <span class="stage-desc-text">
+                  <template v-if="step.step === 'Order Placed'">Official payment verified. Atelier dispatch notified.</template>
+                  <template v-else-if="step.step === 'Processing'">Formulations hand-packaged with protective archival wrap.</template>
+                  <template v-else-if="step.step === 'Shipped'">Handed over to Luméa White-Glove courier dispatch.</template>
+                  <template v-else-if="step.step === 'Out for Delivery'">Driver dispatched for final arrival to destination.</template>
+                  <template v-else-if="step.step === 'Delivered'">Package delivered and signed at destination.</template>
+                </span>
+              </div>
+            </div>
+          </div>
+
+
+        </div>
+
+        <div class="tracking-modal-footer">
+          <button type="button" class="btn-dismiss-tracking" @click="showTrackingModal = false">
+            Close Tracking
+          </button>
+        </div>
+      </div>
+    </div>
   </div>
+  <section v-else class="container" role="status">
+    <p>{{ ordersStore.loading ? 'Loading order...' : (ordersStore.error || 'Order not found') }}</p>
+    <router-link to="/shop">Return to shop</router-link>
+  </section>
 </template>
 
 <script setup>
 import { computed, ref, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
+import axios from 'axios'
+import { orderRequest } from '@/utils/orderAccess'
+import { useAuthStore } from '@/stores/auth'
 import { useOrdersStore } from '@/stores/orders'
 import { useNotificationStore } from '@/stores/notification'
 import AccountSidebar from '@/components/account/AccountSidebar.vue'
@@ -298,11 +387,15 @@ import {
   ArrowRight,
   RotateCcw,
   RefreshCw,
-  Headphones
+  Headphones,
+  X,
+  Sparkles,
+  Package
 } from 'lucide-vue-next'
 
 const route = useRoute()
 const ordersStore = useOrdersStore()
+const authStore = useAuthStore()
 const notificationStore = useNotificationStore()
 
 const showTrackingModal = ref(false)
@@ -319,12 +412,21 @@ const order = computed(() => {
 })
 
 const activeStepIndex = computed(() => {
+  if (!order.value?.timeline) return 0
   const index = order.value.timeline.findIndex((s) => !s.completed)
   return index === -1 ? order.value.timeline.length - 1 : index
 })
 
+async function claimThisOrder() {
+  try {
+    await axios.post(`/api/orders/${order.value.orderNumber}/claim`, {}, orderRequest(order.value.orderNumber))
+    await ordersStore.fetchOrderByNumber(order.value.orderNumber)
+    notificationStore.addToast('Order saved to your account.', 'success')
+  } catch (error) { notificationStore.addToast(error.response?.data?.detail || 'Unable to save this order.', 'error') }
+}
 function openReviewFor(item) {
-  notificationStore.addToast(`Review form opened for ${item.name}`, 'info')
+  if (item.slug) window.location.assign(`/product/${item.slug}#reviews`)
+  else notificationStore.addToast('This product is no longer available for reviews.', 'info')
 }
 </script>
 
@@ -1029,5 +1131,335 @@ function openReviewFor(item) {
     grid-template-columns: 1fr;
     gap: 0.5rem;
   }
+}
+
+/* ==========================================================================
+   LIVE COURIER TRACKING MODAL STYLES
+   ========================================================================== */
+.tracking-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(18, 14, 13, 0.72);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+  padding: 1.5rem;
+  animation: fadeIn 0.2s ease-out;
+}
+
+.tracking-modal-card {
+  background: #FFFFFF;
+  border-radius: 18px;
+  width: 100%;
+  max-width: 540px;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: 0 25px 60px -15px rgba(0, 0, 0, 0.35);
+  animation: slideUp 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.tracking-modal-header {
+  padding: 1.25rem 1.5rem;
+  border-bottom: 1px solid #EFEAE5;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.header-left-wrap {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.carrier-icon-circle {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  background: #F5EFEB;
+  color: #7A2E22;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.modal-tracking-title {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  font-size: 1.05rem;
+  font-weight: 800;
+  color: #1C1917;
+  margin: 0;
+}
+
+.carrier-name {
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.8px;
+  color: #8C847E;
+  display: block;
+  margin-top: 2px;
+}
+
+.modal-close-btn {
+  background: transparent;
+  border: none;
+  color: #8C847E;
+  cursor: pointer;
+  padding: 6px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+}
+
+.modal-close-btn:hover {
+  background: #F5EFEB;
+  color: #1C1917;
+}
+
+.tracking-modal-body {
+  padding: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.tracking-meta-banner {
+  background: #FAF7F4;
+  border-radius: 12px;
+  padding: 1rem 1.25rem;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1rem;
+}
+
+.meta-banner-col {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.meta-label {
+  font-size: 0.68rem;
+  color: #78716C;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.meta-code {
+  font-family: monospace;
+  font-size: 0.82rem;
+  color: #1C1917;
+}
+
+.meta-val {
+  font-size: 0.82rem;
+  color: #1C1917;
+}
+
+.status-badge-live {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: capitalize;
+  width: fit-content;
+}
+.status-badge-live.confirmed, .status-badge-live.processing {
+  background: #FEF3C7;
+  color: #92400E;
+}
+.status-badge-live.shipped, .status-badge-live.out {
+  background: #E0E7FF;
+  color: #3730A3;
+}
+.status-badge-live.delivered {
+  background: #DCFCE7;
+  color: #166534;
+}
+
+/* Timeline */
+.courier-timeline-wrap {
+  display: flex;
+  flex-direction: column;
+}
+
+.courier-stage-node {
+  display: flex;
+  gap: 14px;
+}
+
+.stage-bullet-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.stage-bullet {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: #F5EFEB;
+  border: 2px solid #D6CCC2;
+  color: #FFFFFF;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  z-index: 2;
+  transition: all 0.2s;
+}
+
+.courier-stage-node.is-done .stage-bullet {
+  background: #16A34A;
+  border-color: #16A34A;
+}
+
+.courier-stage-node.is-active .stage-bullet {
+  background: #FFFFFF;
+  border-color: #7A2E22;
+}
+
+.stage-bullet-inner {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #7A2E22;
+}
+
+.stage-line {
+  width: 2px;
+  flex: 1;
+  min-height: 34px;
+  background: #E5E0DA;
+  margin: 3px 0;
+}
+
+.stage-line.is-done {
+  background: #16A34A;
+}
+
+.stage-info-content {
+  padding-bottom: 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.stage-title-row {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.stage-step-name {
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: #1C1917;
+}
+
+.stage-timestamp {
+  font-size: 0.72rem;
+  color: #8C847E;
+}
+
+.stage-desc-text {
+  font-size: 0.76rem;
+  color: #57534E;
+  line-height: 1.35;
+}
+
+/* Academic simulation bar */
+.academic-simulation-bar {
+  background: linear-gradient(135deg, #FAF7F4 0%, #F5EFEB 100%);
+  border: 1px dashed #D6CCC2;
+  border-radius: 12px;
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.sim-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.sim-badge {
+  background: #7A2E22;
+  color: #FFFFFF;
+  font-size: 0.65rem;
+  font-weight: 700;
+  padding: 2px 7px;
+  border-radius: 4px;
+}
+
+.sim-hint {
+  font-size: 0.75rem;
+  color: #57534E;
+}
+
+.btn-advance-delivery {
+  background: #7A2E22;
+  color: #FFFFFF;
+  border: none;
+  border-radius: 8px;
+  padding: 0.65rem 1rem;
+  font-size: 0.78rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-advance-delivery:hover:not(:disabled) {
+  background: #8E3628;
+}
+
+.btn-advance-delivery:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+}
+
+.tracking-modal-footer {
+  padding: 1rem 1.5rem;
+  border-top: 1px solid #EFEAE5;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.btn-dismiss-tracking {
+  background: #F5EFEB;
+  color: #1C1917;
+  border: 1px solid #E5E0DA;
+  border-radius: 8px;
+  padding: 0.55rem 1.25rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.btn-dismiss-tracking:hover {
+  background: #EFE7E0;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(14px) scale(0.97); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
 }
 </style>

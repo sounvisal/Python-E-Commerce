@@ -128,6 +128,7 @@
             <div class="payment-options">
               <!-- 1. Bakong KHQR Option -->
               <label
+                v-if="!hostedCheckout"
                 class="payment-option khqr-payment-option"
                 :class="{ selected: form.payment_method === 'khqr' }"
               >
@@ -154,35 +155,37 @@
 
               <!-- 2. Credit Card -->
               <label
+                v-if="!hostedCheckout"
                 class="payment-option"
                 :class="{ selected: form.payment_method === 'card' }"
               >
                 <input
                   type="radio"
                   v-model="form.payment_method"
-                  value="card"
+                  value="card" disabled
                   name="payMethod"
                 />
                 <div class="pay-label">
                   <CreditCard :size="18" />
-                  <span>Credit / Debit Card</span>
+                  <span>Credit / Debit Card (coming soon)</span>
                 </div>
               </label>
 
               <!-- 3. Apple Pay -->
               <label
+                v-if="!hostedCheckout"
                 class="payment-option"
                 :class="{ selected: form.payment_method === 'apple_pay' }"
               >
                 <input
                   type="radio"
                   v-model="form.payment_method"
-                  value="apple_pay"
+                  value="apple_pay" disabled
                   name="payMethod"
                 />
                 <div class="pay-label">
                   <Smartphone :size="18" />
-                  <span>Apple Pay &middot; Instant Express</span>
+                  <span>Apple Pay (coming soon)</span>
                 </div>
               </label>
 
@@ -199,7 +202,7 @@
                 />
                 <div class="pay-label">
                   <Truck :size="18" />
-                  <span>Pay Upon White-Glove Inspection</span>
+                  <span>Cash on delivery</span>
                 </div>
               </label>
             </div>
@@ -329,6 +332,7 @@
       v-if="showKHQRModal && pendingKhqrOrder"
       :order-number="pendingKhqrOrder.order_number"
       :amount="pendingKhqrOrder.total"
+      :expires-at="pendingKhqrOrder.expires_at"
       merchant-name="LUMÉA ATELIER"
       @approved="handleKHQRApproved"
       @cancelled="handleKHQRCancelled"
@@ -342,44 +346,68 @@ import { useRouter } from 'vue-router'
 import axios from 'axios'
 import { useCartStore } from '@/stores/cart'
 import { useOrdersStore } from '@/stores/orders'
+import { useAuthStore } from '@/stores/auth'
 import { useNotificationStore } from '@/stores/notification'
 import { CreditCard, Smartphone, Truck, QrCode } from 'lucide-vue-next'
+import { rememberOrderAccess } from '@/utils/orderAccess'
 import KHQRModal from '@/components/checkout/KHQRModal.vue'
 
 const router = useRouter()
 const cartStore = useCartStore()
 const ordersStore = useOrdersStore()
+const authStore = useAuthStore()
 const notificationStore = useNotificationStore()
+const hostedCheckout = import.meta.env.VITE_HOSTED_DEPLOYMENT === 'true'
 
 onMounted(() => {
   cartStore.fetchSettings()
+  if (authStore.user) {
+    if (authStore.user.name) form.customer_name = authStore.user.name
+    if (authStore.user.email) form.customer_email = authStore.user.email
+    if (authStore.user.phone) form.customer_phone = authStore.user.phone
+    const addr = authStore.defaultAddress
+    if (addr) {
+      if (addr.street) form.shipping_address = addr.street
+      if (addr.city) form.shipping_city = addr.city
+      if (addr.postalCode) form.shipping_postal_code = addr.postalCode
+    }
+  }
 })
 
 const submitting = ref(false)
 const submitError = ref(null)
 const showKHQRModal = ref(false)
 const pendingKhqrOrder = ref(null)
+const checkoutKey = ref(sessionStorage.getItem('lumea_checkout_key') || crypto.randomUUID())
+sessionStorage.setItem('lumea_checkout_key', checkoutKey.value)
 
 const form = reactive({
-  customer_name: 'Sreynich Chan',
-  customer_email: 'sreynich.chan@example.com',
-  customer_phone: '+855 12 345 678',
-  shipping_address: '123 Norodom Boulevard',
-  shipping_city: 'Phnom Penh',
-  shipping_postal_code: '12000',
-  payment_method: 'khqr',
+  customer_name: '',
+  customer_email: '',
+  customer_phone: '',
+  shipping_address: '',
+  shipping_city: '',
+  shipping_postal_code: '',
+  payment_method: hostedCheckout ? 'cod' : 'khqr',
   card_number: '4242 4242 4242 4242',
   card_expiry: '12/28',
   card_cvc: '888',
 })
 
 const handleSubmitOrder = async () => {
-  if (cartStore.items.length === 0) return
+  if (cartStore.items.length === 0 || submitting.value || showKHQRModal.value) return
+  const signature = JSON.stringify({ form, items: cartStore.items, code: cartStore.discountCode })
+  if (sessionStorage.getItem('lumea_checkout_signature') !== signature) {
+    checkoutKey.value = crypto.randomUUID()
+    sessionStorage.setItem('lumea_checkout_key', checkoutKey.value)
+    sessionStorage.setItem('lumea_checkout_signature', signature)
+  }
 
   submitting.value = true
   submitError.value = null
 
   const payload = {
+    checkout_key: checkoutKey.value,
     customer_name: form.customer_name,
     customer_email: form.customer_email,
     customer_phone: form.customer_phone,
@@ -388,24 +416,43 @@ const handleSubmitOrder = async () => {
     shipping_postal_code: form.shipping_postal_code,
     payment_method: form.payment_method,
     discount_code: cartStore.discountCode || null,
+    expected_total: cartStore.grandTotal,
     items: cartStore.items.map((item) => ({
       product_id: item.id,
       quantity: item.quantity,
     })),
   }
 
+  try {
+    const { data } = await axios.post('/api/orders/quote', payload)
+    const quote = data.data
+    if (Math.abs(quote.total - cartStore.grandTotal) > 0.009) {
+      cartStore.items = quote.items.map(line => ({ ...cartStore.items.find(i => i.id === line.product_id), price: line.price }))
+      cartStore.discountRate = quote.subtotal ? quote.discount / quote.subtotal : 0
+      cartStore.saveToStorage()
+      await cartStore.fetchSettings()
+      submitError.value = 'Your bag prices or delivery fee changed. Please review the updated total and submit again.'
+      submitting.value = false
+      return
+    }
+  } catch (err) {
+    submitError.value = err.response?.data?.detail || 'Unable to verify your bag. Please try again.'
+    submitting.value = false
+    return
+  }
   // Specialized flow for Bakong KHQR
   if (form.payment_method === 'khqr') {
     try {
       const response = await axios.post('/api/orders', payload)
       if (response.data && response.data.data) {
+        rememberOrderAccess(response.data.data)
         pendingKhqrOrder.value = response.data.data
         showKHQRModal.value = true
       }
     } catch (err) {
       console.error('Failed to initiate KHQR order:', err)
       submitError.value =
-        err.response?.data?.message || 'Failed to generate order for Bakong KHQR. Please check server status.'
+        err.response?.data?.detail?.message || err.response?.data?.detail || 'Failed to generate order for Bakong KHQR. Please check server status.'
     } finally {
       submitting.value = false
     }
@@ -417,6 +464,8 @@ const handleSubmitOrder = async () => {
     const response = await axios.post('/api/orders', payload)
     if (response.data && response.data.data) {
       const order = response.data.data
+      rememberOrderAccess(order)
+      sessionStorage.removeItem('lumea_checkout_signature')
       ordersStore.addOrder(order)
       cartStore.clearCart()
       notificationStore.addToast('Order successfully confirmed!', 'success')
@@ -425,7 +474,7 @@ const handleSubmitOrder = async () => {
   } catch (err) {
     console.error('Failed to submit order:', err)
     submitError.value =
-      err.response?.data?.message || 'Failed to place order. Please verify that the Luméa atelier backend is running.'
+      err.response?.data?.detail?.message || err.response?.data?.detail || 'Failed to place order. Please verify that the Luméa atelier backend is running.'
   } finally {
     submitting.value = false
   }
@@ -433,6 +482,7 @@ const handleSubmitOrder = async () => {
 
 const handleKHQRApproved = (data) => {
   if (pendingKhqrOrder.value) {
+    sessionStorage.removeItem('lumea_checkout_signature')
     ordersStore.addOrder(pendingKhqrOrder.value)
     cartStore.clearCart()
     notificationStore.addToast('Bakong KHQR payment cleared & verified!', 'success')
@@ -441,9 +491,10 @@ const handleKHQRApproved = (data) => {
   showKHQRModal.value = false
 }
 
-const handleKHQRCancelled = () => {
+const handleKHQRCancelled = (result) => {
+  sessionStorage.removeItem('lumea_checkout_signature')
   showKHQRModal.value = false
-  notificationStore.addToast('KHQR checkout suspended. You may change payment options.', 'info')
+  notificationStore.addToast(result?.requiresReview ? 'Payment needs review. Do not pay again; contact support with your order reference.' : 'KHQR checkout cancelled. You may change payment options.', 'info')
 }
 </script>
 

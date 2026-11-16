@@ -23,8 +23,7 @@ def get_active_quiz(db: Session = Depends(get_db)):
     """
     quiz = db.query(Quiz).filter(Quiz.status == "active").order_by(Quiz.id.asc()).first()
     if not quiz:
-        # Fallback to first quiz
-        quiz = db.query(Quiz).first()
+        raise HTTPException(status_code=404, detail="No active diagnostic quiz")
 
     if not quiz:
         raise HTTPException(status_code=404, detail="No active diagnostic quizzes found.")

@@ -1,81 +1,22 @@
+import { privateStorageKey } from '@/utils/orderAccess'
 import { defineStore } from 'pinia'
 import { computed, ref } from 'vue'
 
 export const useJournalStore = defineStore('journal', () => {
-  const savedJournal = localStorage.getItem('lumea_journal_entries')
-  const initialData = savedJournal ? JSON.parse(savedJournal) : null
+  const savedJournal = localStorage.getItem(privateStorageKey('journal_entries'))
+  let initialData = null
+  try { initialData = savedJournal ? JSON.parse(savedJournal) : null } catch {}
 
-  const entries = ref(initialData?.entries || [
-    {
-      id: 1,
-      date: '2025-06-25',
-      dayNum: 25,
-      monthStr: 'Jun 2025',
-      dayOfWeek: 'Wed',
-      title: 'Good Skin Day!',
-      notes: 'My skin feels smoother and less oily today. The new toner really helps. No breakouts, and my skin looks brighter.',
-      tags: ['Less Oil', 'Brighter', 'No Breakouts'],
-      productImages: [
-        '/images/prod-anua-toner.jpg',
-        '/images/prod-sk2.jpg',
-        '/images/prod-laneige.jpg'
-      ],
-      extraCount: 2
-    },
-    {
-      id: 2,
-      date: '2025-06-22',
-      dayNum: 22,
-      monthStr: 'Jun 2025',
-      dayOfWeek: 'Sun',
-      title: 'A Little Dryness',
-      notes: 'Woke up with some dry spots on my cheeks. Might be from the weather. Used a hydrating mask tonight.',
-      tags: ['Dryness', 'Used Mask', 'Weather'],
-      productImages: [
-        '/images/prod-anua-toner.jpg',
-        '/images/cat-masks.jpg',
-        '/images/prod-laneige.jpg'
-      ],
-      extraCount: 1
-    },
-    {
-      id: 3,
-      date: '2025-06-19',
-      dayNum: 19,
-      monthStr: 'Jun 2025',
-      dayOfWeek: 'Thu',
-      title: 'Breakout Healing',
-      notes: 'A small breakout on my chin, but it\'s already calming down. Using a spot treatment and keeping my routine simple.',
-      tags: ['Breakout', 'Healing', 'Simpler Routine'],
-      productImages: [
-        '/images/prod-ordinary.jpg',
-        '/images/prod-sk2.jpg',
-        '/images/prod-cerave-cleanser.jpg'
-      ],
-      extraCount: 1
-    },
-    {
-      id: 4,
-      date: '2025-06-15',
-      dayNum: 15,
-      monthStr: 'Jun 2025',
-      dayOfWeek: 'Sun',
-      title: 'Feeling Fresh',
-      notes: 'Skin feels hydrated and plump today! Love how it looks after using the new moisturizer.',
-      tags: ['Hydrated', 'Plump', 'Glowing'],
-      productImages: [
-        '/images/prod-anua-toner.jpg',
-        '/images/prod-cosrx-snail.jpg',
-        '/images/prod-cerave-cleanser.jpg'
-      ],
-      extraCount: 2
-    }
-  ])
-
-  const streak = ref(initialData?.streak || 7)
+  const entries = ref(initialData?.entries || [])
+  const streak = ref(initialData?.streak || 0)
+  function loadProfile() {
+    let data = null
+    try { data = JSON.parse(localStorage.getItem(privateStorageKey('journal_entries')) || 'null') } catch {}
+    entries.value = data?.entries || []; streak.value = data?.streak || 0
+  }
 
   function persist() {
-    localStorage.setItem('lumea_journal_entries', JSON.stringify({
+    localStorage.setItem(privateStorageKey('journal_entries'), JSON.stringify({
       entries: entries.value,
       streak: streak.value
     }))
@@ -95,8 +36,8 @@ export const useJournalStore = defineStore('journal', () => {
       dayOfWeek,
       title: newEntry.title || 'Daily Log',
       notes: newEntry.notes || '',
-      tags: newEntry.tags || ['Hydrated'],
-      productImages: newEntry.productImages?.length ? newEntry.productImages : ['/images/prod-anua-toner.jpg', '/images/prod-laneige.jpg'],
+      tags: newEntry.tags || [],
+      productImages: newEntry.productImages || [],
       extraCount: newEntry.extraCount || 0
     }
 
@@ -115,6 +56,7 @@ export const useJournalStore = defineStore('journal', () => {
   })
 
   return {
+    loadProfile,
     entries,
     streak,
     loggedDays,

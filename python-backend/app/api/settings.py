@@ -1,9 +1,14 @@
+from app.api.deps import require_admin
 import os
 import json
 from datetime import datetime, timezone
 from typing import Optional, Dict, Any
-from fastapi import APIRouter
+from fastapi import Depends, APIRouter
 from pydantic import BaseModel
+from sqlalchemy import Column, Integer, JSON
+from sqlalchemy.dialects.postgresql import insert
+from app.core.config import settings
+from app.core.database import Base, SessionLocal
 
 router = APIRouter(prefix="/settings", tags=["Store Settings"])
 
@@ -28,7 +33,18 @@ DEFAULT_SETTINGS = {
     "last_updated": datetime.now(timezone.utc).strftime("%b %d, %Y %I:%M %p")
 }
 
+class StoreConfiguration(Base):
+    __tablename__ = "store_configuration"
+
+    id = Column(Integer, primary_key=True)
+    data = Column(JSON, nullable=False)
+
+
 def load_settings() -> Dict[str, Any]:
+    if settings.PRODUCTION:
+        with SessionLocal() as db:
+            stored = db.get(StoreConfiguration, 1)
+            return {**DEFAULT_SETTINGS, **(stored.data if stored else {})}
     if os.path.exists(SETTINGS_FILE):
         try:
             with open(SETTINGS_FILE, "r", encoding="utf-8") as f:
@@ -39,12 +55,14 @@ def load_settings() -> Dict[str, Any]:
     return DEFAULT_SETTINGS.copy()
 
 def save_settings(data: Dict[str, Any]):
+    if settings.PRODUCTION:
+        statement = insert(StoreConfiguration).values(id=1, data=data)
+        with SessionLocal.begin() as db:
+            db.execute(statement.on_conflict_do_update(index_elements=["id"], set_={"data": statement.excluded.data}))
+        return
     os.makedirs(os.path.dirname(SETTINGS_FILE), exist_ok=True)
     with open(SETTINGS_FILE, "w", encoding="utf-8") as f:
         json.dump(data, f, indent=2, ensure_ascii=False)
-
-# Load into memory on module import
-current_settings = load_settings()
 
 class SettingsUpdatePayload(BaseModel):
     store_name: Optional[str] = None
@@ -82,10 +100,10 @@ def get_public_settings():
         }
     }
 
-@router.put("")
+@router.put("", dependencies=[Depends(require_admin)])
 def update_settings(payload: SettingsUpdatePayload):
     """
-    Update store configuration and persist to disk.
+    Update persistent store configuration.
     """
     s = load_settings()
     update_data = payload.model_dump(exclude_unset=True)
@@ -97,6 +115,6 @@ def update_settings(payload: SettingsUpdatePayload):
 
     return {
         "status": "success",
-        "message": "Store configuration updated and persisted to disk",
+        "message": "Store configuration saved",
         "data": s
     }

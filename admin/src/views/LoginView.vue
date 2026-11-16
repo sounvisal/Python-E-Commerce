@@ -1,6 +1,6 @@
 <script setup>
 import { useAuthStore } from '@/stores/auth'
-import { ArrowRight, KeyRound, Lock, Mail, ShieldCheck, Sparkles } from 'lucide-vue-next'
+import { ArrowRight, Lock, Mail, ShieldCheck, Sparkles } from 'lucide-vue-next'
 import { ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 
@@ -8,15 +8,10 @@ const router = useRouter()
 const route = useRoute()
 const authStore = useAuthStore()
 
-const email = ref('admin@lumea.com')
-const password = ref('admin123')
+const email = ref('')
+const password = ref('')
 const errorMessage = ref('')
 const isSubmitting = ref(false)
-
-function fillDemoCredentials() {
-  email.value = 'admin@lumea.com'
-  password.value = 'admin123'
-}
 
 async function handleLogin() {
   if (!email.value || !password.value) {
@@ -34,16 +29,10 @@ async function handleLogin() {
     const redirectPath = route.query.redirect || '/dashboard'
     router.push(redirectPath)
   } else {
-    // If backend isn't reachable or password mismatch, offer 1-click fallback
-    errorMessage.value = res.message || 'Login failed. Try the 1-Click Demo Login below.'
+    errorMessage.value = res.message || 'Login failed. Use a valid administrator account.'
   }
 }
 
-function handleDemoInstantLogin() {
-  authStore.demoLogin()
-  const redirectPath = route.query.redirect || '/dashboard'
-  router.push(redirectPath)
-}
 </script>
 
 <template>
@@ -83,7 +72,7 @@ function handleDemoInstantLogin() {
                 id="email"
                 v-model="email"
                 type="email"
-                placeholder="admin@lumea.com"
+                placeholder="name@example.com"
                 required
                 autocomplete="email"
               />
@@ -114,28 +103,10 @@ function handleDemoInstantLogin() {
           </button>
         </form>
 
-        <!-- Demo Helpers Divider -->
-        <div class="demo-divider">
-          <span>Demo Access Options</span>
-        </div>
-
-        <!-- Demo Quick Actions -->
-        <div class="demo-actions">
-          <button type="button" class="btn btn-secondary demo-btn" @click="fillDemoCredentials">
-            <KeyRound :size="15" />
-            <span>Autofill Seeded Credentials</span>
-          </button>
-
-          <button type="button" class="btn demo-instant-btn" @click="handleDemoInstantLogin">
-            <Sparkles :size="15" />
-            <span>1-Click Instant Demo Login</span>
-          </button>
-        </div>
-
         <!-- Security Note -->
         <div class="security-note">
           <ShieldCheck :size="14" />
-          <span>Protected by Sanctum Token Authentication & Role Verification</span>
+          <span>Administrator access only</span>
         </div>
       </div>
     </div>

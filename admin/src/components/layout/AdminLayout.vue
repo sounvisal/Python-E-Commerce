@@ -32,11 +32,7 @@ watch(() => route.path, () => {
       <AdminHeader />
 
       <main ref="contentRef" class="admin-content">
-        <router-view v-slot="{ Component }">
-          <transition name="fade-view" mode="out-in">
-            <component :is="Component" />
-          </transition>
-        </router-view>
+        <router-view />
       </main>
     </div>
 
@@ -68,21 +64,6 @@ watch(() => route.path, () => {
   overflow-y: auto;
   padding: 2rem;
   background-color: var(--bg-app);
-}
-
-.fade-view-enter-active,
-.fade-view-leave-active {
-  transition: opacity 0.2s ease, transform 0.2s ease;
-}
-
-.fade-view-enter-from {
-  opacity: 0;
-  transform: translateY(6px);
-}
-
-.fade-view-leave-to {
-  opacity: 0;
-  transform: translateY(-6px);
 }
 
 @media (max-width: 768px) {

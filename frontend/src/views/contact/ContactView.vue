@@ -98,27 +98,29 @@
             <h2 class="col-heading">Message Our Team.</h2>
             <p class="col-subtext">Fill out the form below and we’ll get back to you as soon as possible.</p>
 
+            <p v-if="sendError" role="alert">{{ sendError }}</p>
+            <p v-if="ticketReference" role="status">Your inquiry was received. Reference: {{ ticketReference }}</p>
             <form @submit.prevent="handleSubmitMessage" class="contact-message-form">
               <div class="form-twin-row">
                 <div class="form-field">
-                  <label>First Name <span class="required-star">*</span></label>
-                  <input v-model="form.firstName" type="text" placeholder="" required />
+                  <label for="contact-first-name">First Name <span class="required-star">*</span></label>
+                  <input id="contact-first-name" v-model="form.firstName" type="text" autocomplete="given-name" required />
                 </div>
                 <div class="form-field">
-                  <label>Last Name <span class="required-star">*</span></label>
-                  <input v-model="form.lastName" type="text" placeholder="" required />
+                  <label for="contact-last-name">Last Name <span class="required-star">*</span></label>
+                  <input id="contact-last-name" v-model="form.lastName" type="text" autocomplete="family-name" required />
                 </div>
               </div>
 
               <div class="form-field">
-                <label>Email Address <span class="required-star">*</span></label>
-                <input v-model="form.email" type="email" placeholder="" required />
+                <label for="contact-email">Email Address <span class="required-star">*</span></label>
+                <input id="contact-email" v-model="form.email" type="email" autocomplete="email" required />
               </div>
 
               <div class="form-field">
-                <label>Subject <span class="required-star">*</span></label>
+                <label for="contact-subject">Subject <span class="required-star">*</span></label>
                 <div class="select-wrapper">
-                  <select v-model="form.subject" required>
+                  <select id="contact-subject" v-model="form.subject" required>
                     <option value="" disabled selected></option>
                     <option value="order">Order Status & Shipping</option>
                     <option value="return">Returns & Refunds</option>
@@ -132,10 +134,11 @@
 
               <div class="form-field">
                 <div class="label-counter-row">
-                  <label>Your Message <span class="required-star">*</span></label>
+                  <label for="contact-message">Your Message <span class="required-star">*</span></label>
                   <span class="count-text">{{ form.message.length }}/500</span>
                 </div>
                 <textarea
+                  id="contact-message"
                   v-model="form.message"
                   maxlength="500"
                   rows="6"
@@ -149,14 +152,14 @@
                   <input v-model="form.consent" type="checkbox" required />
                   <span class="consent-msg">
                     I agree to the processing of my personal data in accordance with Luméa’s
-                    <a href="#" class="policy-anchor">Privacy Policy</a>.
+                    <router-link to="/privacy" class="policy-anchor">Privacy Policy</router-link>.
                   </span>
                 </label>
               </div>
 
               <button type="submit" class="btn-send-rectangular" :disabled="submitted">
                 <span v-if="!submitted">Send Message <span class="arrow-right">→</span></span>
-                <span v-else class="success-sent"><Check :size="15" class="sent-check" /> Message Sent Successfully!</span>
+                <span v-else class="success-sent"><Check :size="15" class="sent-check" /> Submitting...</span>
               </button>
             </form>
           </div>
@@ -241,6 +244,7 @@
 </template>
 
 <script setup>
+import axios from 'axios'
 import { ref, reactive } from 'vue'
 import {
   MessageSquare,
@@ -270,17 +274,16 @@ const form = reactive({
 
 const submitted = ref(false)
 
-function handleSubmitMessage() {
-  submitted.value = true
-  setTimeout(() => {
-    form.firstName = ''
-    form.lastName = ''
-    form.email = ''
-    form.subject = ''
-    form.message = ''
-    form.consent = false
-    submitted.value = false
-  }, 3500)
+const sendError = ref('')
+const ticketReference = ref('')
+async function handleSubmitMessage() {
+  submitted.value = true; sendError.value = ''; ticketReference.value = ''
+  try {
+    const { data } = await axios.post('/api/contact', form)
+    ticketReference.value = data.reference
+    Object.assign(form, { firstName: '', lastName: '', email: '', subject: '', message: '', consent: false })
+  } catch (error) { sendError.value = 'Your message was not received. Please check the form and retry.' }
+  finally { submitted.value = false }
 }
 </script>
 

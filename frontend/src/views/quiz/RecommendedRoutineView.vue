@@ -301,17 +301,8 @@ const activeTime = ref('morning')
 const addedItems = ref(new Set())
 const addedAll = ref(false)
 
-const activeConcerns = [
-  { name: 'Pores', icon: Sparkles },
-  { name: 'Uneven Tone', icon: Sun },
-  { name: 'Occasional Breakouts', icon: Flame }
-]
-
-const activeGoals = [
-  { name: 'Clearer Skin', icon: Sparkles },
-  { name: 'Brighter Tone', icon: Sun },
-  { name: 'Hydration', icon: Droplets }
-]
+const activeConcerns = computed(() => quizStore.answers.concerns.map(name => ({ name, icon: Sparkles })))
+const activeGoals = computed(() => quizStore.answers.goals.map(name => ({ name, icon: Sun })))
 
 const currentProducts = computed(() => {
   return activeTime.value === 'morning'
@@ -346,6 +337,7 @@ function addAllToCart() {
       brand: prod.brand,
       price: prod.price,
       image_url: prod.image_url,
+      slug: prod.slug,
       quantity: 1
     })
   })

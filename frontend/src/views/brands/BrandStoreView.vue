@@ -394,7 +394,7 @@ function toggleCategory(catName) {
 
 // Bestsellers products matching Brand Store.png
 const displayedBestsellers = computed(() => {
-  let list = productStore.allCatalogProducts.filter((p) => p.brand === 'SK-II')
+  let list = productStore.allCatalogProducts.filter((p) => p.brand.toLowerCase() === currentBrand.value.name.toLowerCase())
 
   if (selectedCategory.value) {
     list = list.filter((p) => (p.category_name || p.category).toLowerCase().includes(selectedCategory.value.toLowerCase()))

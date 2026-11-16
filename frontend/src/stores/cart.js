@@ -99,25 +99,18 @@ export const useCartStore = defineStore('cart', {
       this.saveToStorage()
     },
 
-    applyPromoCode(code) {
-      const cleanCode = code.trim().toUpperCase()
-      if (cleanCode === 'LUMEA10') {
-        this.discountCode = cleanCode
-        this.discountRate = 0.10 // 10% off
+    async applyPromoCode(code) {
+      const cleanCode = (code || '').trim().toUpperCase()
+      if (!cleanCode) return { success: false, message: 'Enter a promotion code.' }
+      try {
+        const { data } = await axios.get(`/api/promotions/validate/${encodeURIComponent(cleanCode)}`)
+        this.discountCode = data.code
+        this.discountRate = data.rate
         this.saveToStorage()
-        return { success: true, message: 'Promo code applied: 10% off your atelier order!' }
-      } else if (cleanCode === 'LUMEA20') {
-        this.discountCode = cleanCode
-        this.discountRate = 0.20 // 20% off
-        this.saveToStorage()
-        return { success: true, message: 'VIP Privilege code applied: 20% off your entire order!' }
-      } else if (cleanCode === 'ATELIER15') {
-        this.discountCode = cleanCode
-        this.discountRate = 0.15 // 15% off
-        this.saveToStorage()
-        return { success: true, message: 'Curator code applied: 15% off!' }
+        return { success: true, message: `Promotion ${data.code} applied.` }
+      } catch (error) {
+        return { success: false, message: error.response?.data?.detail || 'Unable to validate the promotion. Please retry.' }
       }
-      return { success: false, message: 'Invalid promo code. Try LUMEA10, LUMEA20, or ATELIER15' }
     },
 
     removePromoCode() {

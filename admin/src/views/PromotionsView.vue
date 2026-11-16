@@ -1,5 +1,6 @@
 <script setup>
 import { ref, computed, reactive, onMounted } from 'vue'
+import apiClient from '@/api/client'
 import { useAdminStore } from '@/stores/admin'
 import {
   Search,
@@ -66,204 +67,20 @@ const promoForm = reactive({
 })
 
 // 4 Top KPI Cards
-const promoKpis = [
-  {
-    label: 'Total Promotions',
-    val: '12',
-    trend: '+20%',
-    trendUp: true,
-    icon: Tag,
-    color: 'pill-rose'
-  },
-  {
-    label: 'Active Promotions',
-    val: '8',
-    trend: '+33%',
-    trendUp: true,
-    icon: Gift,
-    color: 'pill-peach'
-  },
-  {
-    label: 'Total Discount Given',
-    val: '$2,480.00',
-    trend: '+18%',
-    trendUp: true,
-    icon: Percent,
-    color: 'pill-crimson'
-  },
-  {
-    label: 'Total Redemptions',
-    val: '1,256',
-    trend: '+27%',
-    trendUp: true,
-    icon: Users,
-    color: 'pill-amber'
-  }
-]
-
-// Mock Promotions Data matching Luméa Promotions Management Dashboard.png
-const promotionsList = ref([
-  {
-    id: 1,
-    name: 'New Customer Discount',
-    code: 'WELCOME15',
-    type: 'Discount Code',
-    type_badge: 'badge-discount',
-    value: '15% OFF',
-    used: 428,
-    limit: 1000,
-    start_date: 'Aug 1, 2025',
-    end_date: 'Dec 31, 2025',
-    status: 'Active',
-    is_featured: true,
-    thumb: '15% OFF',
-    thumb_type: 'badge-text'
-  },
-  {
-    id: 2,
-    name: 'Summer Glow Sale',
-    code: 'SUMMER25',
-    type: 'Flash Sale',
-    type_badge: 'badge-flash',
-    value: '25% OFF',
-    used: 312,
-    limit: 500,
-    start_date: 'Aug 10, 2025',
-    end_date: 'Aug 25, 2025',
-    status: 'Active',
-    is_featured: false,
-    thumb: '/images/prod-sk2.jpg',
-    thumb_type: 'image'
-  },
-  {
-    id: 3,
-    name: 'Free Gift with $50+',
-    code: 'GIFT50',
-    type: 'Free Gift',
-    type_badge: 'badge-gift',
-    value: 'Free Gift',
-    used: 186,
-    limit: 300,
-    start_date: 'Aug 1, 2025',
-    end_date: 'Aug 31, 2025',
-    status: 'Active',
-    is_featured: true,
-    thumb: 'gift',
-    thumb_type: 'icon'
-  },
-  {
-    id: 4,
-    name: 'Skincare Set Bundle',
-    code: 'BUNDLE20',
-    type: 'Bundle Deal',
-    type_badge: 'badge-bundle',
-    value: '20% OFF',
-    used: 98,
-    limit: 200,
-    start_date: 'Aug 5, 2025',
-    end_date: 'Sep 5, 2025',
-    status: 'Active',
-    is_featured: false,
-    thumb: '/images/prod-sulwhasoo.jpg',
-    thumb_type: 'image'
-  },
-  {
-    id: 5,
-    name: 'Clearance Sale',
-    code: 'CLEAR50',
-    type: 'Discount Code',
-    type_badge: 'badge-discount',
-    value: '50% OFF',
-    used: 256,
-    limit: 1000,
-    start_date: 'Aug 15, 2025',
-    end_date: 'Sep 15, 2025',
-    status: 'Active',
-    is_featured: false,
-    thumb: '50% SALE',
-    thumb_type: 'badge-text-red'
-  },
-  {
-    id: 6,
-    name: 'Brand Week - Anua',
-    code: 'ANUA20',
-    type: 'Brand Promotion',
-    type_badge: 'badge-brand',
-    value: '20% OFF',
-    used: 143,
-    limit: 500,
-    start_date: 'Aug 12, 2025',
-    end_date: 'Aug 26, 2025',
-    status: 'Active',
-    is_featured: true,
-    thumb: '/images/prod-lamer.jpg',
-    thumb_type: 'image'
-  },
-  {
-    id: 7,
-    name: 'Free Shipping',
-    code: 'FREESHIP',
-    type: 'Shipping Discount',
-    type_badge: 'badge-shipping',
-    value: 'Free Shipping',
-    used: 621,
-    limit: 1000,
-    start_date: 'Aug 1, 2025',
-    end_date: 'Dec 31, 2025',
-    status: 'Active',
-    is_featured: false,
-    thumb: 'truck',
-    thumb_type: 'icon'
-  },
-  {
-    id: 8,
-    name: '11.11 Mega Sale',
-    code: 'MEGA1111',
-    type: 'Flash Sale',
-    type_badge: 'badge-flash',
-    value: '30% OFF',
-    used: 0,
-    limit: 1000,
-    start_date: 'Nov 1, 2025',
-    end_date: 'Nov 11, 2025',
-    status: 'Scheduled',
-    is_featured: false,
-    thumb: '11.11',
-    thumb_type: 'badge-text-crimson'
-  },
-  {
-    id: 9,
-    name: 'VIP Exclusive',
-    code: 'VIP30',
-    type: 'Member Only',
-    type_badge: 'badge-member',
-    value: '30% OFF',
-    used: 78,
-    limit: 300,
-    start_date: 'Aug 1, 2025',
-    end_date: 'Dec 31, 2025',
-    status: 'Active',
-    is_featured: false,
-    thumb: 'VIP',
-    thumb_type: 'badge-text-gold'
-  },
-  {
-    id: 10,
-    name: 'Birthday Special',
-    code: 'BDAY20',
-    type: 'Special Event',
-    type_badge: 'badge-event',
-    value: '20% OFF',
-    used: 54,
-    limit: 200,
-    start_date: 'Jan 1, 2025',
-    end_date: 'Dec 31, 2025',
-    status: 'Active',
-    is_featured: false,
-    thumb: 'sparkles',
-    thumb_type: 'icon'
-  }
+const promotionsList = ref([])
+const promoKpis = computed(() => [
+  { label: 'Total Promotions', val: promotionsList.value.length, icon: Tag, color: 'pill-rose' },
+  { label: 'Active Promotions', val: promotionsList.value.filter(p => p.status === 'Active').length, icon: Gift, color: 'pill-peach' },
+  { label: 'Total Redemptions', val: promotionsList.value.reduce((sum, p) => sum + p.used, 0), icon: Users, color: 'pill-amber' },
 ])
+async function fetchPromotions() {
+  try {
+    promotionsList.value = (await apiClient.get('/promotions')).data.map(p => ({ ...p, type: 'Discount Code',
+      type_badge: 'badge-discount', value: `${p.percent}% OFF`, limit: p.max_uses,
+      thumb: `${p.percent}% OFF`, thumb_type: 'badge-text' }))
+  } catch { adminStore.addToast('Unable to load promotions.', 'error') }
+}
+onMounted(fetchPromotions)
 
 // Filtered Promotions
 const filteredPromotions = computed(() => {
@@ -323,9 +140,13 @@ const toggleSelectAll = () => {
   }
 }
 
-const toggleFeatured = (promo) => {
-  promo.is_featured = !promo.is_featured
-  adminStore.addToast(`Promotion "${promo.name}" featured state updated`, 'success')
+const toggleFeatured = async promo => {
+  try {
+    await apiClient.put(`/promotions/${promo.id}`, { name: promo.name, code: promo.code, percent: promo.percent,
+      max_uses: promo.limit, start_date: promo.start_date, end_date: promo.end_date,
+      status: promo.status, is_featured: !promo.is_featured })
+    await fetchPromotions()
+  } catch { adminStore.addToast('Unable to update promotion.', 'error') }
 }
 
 // Open modal
@@ -338,8 +159,8 @@ const openCreatePromo = () => {
   promoForm.discount_value = '15% OFF'
   promoForm.max_uses = 1000
   promoForm.current_uses = 0
-  promoForm.start_date = '2025-09-01'
-  promoForm.end_date = '2025-12-31'
+  promoForm.start_date = new Date().toISOString().slice(0, 10)
+  promoForm.end_date = ''
   promoForm.status = 'Active'
   promoForm.is_featured = false
   showPromoModal.value = true
@@ -354,56 +175,31 @@ const openEditPromo = (promo) => {
   promoForm.discount_value = promo.value
   promoForm.max_uses = promo.limit
   promoForm.current_uses = promo.used
-  promoForm.start_date = '2025-08-01'
-  promoForm.end_date = '2025-12-31'
+  promoForm.start_date = promo.start_date || ''
+  promoForm.end_date = promo.end_date || ''
   promoForm.status = promo.status
   promoForm.is_featured = promo.is_featured
   showPromoModal.value = true
 }
 
-const savePromotion = () => {
-  if (!promoForm.name || !promoForm.code) {
-    alert('Please enter promotion title and coupon code.')
-    return
-  }
-
-  if (modalMode.value === 'create') {
-    promotionsList.value.unshift({
-      id: Date.now(),
-      name: promoForm.name,
-      code: promoForm.code.toUpperCase(),
-      type: promoForm.type,
-      type_badge: 'badge-discount',
-      value: promoForm.discount_value,
-      used: 0,
-      limit: promoForm.max_uses,
-      start_date: promoForm.start_date,
-      end_date: promoForm.end_date,
-      status: promoForm.status,
-      is_featured: promoForm.is_featured,
-      thumb: promoForm.discount_value,
-      thumb_type: 'badge-text'
-    })
-    adminStore.addToast(`Campaign "${promoForm.name}" created`, 'success')
-  } else {
-    const idx = promotionsList.value.findIndex(p => p.id === promoForm.id)
-    if (idx !== -1) {
-      promotionsList.value[idx].name = promoForm.name
-      promotionsList.value[idx].code = promoForm.code.toUpperCase()
-      promotionsList.value[idx].value = promoForm.discount_value
-      promotionsList.value[idx].type = promoForm.type
-      promotionsList.value[idx].status = promoForm.status
-    }
-    adminStore.addToast('Promotion updated successfully', 'success')
-  }
-  showPromoModal.value = false
+const savePromotion = async () => {
+  const percent = Number(String(promoForm.discount_value).replace(/[^0-9.]/g, ''))
+  const payload = { name: promoForm.name, code: promoForm.code.toUpperCase(), percent,
+    max_uses: Number(promoForm.max_uses), start_date: promoForm.start_date || null,
+    end_date: promoForm.end_date || null, status: promoForm.status === 'Active' ? 'Active' : 'Paused', is_featured: promoForm.is_featured }
+  if (promoForm.type !== 'Discount Code') return adminStore.addToast('Only percentage discount codes are currently supported.', 'error')
+  try {
+    if (modalMode.value === 'create') await apiClient.post('/promotions', payload)
+    else await apiClient.put(`/promotions/${promoForm.id}`, payload)
+    await fetchPromotions()
+    showPromoModal.value = false
+    adminStore.addToast('Promotion saved. Checkout now uses these rules.', 'success')
+  } catch (error) { adminStore.addToast(typeof error.response?.data?.detail === 'string' ? error.response.data.detail : 'Check the promotion fields and retry.', 'error') }
 }
-
-const deletePromo = (promo) => {
-  if (confirm(`Delete promotion "${promo.name}"?`)) {
-    promotionsList.value = promotionsList.value.filter(p => p.id !== promo.id)
-    adminStore.addToast('Promotion removed', 'success')
-  }
+const deletePromo = async promo => {
+  if (!confirm(`Pause promotion "${promo.name}"? Existing redemptions will be retained.`)) return
+  try { await apiClient.delete(`/promotions/${promo.id}`); await fetchPromotions(); adminStore.addToast('Promotion paused.', 'success') }
+  catch { adminStore.addToast('Unable to pause promotion.', 'error') }
 }
 </script>
 
@@ -414,7 +210,7 @@ const deletePromo = (promo) => {
       <div class="hero-left">
         <span class="hero-eyebrow">PROMOTIONS</span>
         <h1 class="hero-heading">Promotions Management</h1>
-        <p class="hero-subtext">Create and manage discounts, vouchers, and campaigns to boost your sales.</p>
+        <p class="hero-subtext">Manage percentage codes, active dates, and redemption limits used at checkout.</p>
       </div>
 
       <div class="hero-right">
@@ -490,8 +286,8 @@ const deletePromo = (promo) => {
           <select v-model="selectedStatus" class="atelier-select">
             <option value="All Statuses">All Statuses</option>
             <option value="Active">Active</option>
-            <option value="Scheduled">Scheduled</option>
-            <option value="Expired">Expired</option>
+            <option value="Paused">Paused</option>
+
           </select>
           <ChevronDown :size="14" class="select-arrow" />
         </div>
@@ -764,15 +560,7 @@ const deletePromo = (promo) => {
           <div class="form-row-2">
             <div class="form-group">
               <label class="form-label">Promotion Type</label>
-              <select v-model="promoForm.type" class="atelier-input">
-                <option value="Discount Code">Discount Code</option>
-                <option value="Flash Sale">Flash Sale</option>
-                <option value="Free Gift">Free Gift</option>
-                <option value="Bundle Deal">Bundle Deal</option>
-                <option value="Brand Promotion">Brand Promotion</option>
-                <option value="Shipping Discount">Shipping Discount</option>
-                <option value="Member Only">Member Only</option>
-              </select>
+              <select v-model="promoForm.type" class="atelier-input"><option value="Discount Code">Percentage discount code</option></select>
             </div>
             <div class="form-group">
               <label class="form-label">Discount / Benefit Value</label>
@@ -797,11 +585,7 @@ const deletePromo = (promo) => {
             </div>
             <div class="form-group">
               <label class="form-label">Status</label>
-              <select v-model="promoForm.status" class="atelier-input">
-                <option value="Active">Active</option>
-                <option value="Scheduled">Scheduled</option>
-                <option value="Expired">Expired</option>
-              </select>
+              <select v-model="promoForm.status" class="atelier-input"><option value="Active">Active</option><option value="Paused">Paused</option></select>
             </div>
           </div>
 

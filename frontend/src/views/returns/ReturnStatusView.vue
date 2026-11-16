@@ -1,6 +1,8 @@
 <template>
   <div class="lumea-return-status-page">
-    <div class="container status-container">
+    <p v-if="loading" role="status">Loading return...</p>
+    <p v-else-if="loadError" role="alert">{{ loadError }}</p>
+    <div v-else-if="returnData" class="container status-container">
       <!-- Breadcrumbs -->
       <nav class="status-breadcrumb" aria-label="Breadcrumb">
         <router-link to="/">Home</router-link>
@@ -50,7 +52,7 @@
         <div class="summary-right">
           <button @click="downloadReturnLabel" class="btn-download-label">
             <Download :size="16" />
-            <span>Download Return Label</span>
+            <span>Download return instructions</span>
           </button>
         </div>
       </div>
@@ -150,7 +152,7 @@
               Please ship the item back to us using the return label. Once we receive the item, we'll process your refund.
             </p>
             <button @click="downloadReturnLabel" class="btn-sidebar-download">
-              Download Return Label
+              Download return instructions
             </button>
           </div>
 
@@ -201,6 +203,7 @@
 </template>
 
 <script setup>
+import axios from 'axios'
 import { ref, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import {
@@ -217,35 +220,9 @@ import {
 
 const route = useRoute()
 
-const returnData = ref({
-  request_number: 'RR24081234',
-  order_number: 'LM24081234',
-  product_name: 'SK-II Facial Treatment Essence',
-  product_image: '/images/prod-sk2.jpg',
-  product_variant: '230ml',
-  price: 125.0,
-  quantity: 1,
-  reason: 'Product is damaged',
-  resolution: 'Refund to original payment method',
-  description: 'The bottle arrived with a crack and some product leaked. Please see the attached photos.',
-  photos: [
-    '/images/returns-workflow-bottles.jpg',
-    '/images/prod-sk2.jpg',
-    '/images/returns-status-box2.jpg'
-  ],
-  status: 'Approved',
-  current_step: 3,
-  submitted_date: 'Aug 14, 2024',
-  timeline: [
-    { id: 1, title: 'Submitted', date: 'Aug 14, 2024', status: 'completed' },
-    { id: 2, title: 'Under Review', date: 'Aug 15, 2024', status: 'completed' },
-    { id: 3, title: 'Approved', date: 'Aug 16, 2024', status: 'current' },
-    { id: 4, title: 'Return in Transit', date: 'Pending', status: 'upcoming' },
-    { id: 5, title: 'Item Received', date: 'Pending', status: 'upcoming' },
-    { id: 6, title: 'Refund Processing', date: 'Pending', status: 'upcoming' },
-    { id: 7, title: 'Refund Completed', date: 'Pending', status: 'upcoming' }
-  ]
-})
+const returnData = ref(null)
+const loading = ref(true)
+const loadError = ref('')
 
 function getStageIcon(id) {
   switch (id) {
@@ -261,19 +238,22 @@ function getStageIcon(id) {
 }
 
 function downloadReturnLabel() {
-  alert(`Downloading Luméa Official Return Shipping Label for Request #${returnData.value.request_number}...`)
+  const text = `Luméa return instructions\nRequest: ${returnData.value.request_number}\nOrder: ${returnData.value.order_number}\nReturn address: ${returnData.value.return_address}\n\nWait for approval before shipping. Include your request number inside the package. This document is not a prepaid shipping label.`
+  const url = URL.createObjectURL(new Blob([text], { type: 'text/plain;charset=utf-8' }))
+  const link = document.createElement('a')
+  link.href = url; link.download = `${returnData.value.request_number}-instructions.txt`; link.click()
+  URL.revokeObjectURL(url)
 }
 
 async function loadReturnRequest() {
   const reqId = route.params.requestId || 'RR24081234'
   try {
-    const res = await fetch(`/api/returns/${reqId}`)
-    if (res.ok) {
-      const data = await res.json()
-      returnData.value = data
-    }
+    const { data } = await axios.get(`/api/returns/${reqId}`)
+    returnData.value = data
   } catch (err) {
-    console.warn('[ReturnStatusView] Falling back to default data:', err)
+    loadError.value = err.response?.data?.detail || 'Unable to load this return. Please try again.'
+  } finally {
+    loading.value = false
   }
 }
 

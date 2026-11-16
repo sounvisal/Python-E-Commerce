@@ -348,7 +348,7 @@
           </router-link>
           <div>
             <span>Admin console user?</span>
-            <a href="http://localhost:5174" target="_blank" class="admin-link">Open Atelier Admin &rarr;</a>
+            <a :href="adminUrl" target="_blank" rel="noopener" class="admin-link">Open Atelier Admin &rarr;</a>
           </div>
         </div>
       </div>
@@ -375,6 +375,7 @@ import { useRoute, useRouter } from 'vue-router'
 
 const router = useRouter()
 const route = useRoute()
+const adminUrl = import.meta.env.VITE_HOSTED_DEPLOYMENT === 'true' ? '/atelier/' : 'http://localhost:5174'
 const cartStore = useCartStore()
 const productStore = useProductStore()
 const wishlistStore = useWishlistStore()

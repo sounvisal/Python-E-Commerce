@@ -62,7 +62,7 @@
                 :class="{ active: currentTab === 'processing' }"
                 @click="currentTab = 'processing'"
               >
-                <span>Processing ({{ ordersStore.processingOrders.length }})</span>
+                <span>Open / In Progress ({{ ordersStore.processingOrders.length }})</span>
               </button>
               <button
                 type="button"
@@ -185,11 +185,11 @@
               <!-- Action Buttons -->
               <div class="card-actions-col">
                 <div class="button-row">
-                  <!-- If shipped, show Track Order + View Details -->
-                  <template v-if="order.statusType === 'shipped'">
+                  <!-- If shipped or out for delivery, show Track Order + View Details -->
+                  <template v-if="order.statusType === 'shipped' || order.statusType === 'out for delivery'">
                     <router-link
                       :to="`/account/orders/${order.orderNumber}`"
-                      class="btn-order-outline"
+                      class="btn-order-solid"
                     >
                       Track Order
                     </router-link>
@@ -201,13 +201,19 @@
                     </router-link>
                   </template>
 
-                  <!-- If processing, show View Details + Cancel Order -->
-                  <template v-else-if="order.statusType === 'processing'">
+                  <!-- If confirmed, processing or pending, show View Details + Track + Cancel -->
+                  <template v-else-if="['processing', 'confirmed', 'pending'].includes(order.statusType)">
                     <router-link
                       :to="`/account/orders/${order.orderNumber}`"
                       class="btn-order-outline"
                     >
                       View Details
+                    </router-link>
+                    <router-link
+                      :to="`/account/orders/${order.orderNumber}`"
+                      class="btn-order-solid"
+                    >
+                      Track Order
                     </router-link>
                     <button
                       type="button"

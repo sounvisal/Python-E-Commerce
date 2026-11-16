@@ -1,5 +1,6 @@
 <template>
   <div class="lumea-quiz-questions-view">
+    <p v-if="validationError" role="alert">{{ validationError }}</p>
     <div class="container quiz-layout-container">
       <!-- ============================================================= -->
       <!-- 1. LEFT EDITORIAL COLUMN (Sticky)                             -->
@@ -46,7 +47,7 @@
             <span class="step-label">Question {{ currentStep }} of {{ totalSteps }}</span>
           </div>
 
-          <button class="btn-text-nav skip-btn" @click="nextStep">
+          <button v-if="currentStep === 6" class="btn-text-nav skip-btn" @click="nextStep">
             <span>Skip Question</span>
           </button>
         </div>
@@ -88,15 +89,17 @@
             <p class="question-subtitle">Choose the option that best describes your skin.</p>
 
             <div class="skin-types-grid">
-              <div
+              <button
                 v-for="type in skinTypeOptions"
                 :key="type.id"
+                type="button"
                 class="skin-type-card"
                 :class="{ 'is-selected': selectedSkinType === type.id }"
+                :aria-pressed="selectedSkinType === type.id"
                 @click="selectSkinType(type.id)"
               >
                 <div class="type-texture-wrapper">
-                  <img :src="type.image" :alt="type.name" class="type-texture-img" />
+                  <img :src="type.image" alt="" class="type-texture-img" />
                   <div class="type-selected-badge" v-if="selectedSkinType === type.id">
                     <Check :size="16" />
                   </div>
@@ -105,7 +108,7 @@
                   <div class="type-name">{{ type.name }}</div>
                   <div class="type-desc">{{ type.desc }}</div>
                 </div>
-              </div>
+              </button>
             </div>
           </div>
 
@@ -257,7 +260,7 @@
               </div>
             </div>
             <h2 class="analyzing-title">Analyzing Your Skin Profile...</h2>
-            <p class="analyzing-subtitle">Formulating your bespoke skincare regimen and ingredient synergy.</p>
+            <p class="analyzing-subtitle">Finding in-stock suggestions from your skin type, concerns, goals, and routine length.</p>
 
             <div class="analyzing-checklist">
               <div class="check-item is-done">
@@ -266,11 +269,11 @@
               </div>
               <div class="check-item is-done">
                 <CheckCircle2 :size="18" class="check-icon-done" />
-                <span>Screening active ingredients for your concerns</span>
+                <span>Matching available catalog attributes to your concerns</span>
               </div>
               <div class="check-item is-done">
                 <CheckCircle2 :size="18" class="check-icon-done" />
-                <span>Sequencing 5-step morning & evening ritual</span>
+                <span>Building your selected morning and evening routine</span>
               </div>
             </div>
 
@@ -387,10 +390,12 @@ const router = useRouter()
 const quizStore = useQuizStore()
 
 onMounted(() => {
+  quizStore.resetQuiz()
   quizStore.fetchActiveQuiz()
 })
 
-const currentStep = ref(3) // Default to step 3 as shown in format mockup
+const currentStep = ref(1)
+const validationError = ref('')
 const totalSteps = 8
 
 const stepNames = [
@@ -456,7 +461,7 @@ const skinTypeOptions = [
   }
 ]
 
-const selectedSkinType = computed(() => quizStore.answers.skinType || 'Combination')
+const selectedSkinType = computed(() => quizStore.answers.skinType)
 
 function selectSkinType(id) {
   quizStore.setAnswer('skinType', id)
@@ -536,7 +541,7 @@ const routineDepthOptions = [
 ]
 
 const selectedRoutineDepth = computed({
-  get: () => quizStore.answers.routineLevel || 'Essential (3-4 Steps)',
+  get: () => quizStore.answers.routineLevel,
   set: (val) => quizStore.setAnswer('routineLevel', val)
 })
 
@@ -554,6 +559,14 @@ const currentWhyText = computed(() => {
 
 // ================= NAVIGATION =================
 function nextStep() {
+  const keys = ['goals', 'skinType', 'concerns', 'lifestyle', 'environment', 'preferences', 'routineLevel']
+  const answer = quizStore.answers[keys[currentStep.value - 1]]
+  if (currentStep.value <= 7 && currentStep.value !== 6 && (!answer || (Array.isArray(answer) && !answer.length))) {
+    validationError.value = 'Please select an answer to continue.'
+    return
+  }
+  validationError.value = ''
+
   if (currentStep.value < totalSteps) {
     currentStep.value++
     window.scrollTo({ top: 120, behavior: 'smooth' })
@@ -775,6 +788,9 @@ function finalizeAndNavigate() {
 }
 
 .skin-type-card {
+  padding: 0;
+  text-align: left;
+  font: inherit;
   background: #FAF8F5;
   border: 1.5px solid #EFE6DD;
   border-radius: 16px;

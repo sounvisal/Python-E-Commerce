@@ -1,5 +1,5 @@
 <template>
-  <div class="my-account-page">
+  <div class="my-account-page" v-if="authStore.user">
     <div class="container account-container">
       <!-- Breadcrumbs -->
       <nav class="breadcrumb-nav" aria-label="Breadcrumb">
@@ -239,7 +239,7 @@
           <div class="aside-card payment-methods-card">
             <div class="aside-card-header">
               <h3 class="aside-card-title">Payment Methods</h3>
-              <button class="aside-manage-btn" @click="showPaymentModal = true">
+              <button class="aside-manage-btn" disabled title="Saving payment methods is not available yet">
                 Manage &rarr;
               </button>
             </div>
@@ -267,7 +267,7 @@
                 </button>
               </div>
 
-              <button class="btn-add-dashed-action" @click="showPaymentModal = true">
+              <button class="btn-add-dashed-action" disabled title="Saving payment methods is not available yet">
                 <Plus :size="15" />
                 <span>Add Payment Method</span>
               </button>
@@ -306,10 +306,29 @@
       </div>
     </div>
   </div>
+  <div v-if="showProfileModal || showAddressModal" class="account-edit-overlay" role="dialog" aria-modal="true" aria-label="Edit account details">
+    <form class="account-edit-form" @submit.prevent="showProfileModal ? saveAccountProfile() : saveAddress()">
+      <h2>{{ showProfileModal ? 'Edit profile' : 'Save address' }}</h2>
+      <template v-if="showProfileModal">
+        <label>Name<input v-model="profileForm.name" required minlength="2" maxlength="100" /></label>
+        <label>Phone<input v-model="profileForm.phone" type="tel" /></label>
+      </template>
+      <template v-else>
+        <label>Recipient<input v-model="addressForm.name" required /></label>
+        <label>Street address<input v-model="addressForm.street" required /></label>
+        <label>City<input v-model="addressForm.city" required /></label>
+        <label>Postal code<input v-model="addressForm.postalCode" /></label>
+        <label>Phone<input v-model="addressForm.phone" type="tel" /></label>
+      </template>
+      <button type="submit" class="btn btn-primary" :disabled="savingProfile">Save</button>
+      <button type="button" class="btn btn-outline" @click="showProfileModal = false; showAddressModal = false">Cancel</button>
+    </form>
+  </div>
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { ref, computed, reactive, onMounted } from 'vue'
+import { useProductStore } from '@/stores/products'
 import { useAuthStore } from '@/stores/auth'
 import { useOrdersStore } from '@/stores/orders'
 import { useWishlistStore } from '@/stores/wishlist'
@@ -342,55 +361,29 @@ const showRewardsModal = ref(false)
 // 2. Laneige Lip Sleeping Mask ($24.00)
 // 3. The Ordinary Niacinamide 10% + Zinc 1% ($17.80)
 // 4. CeraVe Hydrating Facial Cleanser ($16.00)
-const recommendedProducts = [
-  {
-    id: 101,
-    brand: 'SK-II',
-    name: 'Facial Treatment Essence',
-    volume: '230 ml',
-    price: 99.00,
-    rating: 4.8,
-    reviews: '1.2K',
-    image_url: '/images/prod-sk2.jpg',
-    slug: 'sk-ii-facial-treatment-essence'
-  },
-  {
-    id: 103,
-    brand: 'Laneige',
-    name: 'Lip Sleeping Mask',
-    volume: '20 g',
-    price: 24.00,
-    rating: 4.8,
-    reviews: '4.1K',
-    image_url: '/images/prod-laneige.jpg',
-    slug: 'laneige-lip-sleeping-mask'
-  },
-  {
-    id: 102,
-    brand: 'The Ordinary',
-    name: 'Niacinamide 10% + Zinc 1%',
-    volume: '30 ml',
-    price: 17.80,
-    rating: 4.7,
-    reviews: '9.8K',
-    image_url: '/images/prod-ordinary.jpg',
-    slug: 'the-ordinary-niacinamide-10-zinc-1'
-  },
-  {
-    id: 104,
-    brand: 'CeraVe',
-    name: 'Hydrating Facial Cleanser',
-    volume: '236 ml',
-    price: 16.00,
-    rating: 4.7,
-    reviews: '6.2K',
-    image_url: '/images/prod-cerave-cleanser.jpg',
-    slug: 'cerave-hydrating-cleanser'
-  }
-]
+const recommendedProducts = computed(() => useProductStore().allCatalogProducts.filter(p => p.stock > 0).slice(0, 4))
+onMounted(() => ordersStore.fetchOrders())
+const profileForm = reactive({ name: authStore.user?.name || '', phone: authStore.user?.phone || '' })
+const addressForm = reactive({ name: authStore.user?.name || '', street: '', city: '', postalCode: '', country: 'Cambodia', phone: '', isDefault: true })
+const savingProfile = ref(false)
+async function saveAccountProfile() {
+  savingProfile.value = true
+  if (await authStore.updateProfile(profileForm)) showProfileModal.value = false
+  savingProfile.value = false
+}
+async function saveAddress() {
+  savingProfile.value = true
+  if (await authStore.addAddress(addressForm)) showAddressModal.value = false
+  savingProfile.value = false
+}
 </script>
 
 <style scoped>
+.account-edit-overlay { position: fixed; inset: 0; z-index: 1000; background: #271c1866; display: grid; place-items: center; padding: 1rem; }
+.account-edit-form { background: white; padding: 2rem; width: min(100%, 480px); max-height: 90vh; overflow: auto; border-radius: 14px; }
+.account-edit-form label { display: block; margin: 1rem 0; }
+.account-edit-form input { display: block; width: 100%; padding: .65rem; border: 1px solid #d6c7bf; border-radius: 6px; }
+
 /* ==========================================================================
    MY ACCOUNT PAGE (Strictly matches format/My Account.png)
    ========================================================================== */

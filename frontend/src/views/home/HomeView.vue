@@ -3,7 +3,7 @@
     <!-- ================================================================= -->
     <!-- 1. HERO SECTION                                                  -->
     <!-- ================================================================= -->
-    <section class="hero-section reveal-on-scroll is-visible">
+    <section v-if="homeBanner.is_active !== false" class="hero-section reveal-on-scroll is-visible">
       <div class="container hero-container">
         <!-- Hero Left Column: Editorial Copy -->
         <div class="hero-text-col">
@@ -452,6 +452,7 @@
 <script setup>
 import BrandLogo from '@/components/BrandLogo.vue'
 import ProductCard from '@/components/ProductCard.vue'
+import { useProductStore } from '@/stores/products'
 import { useCartStore } from '@/stores/cart'
 import { useBannerStore } from '@/stores/banners'
 import {
@@ -556,60 +557,8 @@ const categoriesList = [
 ]
 
 // 2. Best Sellers List (Authentic high-res studio photos matching reference design)
-const bestSellersList = [
-  {
-    id: 101,
-    brand: 'SK-II',
-    name: 'Facial Treatment Essence',
-    slug: 'sk-ii-facial-treatment-essence',
-    price: 99.00,
-    rating: 4.8,
-    reviews: '1.2k',
-    image_url: '/images/prod-sk2.jpg',
-  },
-  {
-    id: 102,
-    brand: 'The Ordinary',
-    name: 'Niacinamide 10% + Zinc 1%',
-    slug: 'the-ordinary-niacinamide-10-zinc-1',
-    price: 8.90,
-    rating: 4.7,
-    reviews: '950',
-    image_url: '/images/prod-ordinary.jpg',
-  },
-  {
-    id: 103,
-    brand: 'LANEIGE',
-    name: 'Lip Sleeping Mask',
-    slug: 'laneige-lip-sleeping-mask',
-    price: 24.00,
-    rating: 4.9,
-    reviews: '2.1k',
-    image_url: '/images/prod-laneige.jpg',
-  },
-  {
-    id: 104,
-    brand: 'CeraVe',
-    name: 'Moisturizing Cream',
-    slug: 'cerave-moisturizing-cream',
-    price: 24.00,
-    rating: 4.7,
-    reviews: '3.5k',
-    image_url: '/images/prod-cerave.jpg',
-  },
-  {
-    id: 105,
-    brand: 'Beauty of Joseon',
-    name: 'Relief Sun SPF 50+',
-    slug: 'beauty-of-joseon-relief-sun-spf50',
-    price: 22.00,
-    rating: 4.9,
-    reviews: '1.9k',
-    image_url: '/images/prod-boj.jpg',
-  },
-]
+const bestSellersList = computed(() => [...useProductStore().allCatalogProducts].sort((a, b) => b.reviews - a.reviews).slice(0, 5))
 
-// 3. Brand Flagships
 const brandCircles = [
   { name: 'SK-II', slug: 'sk-ii', origin: 'Japan' },
   { name: 'The Ordinary', slug: 'the-ordinary', origin: 'Canada' },

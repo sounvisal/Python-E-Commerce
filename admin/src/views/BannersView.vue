@@ -23,6 +23,7 @@ import {
 } from 'lucide-vue-next'
 
 const adminStore = useAdminStore()
+const hostedDeployment = import.meta.env.VITE_HOSTED_DEPLOYMENT === 'true'
 
 // State
 const banners = ref([])
@@ -37,68 +38,7 @@ const metaImage = ref('/images/admin-hero-bottles.jpg')
 const lastPublished = ref('Aug 28, 2025 at 10:24 AM')
 
 // Homepage Sections matching Luméa Homepage Management Dashboard.png
-const sections = ref([
-  {
-    id: 1,
-    order: 1,
-    title: 'Hero Banner',
-    type: 'Banner',
-    type_badge: 'badge-banner',
-    description: 'Main banner section with promotional content and call-to-action.',
-    is_active: true,
-    thumb: '/images/ai-banner-atelier.jpg'
-  },
-  {
-    id: 2,
-    order: 2,
-    title: 'Feature Icons',
-    type: 'Features',
-    type_badge: 'badge-features',
-    description: 'Key benefits and service highlights (Free Shipping, Authentic Products, Dermatologist Approved, Easy Returns).',
-    is_active: true,
-    thumb: '/images/admin-hero-bottles.jpg'
-  },
-  {
-    id: 3,
-    order: 3,
-    title: 'Category Showcase',
-    type: 'Category List',
-    type_badge: 'badge-catlist',
-    description: 'Featured product categories with high-resolution imagery.',
-    is_active: true,
-    thumb: '/images/cat-cleansers.jpg'
-  },
-  {
-    id: 4,
-    order: 4,
-    title: 'Featured Products',
-    type: 'Product Slider',
-    type_badge: 'badge-slider',
-    description: 'Hand-picked formulations for this season with live cart actions.',
-    is_active: true,
-    thumb: '/images/prod-sk2.jpg'
-  },
-  {
-    id: 5,
-    order: 5,
-    title: 'Promotional Banner',
-    type: 'Banner',
-    type_badge: 'badge-banner',
-    description: 'Special promotion or seasonal campaign banner ("Glow Brighter This Season").',
-    is_active: true,
-    thumb: '/images/ai-banner-atelier.jpg'
-  },
-  {
-    id: 6,
-    order: 6,
-    title: 'Articles Preview',
-    type: 'Article List',
-    type_badge: 'badge-artlist',
-    description: 'Latest beauty tips, science guides, and botanical articles.',
-    is_active: true,
-    thumb: '/images/article-thumb-sleep.jpg'
-  }
-])
+const sections = ref([])
 
 // Banner Edit Form
 const bannerForm = reactive({
@@ -122,6 +62,9 @@ async function fetchBanners() {
     const res = await apiClient.get('/banners?active_only=false')
     if (res.data?.status === 'success') {
       banners.value = res.data.data
+      sections.value = banners.value.map(b => ({ id: b.id, order: b.display_order, title: b.title, type: b.page,
+        type_badge: 'badge-banner', description: b.subtitle, is_active: b.is_active, thumb: b.image_url, banner: b }))
+      lastPublished.value = banners.value.map(b => b.updated_at || b.created_at || '').sort().at(-1) || 'No banners yet'
     }
   } catch (err) {
     console.error('Failed to load banners:', err)
@@ -164,43 +107,34 @@ async function handleBannerUpload(e) {
 function openEditSection(sec) {
   bannerForm.id = sec.id
   bannerForm.section_title = sec.title
-  bannerForm.title = sec.title
+  bannerForm.title = sec.banner.title
   bannerForm.subtitle = sec.description
-  bannerForm.badge = sec.type
+  bannerForm.badge = sec.banner.badge_text || ''
   bannerForm.image_url = sec.thumb
-  bannerForm.link = '/'
+  bannerForm.link = sec.banner.cta_link || '/'
   bannerForm.is_active = sec.is_active
   showEditModal.value = true
 }
 
-function saveSection() {
-  const target = sections.value.find(s => s.id === bannerForm.id)
-  if (target) {
-    target.title = bannerForm.section_title
-    target.description = bannerForm.subtitle
-    target.thumb = bannerForm.image_url
-    target.is_active = bannerForm.is_active
-  }
-  adminStore.addToast(`Section "${bannerForm.section_title}" updated`, 'success')
-  showEditModal.value = false
+async function saveSection() {
+  isSubmitting.value = true
+  try {
+    await apiClient.put(`/banners/${bannerForm.id}`, { title: bannerForm.title, subtitle: bannerForm.subtitle,
+      badge_text: bannerForm.badge, image_url: bannerForm.image_url, cta_link: bannerForm.link, is_active: bannerForm.is_active })
+    await fetchBanners()
+    showEditModal.value = false
+    adminStore.addToast('Banner saved to the storefront.', 'success')
+  } catch (error) { adminStore.addToast(error.response?.data?.detail || 'Banner was not saved. Please retry.', 'error') }
+  finally { isSubmitting.value = false }
 }
-
-function toggleSection(sec) {
-  sec.is_active = !sec.is_active
-  adminStore.addToast(`Section "${sec.title}" visibility toggled`, 'success')
+async function toggleSection(sec) {
+  try {
+    await apiClient.put(`/banners/${sec.id}`, { is_active: !sec.is_active })
+    await fetchBanners()
+    adminStore.addToast('Banner visibility saved.', 'success')
+  } catch { adminStore.addToast('Could not save visibility.', 'error') }
 }
-
-function updateHomepage() {
-  lastPublished.value = new Date().toLocaleString('en-US', {
-    month: 'short',
-    day: 'numeric',
-    year: 'numeric',
-    hour: 'numeric',
-    minute: '2-digit',
-    hour12: true
-  })
-  adminStore.addToast('Homepage configuration published live to storefront!', 'success')
-}
+async function updateHomepage() { await fetchBanners() }
 
 function openLiveSite() {
   window.open('http://localhost:5173', '_blank')
@@ -253,7 +187,7 @@ function openLiveSite() {
               <h3 class="panel-card-title">Homepage Sections</h3>
               <p class="panel-sub">Drag and drop to reorder sections. Changes will be visible after publishing.</p>
             </div>
-            <button class="btn-add-section" @click="alert('Add custom promotional section...')">
+            <button disabled title="Custom sections are not available yet" class="btn-add-section" @click="alert('Add custom promotional section...')">
               <Plus :size="14" />
               <span>Add Section</span>
             </button>
@@ -322,8 +256,8 @@ function openLiveSite() {
       <!-- Right Column: Settings, Publish, Templates -->
       <div class="sidebar-column">
         <!-- 1. Homepage Settings -->
-        <div class="card panel-sidebar-card">
-          <h3 class="panel-card-title">Homepage Settings</h3>
+        <div v-if="false" class="card panel-sidebar-card">
+          <h3 class="panel-card-title">Page metadata (not available yet)</h3>
 
           <div class="form-group-clean">
             <label class="form-lbl">Page Title</label>
@@ -373,7 +307,7 @@ function openLiveSite() {
           <div class="publish-meta">
             <span class="pub-lbl">Last Published</span>
             <strong class="pub-time">{{ lastPublished }}</strong>
-            <span class="pub-author">by Admin (Super Admin)</span>
+            <span class="pub-author">Saved on the server</span>
           </div>
 
           <div class="publish-buttons-row">
@@ -382,13 +316,13 @@ function openLiveSite() {
               <span>Preview</span>
             </button>
             <button class="btn-update-homepage" @click="updateHomepage">
-              <span>Update Homepage</span>
+              <span>Refresh saved banners</span>
             </button>
           </div>
         </div>
 
         <!-- 3. Templates -->
-        <div class="card panel-sidebar-card">
+        <div v-if="false" class="card panel-sidebar-card">
           <div class="card-header-row">
             <h3 class="panel-card-title">Templates</h3>
             <span class="view-all-link">View All</span>
@@ -465,6 +399,7 @@ function openLiveSite() {
             <div class="input-with-upload-action">
               <input v-model="bannerForm.image_url" type="text" class="atelier-input" />
               <input
+                v-if="!hostedDeployment"
                 type="file"
                 ref="bannerFileInput"
                 @change="handleBannerUpload"
@@ -472,6 +407,7 @@ function openLiveSite() {
                 style="display: none"
               />
               <button
+                v-if="!hostedDeployment"
                 type="button"
                 class="btn-upload-trigger"
                 @click="triggerBannerUpload"
