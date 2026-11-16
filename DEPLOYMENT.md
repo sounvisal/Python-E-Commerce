@@ -1,42 +1,110 @@
-# Deploy Luméa on free plans
+# Deploy Luméa on Render & Neon PostgreSQL
 
-The [Render Blueprint](render.yaml) runs the storefront, admin console and FastAPI on one **Free** service in Singapore. Postgres keeps orders, catalog data, accounts and settings across Render restarts. Use the included `onrender.com` address.
+This guide covers deploying the full Luméa E-Commerce Atelier (Vue 3 Storefront, Vue 3 Admin Atelier, and Python FastAPI backend) using **Render** (free web service) and **Neon** (serverless PostgreSQL free tier), with fully functional **Bakong KHQR** payment processing.
 
-## Get a Postgres connection string
+---
 
-**Neon Free** — Create a project in Singapore. Open **Connect**, turn off **Connection pooling**, and copy the full direct connection string with its SSL options. The app has its own small connection pool. [Neon connection guide](https://neon.com/docs/connect/connect-from-any-app)
+## 1. Setup Neon Serverless PostgreSQL Database
 
-**Existing Supabase project** — Turn off the **Data API**, then copy the **Session pooler** URI from **Connect**. Replace `[YOUR-PASSWORD]` with the URL-encoded database password. Add `?sslmode=require` if the URI has no query string. [Supabase session pooler](https://supabase.com/docs/guides/database/connecting-to-postgres#shared-pooler-session-mode) · [Data API settings](https://supabase.com/docs/guides/api/securing-your-api#disable-the-data-api)
+1. **Sign up / Log in to Neon**:
+   - Go to [neon.tech](https://neon.tech) and create a free account.
+2. **Create a New Project**:
+   - Project Name: `lumea-db` (or any preferred name).
+   - Region: Choose **Singapore (ap-southeast-1)** or the region closest to your users / Render region.
+   - Click **Create Project**.
+3. **Get Direct Connection String**:
+   - In your Neon project dashboard, go to the **Connect** or **Dashboard** tab.
+   - Under *Connection Details*, ensure **Connection pooling** toggle is **OFF** (use the Direct connection string `ep-...` rather than `-pooler`). The Luméa backend manages its own internal connection pool (`pool_size=5, max_overflow=5, pool_recycle=300`).
+   - Select **SQLAlchemy** or **Connection string**.
+   - The connection string looks like:
+     ```text
+     postgresql://neondb_owner:npg_xxxxxx@ep-xxxxxx.ap-southeast-1.aws.neon.tech/neondb?sslmode=require
+     ```
+   - Copy this string (keep it safe and private).
 
-The temporary deployment uses bundled asset paths and existing HTTPS media URLs. There is no storage bucket to configure.
+---
 
-## Deploy from GitHub
+## 2. How KHQR Works on Hosted Deployment
 
-1. Push the reviewed application changes and `render.yaml` to the branch you want Render to use. Keep local environment files, the local SQLite database, and payment captures out of the deployment changes.
-2. Open [New Render Blueprint](https://dashboard.render.com/blueprint/new?repo=https%3A%2F%2Fgithub.com%2Fsounvisal%2FPython-E-Commerce), connect the repository, and select the deployed branch. Use the **Hobby** workspace and confirm the service is **Free**. Leave payment details off the workspace if you want Render to suspend usage at its included limits. [Render free limits](https://render.com/docs/free)
-3. Paste the full connection string into Render's `DATABASE_URL` prompt. Render generates the signing key automatically. If the service already exists, update `DATABASE_URL` under **Environment** and redeploy. Keep the URI out of Git and chat.
-4. Open `/` for the storefront, `/atelier/` for admin, and `/api/health` to verify the database connection. Render's automated check uses `/api/live` so it doesn't wake an idle Neon database. Apply future deploys manually from Render.
+The hosted Luméa system features NBC Bakong KHQR payment processing:
+1. **Dynamic EMVCo TLV Generation**:
+   - Generates compliant Dynamic Bakong KHQR payload with standard CCITT CRC16 checksum.
+   - Renders in real-time on HTML5 canvas with the central Bakong currency emblem.
+   - Dual-currency display: Order total in USD with live conversion to Cambodian Riel (KHR).
+2. **Interactive Academic Defense / Demo Mode**:
+   - `ENABLE_DEMO_PAYMENTS: "true"` is configured in `render.yaml`.
+   - On the KHQR checkout modal, an instant clearance button is available:
+     `⚡ Demo Mode: Simulate Instant Bank Approval`
+   - Clicking this simulates instantaneous NBC Bakong clearance (`DEMO-BAKONG-...`), transitions the order to `Paid`, and opens the order confirmation invoice without needing to deduct real funds.
+3. **Optional Real ABA PayWay Integration**:
+   - To connect a live ABA PayWay merchant payment link, set the `ABA_PAYWAY_URL` environment variable in Render. If set, customer can click **Open ABA Pay Link** or scan directly via ABA Mobile.
+4. **Merchant Account Customization**:
+   - `BAKONG_MERCHANT_NAME`: Displays your atelier name on the banking screen (defaults to `LUMEA ATELIER`).
+   - `BAKONG_ACCOUNT_ID`: Your NBC Bakong / ABA account ID (defaults to `000000000000000`).
 
-## Create the first administrator
+---
 
-After the initial health check succeeds, use PowerShell 7 from the repo to create your own account. The script prompts for the administrator password separately.
+## 3. Deploy to Render via Blueprint
 
-```powershell
-Set-Location python-backend
-.\venv\Scripts\python.exe -m pip install -r requirements.txt
-$env:DATABASE_URL = Read-Host 'Postgres connection URI with SSL options' -MaskInput
-try {
-  .\venv\Scripts\python.exe create_admin.py admin@example.com --name 'Store Administrator'
-} finally {
-  Remove-Item Env:DATABASE_URL
-}
-```
+1. **Push Changes to GitHub**:
+   - Commit and push your code and `render.yaml` to your GitHub repository.
+2. **Create Render Web Service**:
+   - Go to [dashboard.render.com](https://dashboard.render.com).
+   - Click **New +** -> **Blueprint**.
+   - Connect your GitHub repository.
+   - Select your deployment branch.
+   - Choose the **Free** tier.
+3. **Provide Environment Variables**:
+   - When prompted for `DATABASE_URL`, paste your Neon direct connection string (with `?sslmode=require`).
+   - Render automatically generates a cryptographically secure 256-bit `SECRET_KEY`.
+   - Ensure the following environment variables are present (pre-configured in `render.yaml`):
+     - `PRODUCTION`: `"true"`
+     - `SERVE_BUILT_APPS`: `"true"`
+     - `VITE_HOSTED_DEPLOYMENT`: `"true"`
+     - `ENABLE_DEMO_PAYMENTS`: `"true"`
+     - `BAKONG_MERCHANT_NAME`: `"LUMEA ATELIER"`
+     - `BAKONG_ACCOUNT_ID`: `"000000000000000"`
+4. **Click Apply**:
+   - Render will build both Vue frontends (`npm run build`) and start the FastAPI ASGI server with Uvicorn.
+   - On first startup, the backend automatically creates all database tables and seeds the full catalog into Neon.
 
-The hosted database starts empty. Set the store contact details, delivery settings, catalog and stock, and publish the content you want customers to see. Test a cash-on-delivery order and confirm it appears in admin. For product, article and banner media, use an existing HTTPS URL or a bundled path such as `/images/prod-sk2.jpg`.
+---
 
-Hosted checkout accepts **cash on delivery**. KHQR requires a verified merchant integration. The temporary hosted build disables file uploads, including video reviews and return proof photos.
+## 4. Automatic Database Seeding & Pre-seeded Accounts
 
-## Free-plan limits
+On the very first launch with a fresh Neon database, the system automatically:
+- Creates all relational tables.
+- Seeds all 8 skincare categories, 46 formulations, dynamic banners, quizzes, and articles.
+- Synchronizes all PostgreSQL primary key sequences (`SELECT setval(...)`) to prevent ID collisions.
 
-- Render sleeps after 15 minutes of inactivity. The next visit can take about a minute, and the service is subject to workspace usage limits. [Render free limits](https://render.com/docs/free)
-- Neon Free includes 1 GB of Postgres storage and 100 compute-unit hours per project per month. The database suspends after five minutes of inactivity and wakes on the next query. [Neon free plan](https://neon.com/docs/introduction/plans)
+### Default Login Accounts for Evaluation & Grading:
+- **Atelier Administrator**:
+  - **Email**: `admin@lumea.com`
+  - **Password**: `password123`
+  - **Role**: `admin` (Full access to Admin Atelier at `/atelier/`)
+- **VIP Customer**:
+  - **Email**: `sreynich.chan@example.com`
+  - **Password**: `password123`
+  - **Role**: `customer` | **Tier**: `Luméa Radiant Gold` (320 reward points)
+
+---
+
+## 5. Verifying the Deployment
+
+Once Render finishes deploying:
+1. **Storefront**: Open `https://<your-service>.onrender.com/`
+2. **Admin Console**: Open `https://<your-service>.onrender.com/atelier/`
+3. **Health Check**: Open `https://<your-service>.onrender.com/api/health` -> verify `"database": "connected"`
+4. **Interactive Swagger Docs**: Open `https://<your-service>.onrender.com/docs`
+5. **Test KHQR Checkout**:
+   - Add any product to the shopping bag.
+   - Proceed to Checkout -> select **Bakong KHQR** as payment method.
+   - Confirm order -> the authentic KHQR modal appears with QR canvas, timer, and KHR conversion.
+   - Click `⚡ Demo Mode: Simulate Instant Bank Approval` -> order confirms immediately as Paid!
+
+---
+
+## 6. Free Tier Notes
+
+- **Render Inactivity**: Render free instances spin down after 15 minutes of inactivity. The first visit after spin-down takes ~45-60 seconds to wake up.
+- **Neon Serverless Pooling**: Neon automatically sleeps idle compute after 5 minutes. Luméa's connection engine uses `pool_pre_ping=True` and `pool_recycle=300`, so queries wake Neon seamlessly.
