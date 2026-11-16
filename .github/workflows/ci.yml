@@ -26,15 +26,11 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
-      - name: Run Pytest Suite with Coverage
-        run: |
-          cd python-backend
-          pytest -v --cov=app tests/
-
-      - name: Run Master 30-Point API Test Suite
-        run: |
-          cd python-backend
-          python test_api.py
+      - name: Run API and commerce regression tests
+        env:
+          PYTHONPATH: python-backend
+          DATABASE_URL: sqlite:///${{ runner.temp }}/lumea-tests.sqlite
+        run: python -m pytest -v --cov=app python-backend/tests test_flow_regressions.py test_security_transactions.py
 
   frontend-build:
     name: Storefront Vite Build
@@ -59,6 +55,9 @@ jobs:
         run: |
           cd frontend
           npm run build
+
+      - name: Run storefront regression tests
+        run: node --test frontend/tests/flows.test.mjs test_recommendations.mjs
 
   admin-build:
     name: Admin Console Vite Build
