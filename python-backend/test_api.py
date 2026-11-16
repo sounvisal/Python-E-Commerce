@@ -8,10 +8,20 @@ if sys.platform == "win32":
 
 from fastapi.testclient import TestClient
 from app.main import app
+from app.core.database import SessionLocal
+from app.models.product import Product
 
 client = TestClient(app)
 
 def run_tests():
+    # Ensure test products have ample stock for automated test execution
+    with SessionLocal() as db:
+        for pid in [201, 202, 203]:
+            p = db.query(Product).filter(Product.id == pid).first()
+            if p and p.stock < 10:
+                p.stock = 50
+        db.commit()
+
     print("=" * 60)
     print("[TEST] Running Lumea FastAPI Automated Endpoint Verification...")
     print("=" * 60)
@@ -67,6 +77,17 @@ def run_tests():
     user_name = token_data["user"]["name"]
     print(f"[PASS] 7. POST /api/auth/login -> Logged in as: {user_name} (JWT token generated)")
 
+    # 7b. Admin Authentication: Login as Atelier Administrator
+    admin_login_res = client.post("/api/auth/login", json={
+        "email": "admin@lumea.com",
+        "password": "password123"
+    })
+    assert admin_login_res.status_code == 200, f"Admin login failed: {admin_login_res.text}"
+    admin_token = admin_login_res.json()["data"]["access_token"]
+    admin_headers = {"Authorization": f"Bearer {admin_token}"}
+    customer_headers = {"Authorization": f"Bearer {token}"}
+    print("[PASS] 7b. POST /api/auth/login -> Logged in as: Luméa Administrator (Admin token generated)")
+
     # 8. Authenticated Route: GET /api/auth/me
     res = client.get("/api/auth/me", headers={"Authorization": f"Bearer {token}"})
     assert res.status_code == 200
@@ -106,7 +127,9 @@ def run_tests():
     print(f"[PASS] 9. POST /api/orders -> Order {ord_num} placed successfully! Total: ${total}")
 
     # 10. Track Order by Order Number
-    res = client.get(f"/api/orders/{ord_num}")
+    order_token = created_order.get("access_token")
+    headers = {"X-Order-Token": order_token} if order_token else {"Authorization": f"Bearer {token}"}
+    res = client.get(f"/api/orders/{ord_num}", headers=headers)
     assert res.status_code == 200
     tracked = res.json()["data"]
     assert tracked["status"] == "Confirmed"
@@ -160,14 +183,14 @@ def run_tests():
     print(f"[PASS] 16. GET /api/articles/how-to-build-a-skincare-routine-for-your-skin-type -> Loaded with {len(single_art['related'])} related articles")
 
     # 17. Returns List
-    res = client.get("/api/returns")
+    res = client.get("/api/returns", headers=admin_headers)
     assert res.status_code == 200
     ret_list = res.json()["data"]
     assert len(ret_list) >= 1
     print(f"[PASS] 17. GET /api/returns -> Found {len(ret_list)} return requests in database")
 
     # 18. Return Request by ID (RR24081234)
-    res = client.get("/api/returns/RR24081234")
+    res = client.get("/api/returns/RR24081234", headers=admin_headers)
     assert res.status_code == 200
     ret_req = res.json()
     assert ret_req["request_number"] == "RR24081234"
@@ -176,7 +199,7 @@ def run_tests():
     print(f"[PASS] 18. GET /api/returns/RR24081234 -> Loaded request: {ret_req['status']} with 7 timeline stages")
 
     # 19. Admin Atelier Stats (KPIs, revenue, orders breakdown)
-    res = client.get("/api/admin/stats")
+    res = client.get("/api/admin/stats", headers=admin_headers)
     assert res.status_code == 200
     stats_data = res.json()["data"]
     assert stats_data["metrics"]["total_products"] >= 30
@@ -186,7 +209,7 @@ def run_tests():
     print(f"[PASS] 19. GET /api/admin/stats -> Revenue: ${stats_data['metrics']['total_revenue']}, {stats_data['metrics']['total_orders']} orders, {stats_data['metrics']['total_products']} products")
 
     # 20. Admin Orders List
-    res = client.get("/api/admin/orders")
+    res = client.get("/api/admin/orders", headers=admin_headers)
     assert res.status_code == 200
     admin_orders = res.json()
     assert admin_orders["status"] == "success"
@@ -194,7 +217,7 @@ def run_tests():
     print(f"[PASS] 20. GET /api/admin/orders -> Loaded {len(admin_orders['data'])} orders with pagination metadata")
 
     # 21. Admin Customers List
-    res = client.get("/api/admin/customers")
+    res = client.get("/api/admin/customers", headers=admin_headers)
     assert res.status_code == 200
     cust_data = res.json()
     assert cust_data["status"] == "success"
@@ -203,7 +226,7 @@ def run_tests():
 
     # 22. File Upload API
     test_file_bytes = b"\xff\xd8\xff\xe0\x00\x10JFIF\x00\x01\x01\x01\x00H\x00H\x00\x00\xff\xdb"
-    res = client.post("/api/upload", files={"file": ("test_upload.jpg", test_file_bytes, "image/jpeg")})
+    res = client.post("/api/upload", files={"file": ("test_upload.jpg", test_file_bytes, "image/jpeg")}, headers=customer_headers)
     assert res.status_code == 201, f"Upload failed: {res.text}"
     upload_res = res.json()
     assert upload_res["status"] == "success"
@@ -226,7 +249,7 @@ def run_tests():
         "comment": "Absolutely transformative for texture and tone. Worth every single drop!",
         "customer_name": "Sreynich Chan",
         "customer_email": "sreynich.chan@example.com"
-    })
+    }, headers=customer_headers)
     assert res.status_code == 201
     assert res.json()["status"] == "success"
     print("[PASS] 24. POST /api/reviews -> Successfully submitted customer review for product #201")
@@ -259,7 +282,7 @@ def run_tests():
 
     # 28. Video Upload API
     dummy_video_bytes = b"\x00\x00\x00\x18ftypmp42\x00\x00\x00\x00isommp42\x00\x00\x00\x08free"
-    res = client.post("/api/upload/video", files={"file": ("sample_reel.mp4", dummy_video_bytes, "video/mp4")})
+    res = client.post("/api/upload/video", files={"file": ("sample_reel.mp4", dummy_video_bytes, "video/mp4")}, headers=customer_headers)
     assert res.status_code == 201, f"Video upload failed: {res.text}"
     v_upload = res.json()
     assert v_upload["status"] == "success"
@@ -276,21 +299,30 @@ def run_tests():
     print(f"[PASS] 29. POST /api/payments/khqr/generate -> Generated valid Bakong KHQR (EMVCo TLV + CRC16: {khqr_data['data']['qr_string'][-4:]})")
 
     # 30. Bakong KHQR Payment Simulation API
-    # Place a test order first
-    order_res = client.post("/api/orders", json={
-        "customer_name": "Sreynich Chan",
-        "customer_email": "sreynich.chan@example.com",
-        "shipping_address": "Atelier Norodom",
-        "shipping_city": "Phnom Penh",
-        "payment_method": "khqr",
-        "items": [{"product_id": 201, "quantity": 1}]
-    })
-    test_ord_num = order_res.json()["data"]["order_number"]
-    sim_res = client.post("/api/payments/khqr/simulate-approve", json={"order_number": test_ord_num})
-    assert sim_res.status_code == 200
-    assert sim_res.json()["paid"] is True
-    assert "BAKONG" in sim_res.json()["transaction_ref"]
-    print(f"[PASS] 30. POST /api/payments/khqr/simulate-approve -> Verified instant bank clearance ({sim_res.json()['transaction_ref']})")
+    from app.core.config import settings
+    prev_demo = settings.ENABLE_DEMO_PAYMENTS
+    settings.ENABLE_DEMO_PAYMENTS = True
+    try:
+        # Place a test order first
+        order_res = client.post("/api/orders", json={
+            "customer_name": "Sreynich Chan",
+            "customer_email": "sreynich.chan@example.com",
+            "shipping_address": "Atelier Norodom",
+            "shipping_city": "Phnom Penh",
+            "payment_method": "khqr",
+            "items": [{"product_id": 201, "quantity": 1}]
+        })
+        test_ord_data = order_res.json()["data"]
+        test_ord_num = test_ord_data["order_number"]
+        test_token = test_ord_data.get("access_token")
+        sim_headers = admin_headers
+        sim_res = client.post("/api/payments/khqr/simulate-approve", json={"order_number": test_ord_num}, headers=sim_headers)
+        assert sim_res.status_code == 200
+        assert sim_res.json()["paid"] is True
+        assert "BAKONG" in sim_res.json()["transaction_ref"]
+        print(f"[PASS] 30. POST /api/payments/khqr/simulate-approve -> Verified instant bank clearance ({sim_res.json()['transaction_ref']})")
+    finally:
+        settings.ENABLE_DEMO_PAYMENTS = prev_demo
 
     print("=" * 60)
     print(f"[SUCCESS] ALL 30/30 ENDPOINT TESTS PASSED WITH 100% SUCCESS!")

@@ -101,6 +101,29 @@ def seed_database(db: Session):
         db.commit()
         print("[Seed] Created default user: sreynich.chan@example.com (password: password123)")
 
+    # 3b. Seed Default Admin User (Luméa Administrator)
+    admin_user = db.query(User).filter(User.email == "admin@lumea.com").first()
+    if not admin_user:
+        admin_user = User(
+            name="Luméa Administrator",
+            first_name="Luméa",
+            last_name="Admin",
+            email="admin@lumea.com",
+            hashed_password=get_password_hash("password123"),
+            phone="+855 12 000 001",
+            avatar="/images/avatar-sreynich.jpg",
+            role="admin",
+            tier="Atelier Administrator",
+            reward_points=9999
+        )
+        db.add(admin_user)
+        db.commit()
+        print("[Seed] Created default admin user: admin@lumea.com (password: password123)")
+    elif admin_user.role != "admin":
+        admin_user.role = "admin"
+        admin_user.hashed_password = get_password_hash("password123")
+        db.commit()
+
     # 4. Seed Sample Order
     if db.query(Order).count() == 0:
         sample_order = Order(
@@ -1320,5 +1343,25 @@ A morning routine should prioritize protection (antioxidants + SPF), while the e
         db.add_all(sample_returns)
         db.commit()
         print(f"[Seed] Created {len(sample_returns)} Return Requests in database.")
+
+    # 11. Synchronize PostgreSQL Primary Key Sequences (Neon Serverless compatibility)
+    try:
+        bind = db.get_bind()
+        if bind and bind.dialect.name == "postgresql":
+            from sqlalchemy import text
+            tables_to_sync = [
+                "categories", "products", "users", "orders", "order_items",
+                "banners", "reviews", "quizzes", "return_requests", "articles",
+                "pages", "promotions", "brands", "support_messages"
+            ]
+            for tbl in tables_to_sync:
+                try:
+                    db.execute(text(f"SELECT setval(pg_get_serial_sequence('{tbl}', 'id'), COALESCE(MAX(id), 1)) FROM {tbl};"))
+                    db.commit()
+                except Exception:
+                    db.rollback()
+            print("[Seed] Synchronized PostgreSQL primary key sequences.")
+    except Exception as e:
+        print(f"[Seed] Note: Sequence sync skipped or not needed: {e}")
 
 

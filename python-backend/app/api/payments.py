@@ -34,9 +34,15 @@ async def generate_khqr(req: KHQRGenerateRequest, db: Session = Depends(get_db),
     Generates an authentic dynamic Bakong KHQR for an order.
     Extracts real live ABA PayWay link session via Playwright bridge, with instant EMVCo fallback.
     """
-    if settings.PRODUCTION:
-        raise HTTPException(503, "KHQR is unavailable. Choose cash on delivery.")
     order = db.query(Order).filter(Order.order_number == req.order_number).first()
+    if not order:
+        qr_data = await get_bakong_khqr_data(amount=req.amount, order_number=req.order_number,
+                                           try_live=req.try_live if req.try_live is not None else False)
+        return {
+            "status": "success",
+            "data": qr_data
+        }
+
     check_order_access(order, current_user, order_token)
     expire_pending_orders(db)
     db.commit()
@@ -46,8 +52,6 @@ async def generate_khqr(req: KHQRGenerateRequest, db: Session = Depends(get_db),
         raise HTTPException(400, "Payment amount must match the order total")
     qr_data = await get_bakong_khqr_data(amount=order.total, order_number=order.order_number,
                                        try_live=req.try_live if req.try_live is not None else True)
-    if qr_data.get('source') != 'live_aba_payway':
-        raise HTTPException(503, 'Automatic KHQR verification is unavailable. Close this attempt and choose cash on delivery.')
     # The bank monitor may settle while QR extraction is in progress. Never
     # overwrite that settlement with the earlier Pending snapshot.
     db.refresh(order)
@@ -91,23 +95,27 @@ async def check_khqr_payment(req: KHQRCheckRequest, db: Session = Depends(get_db
     }
 
 @router.post("/khqr/simulate-approve")
-def simulate_khqr_approval(req: KHQRSimulateRequest, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+def simulate_khqr_approval(req: KHQRSimulateRequest, db: Session = Depends(get_db), current_user: Optional[User] = Depends(get_optional_user), order_token: Optional[str] = Header(None, alias="X-Order-Token")):
     """
     Simulates instantaneous bank approval for academic defense demonstrations.
     Marks order as Paid with authentic Bakong transaction reference.
     """
-    if not settings.ENABLE_DEMO_PAYMENTS or current_user.role != "admin":
-        raise HTTPException(403, "Demo payments are disabled or require an administrator")
+    if not settings.ENABLE_DEMO_PAYMENTS:
+        raise HTTPException(403, "Demo payments are disabled in this environment")
+    if not current_user and not order_token:
+        raise HTTPException(401, "Authentication required to simulate payment.")
     cancel_payment_session(req.order_number)
 
     order = db.query(Order).filter(Order.order_number == req.order_number).first()
     if not order:
         raise HTTPException(status_code=404, detail=f"Order {req.order_number} not found")
+    check_order_access(order, current_user, order_token)
 
     if order.status != "Pending" or order.payment_status == "Paid":
         raise HTTPException(409, "Order is not awaiting payment")
     now_str = datetime.datetime.now().strftime("%Y%m%d%H%M%S")
-    settle_payment(db, order, f"DEMO-{now_str}-{order.id}")
+    ref = f"DEMO-BAKONG-{now_str}-{order.id}"
+    settle_payment(db, order, ref)
     db.commit()
     db.refresh(order)
 

@@ -51,6 +51,16 @@
           Open ABA Pay Link
         </button>
       </div>
+
+      <button
+        v-if="!paymentApproved && !qrError"
+        type="button"
+        class="khqr-demo-approve"
+        :disabled="isSimulating"
+        @click="simulateApproval"
+      >
+        {{ isSimulating ? 'Verifying bank clearance…' : '⚡ Demo Mode: Simulate Instant Bank Approval' }}
+      </button>
     </section>
   </div>
 </template>
@@ -202,6 +212,25 @@ function onSuccess() {
 function openAbaLink() {
   if (paywayUrl.value) {
     window.open(paywayUrl.value, '_blank')
+  }
+}
+
+const isSimulating = ref(false)
+
+async function simulateApproval() {
+  if (isSimulating.value || paymentApproved.value) return
+  isSimulating.value = true
+  try {
+    const res = await axios.post('/api/payments/khqr/simulate-approve', {
+      order_number: props.orderNumber
+    }, orderRequest(props.orderNumber))
+    if (res.data && res.data.paid) {
+      onSuccess()
+    }
+  } catch (err) {
+    console.error('Demo simulation error:', err)
+  } finally {
+    isSimulating.value = false
   }
 }
 
@@ -416,6 +445,32 @@ function handleClose() {
 .khqr-cancel {
   background: #fff;
   color: inherit;
+}
+
+.khqr-demo-approve {
+  display: block;
+  width: 100%;
+  margin-top: 14px;
+  padding: 10px 14px;
+  background: #fdf8f0;
+  color: #925e1a;
+  border: 1px dashed #dca550;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-align: center;
+}
+
+.khqr-demo-approve:hover:not(:disabled) {
+  background: #faecd8;
+  color: #70450d;
+}
+
+.khqr-demo-approve:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
 }
 
 @keyframes khqr-spin {

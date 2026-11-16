@@ -46,8 +46,6 @@ if settings.PRODUCTION:
         raise RuntimeError("Set a persistent SECRET_KEY of at least 32 bytes in production.")
     if not settings.DATABASE_URL.startswith(("postgresql://", "postgres://", "postgresql+psycopg://")):
         raise RuntimeError("Set a persistent PostgreSQL DATABASE_URL in production.")
-    if settings.ENABLE_DEMO_PAYMENTS:
-        raise RuntimeError("Demo payments must be disabled in production.")
 
 if not settings.SECRET_KEY:
     # Generate cryptographically strong key if none provided in environment

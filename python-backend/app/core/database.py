@@ -8,9 +8,9 @@ if database_url.drivername in {"postgres", "postgresql"}:
     database_url = database_url.set(drivername="postgresql+psycopg")
 
 if database_url.get_backend_name() == "postgresql":
-    if "sslmode" not in database_url.query and settings.PRODUCTION:
+    if "sslmode" not in database_url.query:
         database_url = database_url.update_query_dict({"sslmode": "require"})
-    engine = create_engine(database_url, pool_pre_ping=True, pool_size=3, max_overflow=2)
+    engine = create_engine(database_url, pool_pre_ping=True, pool_recycle=300, pool_size=5, max_overflow=5)
 else:
     engine = create_engine(database_url, connect_args={"check_same_thread": False})
 

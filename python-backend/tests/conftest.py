@@ -24,9 +24,11 @@ def auth_headers():
 @pytest.fixture
 def admin_headers(client):
     with SessionLocal.begin() as db:
-        admin = User(email="test-admin@example.com", name="Test Admin", role="admin", hashed_password="unused")
-        db.add(admin)
-        db.flush()
+        admin = db.query(User).filter(User.email == "test-admin@example.com").first()
+        if not admin:
+            admin = User(email="test-admin@example.com", name="Test Admin", role="admin", hashed_password="unused")
+            db.add(admin)
+            db.flush()
         token = create_access_token(admin.id)
     return {"Authorization": f"Bearer {token}"}
 

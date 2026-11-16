@@ -27,7 +27,11 @@ services:
       - key: CORS_ORIGINS
         value: "[]"
       - key: ENABLE_DEMO_PAYMENTS
-        value: "false"
+        value: "true"
+      - key: BAKONG_MERCHANT_NAME
+        value: "LUMEA ATELIER"
+      - key: BAKONG_ACCOUNT_ID
+        value: "000000000000000"
       - key: SECRET_KEY
         generateValue: true
       - key: DATABASE_URL

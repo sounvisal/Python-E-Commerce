@@ -66,23 +66,18 @@ async def lifespan(app: FastAPI):
     Base.metadata.create_all(bind=engine)
     migrate_schema(engine, seed_demo_promotions=not settings.PRODUCTION)
     
-    # 2. Seed database with initial catalog data
-    if not settings.PRODUCTION:
-        with SessionLocal() as db:
-            seed_database(db)
+    # 2. Seed database with initial catalog data (idempotent; seeds if empty)
+    with SessionLocal() as db:
+        seed_database(db)
         
     logger.info("Luméa Atelier E-Commerce backend service initialized successfully.")
-    if settings.PRODUCTION:
-        # Hosted checkout uses COD and has no pending KHQR sessions to poll.
+    expiry_worker = asyncio.create_task(checkout_expiry_worker())
+    try:
         yield
-    else:
-        expiry_worker = asyncio.create_task(checkout_expiry_worker())
-        try:
-            yield
-        finally:
-            expiry_worker.cancel()
-            with suppress(asyncio.CancelledError):
-                await expiry_worker
+    finally:
+        expiry_worker.cancel()
+        with suppress(asyncio.CancelledError):
+            await expiry_worker
     logger.info("Luméa Atelier E-Commerce backend service shutting down.")
 
 app = FastAPI(
