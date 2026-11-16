@@ -15,6 +15,11 @@ class Order(Base):
     shipping_address = Column(String(255), nullable=False)
     shipping_city = Column(String(100), nullable=False)
     shipping_postal_code = Column(String(20), nullable=True)
+    shipping_carrier = Column(String(100), default="vet_express", nullable=False)
+    delivery_lat = Column(Float, nullable=True)
+    delivery_lng = Column(Float, nullable=True)
+    delivery_notes = Column(String(500), nullable=True)
+    map_url = Column(String(255), nullable=True)
     
     subtotal = Column(Float, nullable=False)
     discount = Column(Float, default=0.0)

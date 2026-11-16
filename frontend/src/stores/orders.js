@@ -7,12 +7,26 @@ import { orderRequest, rememberOrderAccess } from '@/utils/orderAccess'
 
 function mapOrder(o) {
   const events = o.events?.length ? o.events : [{ status: 'Order Placed', at: o.created_at }]
+  const carrierNames = {
+    vet_express: 'Vireak Buntham (VET Logistics)',
+    jt_express: 'J&T Express Cambodia',
+    grab_express: 'GrabExpress On-Demand',
+    lumea_concierge: 'Luméa Atelier Concierge',
+  }
+  const carrierName = carrierNames[o.shipping_carrier] || 'Vireak Buntham (VET Logistics)'
+  const mapUrl = o.map_url || (o.delivery_lat && o.delivery_lng ? `https://www.google.com/maps?q=${o.delivery_lat},${o.delivery_lng}` : null)
   return {
     userId: o.user_id, orderNumber: o.order_number, placedAt: new Date(o.created_at).toLocaleString(),
     date: o.created_at, status: o.status, statusType: o.status.toLowerCase(), paymentStatus: o.payment_status,
     statusText: `${o.status} · ${o.payment_status}`, total: o.total, subtotal: o.subtotal, discount: o.discount,
     shippingFee: o.shipping_fee, tax: 0, rewardPointsEarned: o.payment_status === 'Paid' ? Math.floor(o.total) : 0,
-    deliveryMethod: 'Standard delivery', deliveredAt: o.delivered_at || '',
+    shippingCarrier: o.shipping_carrier || 'vet_express',
+    deliveryMethod: carrierName,
+    deliveredAt: o.delivered_at || '',
+    deliveryLat: o.delivery_lat,
+    deliveryLng: o.delivery_lng,
+    deliveryNotes: o.delivery_notes,
+    mapUrl: mapUrl,
     shippingAddress: { name: o.customer_name, address: o.shipping_address, city: o.shipping_city, phone: o.customer_phone },
     paymentMethod: { provider: o.payment_method.toUpperCase(), details: o.payment_status, amount: o.total },
     timeline: events.map(event => ({ step: event.status, date: event.at ? new Date(event.at).toLocaleDateString() : '', time: event.at ? new Date(event.at).toLocaleTimeString() : '', completed: true })),

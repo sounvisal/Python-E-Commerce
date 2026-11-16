@@ -41,7 +41,15 @@
     <!-- Product Info Block -->
     <div class="product-info">
       <div class="brand-row">
-        <span class="brand-name">{{ product.brand || product.category_name || 'Luméa' }}</span>
+        <router-link
+          v-if="product.brand"
+          :to="`/brand/${brandSlug}`"
+          class="brand-name brand-link"
+          @click.stop
+        >
+          {{ product.brand }}
+        </router-link>
+        <span v-else class="brand-name">{{ product.category_name || 'Luméa' }}</span>
         <span v-if="viewMode === 'list' && product.subcategory" class="subcat-tag">
           {{ product.subcategory }}
         </span>
@@ -136,6 +144,11 @@ const cartStore = useCartStore()
 const wishlistStore = useWishlistStore()
 const notificationStore = useNotificationStore()
 const isAdded = ref(false)
+
+const brandSlug = computed(() => {
+  const brandName = props.product.brand || 'Luméa'
+  return brandName.toLowerCase().replace(/[^a-z0-9]/g, '-')
+})
 
 const hasDiscount = computed(() => {
   return props.product.compare_at_price && props.product.compare_at_price > props.product.price
@@ -299,6 +312,17 @@ const handleAddToCart = () => {
   font-weight: 700;
   letter-spacing: 0.01em;
   color: #1C1917;
+}
+
+.brand-link {
+  text-decoration: none;
+  cursor: pointer;
+  transition: color 0.18s ease;
+}
+
+.brand-link:hover {
+  color: #7A2E22 !important;
+  text-decoration: underline;
 }
 
 .subcat-tag {

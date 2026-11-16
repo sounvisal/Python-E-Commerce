@@ -99,13 +99,13 @@
 
             <div class="form-row">
               <div class="form-group">
-                <label class="form-label" for="sCity">City *</label>
+                <label class="form-label" for="sCity">City / Province *</label>
                 <input
                   type="text"
                   id="sCity"
                   v-model="form.shipping_city"
                   required
-                  placeholder="Stockholm / New York"
+                  placeholder="Phnom Penh / Siem Reap / Battambang"
                   class="form-input"
                 />
               </div>
@@ -115,11 +115,27 @@
                   type="text"
                   id="sZip"
                   v-model="form.shipping_postal_code"
-                  placeholder="10001"
+                  placeholder="12000"
                   class="form-input"
                 />
               </div>
             </div>
+
+            <!-- Cambodia Delivery Carrier Selection -->
+            <DeliveryCarrierSelector
+              v-model="form.shipping_carrier"
+              :subtotal="cartStore.subtotal"
+              :free-shipping-threshold="cartStore.freeShippingThreshold"
+              @change="handleCarrierChange"
+            />
+
+            <!-- Interactive GPS Map Location Picker -->
+            <LocationMapPicker
+              :initial-lat="form.delivery_lat"
+              :initial-lng="form.delivery_lng"
+              :initial-notes="form.delivery_notes"
+              @update:location="handleLocationUpdate"
+            />
           </div>
 
           <!-- Payment Simulation -->
@@ -350,6 +366,8 @@ import { useNotificationStore } from '@/stores/notification'
 import { CreditCard, Smartphone, Truck, QrCode } from 'lucide-vue-next'
 import { rememberOrderAccess } from '@/utils/orderAccess'
 import KHQRModal from '@/components/checkout/KHQRModal.vue'
+import DeliveryCarrierSelector from '@/components/checkout/DeliveryCarrierSelector.vue'
+import LocationMapPicker from '@/components/checkout/LocationMapPicker.vue'
 
 const router = useRouter()
 const cartStore = useCartStore()
@@ -385,13 +403,27 @@ const form = reactive({
   customer_email: '',
   customer_phone: '',
   shipping_address: '',
-  shipping_city: '',
-  shipping_postal_code: '',
+  shipping_city: 'Phnom Penh',
+  shipping_postal_code: '12000',
+  shipping_carrier: 'vet_express',
+  delivery_lat: 11.5564,
+  delivery_lng: 104.9282,
+  delivery_notes: '',
   payment_method: 'khqr',
   card_number: '4242 4242 4242 4242',
   card_expiry: '12/28',
   card_cvc: '888',
 })
+
+function handleCarrierChange({ carrier, fee }) {
+  cartStore.setCarrier(carrier.id)
+}
+
+function handleLocationUpdate({ lat, lng, notes }) {
+  form.delivery_lat = lat
+  form.delivery_lng = lng
+  form.delivery_notes = notes
+}
 
 const handleSubmitOrder = async () => {
   if (cartStore.items.length === 0 || submitting.value || showKHQRModal.value) return
@@ -413,6 +445,10 @@ const handleSubmitOrder = async () => {
     shipping_address: form.shipping_address,
     shipping_city: form.shipping_city,
     shipping_postal_code: form.shipping_postal_code,
+    shipping_carrier: form.shipping_carrier,
+    delivery_lat: form.delivery_lat,
+    delivery_lng: form.delivery_lng,
+    delivery_notes: form.delivery_notes,
     payment_method: form.payment_method,
     discount_code: cartStore.discountCode || null,
     expected_total: cartStore.grandTotal,

@@ -102,12 +102,25 @@
             </div>
 
             <div class="info-half-column divider-left">
-              <h3 class="card-inner-title">Delivery Method</h3>
+              <h3 class="card-inner-title">Delivery Method & Courier</h3>
               <div class="delivery-display-row">
                 <Truck :size="18" class="info-icon" />
                 <div class="delivery-text-col">
                   <strong class="delivery-method-name">{{ order.deliveryMethod }}</strong>
                   <span class="delivery-status-note">{{ order.statusText }}</span>
+                  <div v-if="order.deliveryNotes" class="delivery-landmark-note">
+                    <strong>📍 Driver Note:</strong> {{ order.deliveryNotes }}
+                  </div>
+                  <div v-if="order.mapUrl" class="delivery-map-action">
+                    <a
+                      :href="order.mapUrl"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      class="btn-driver-maps"
+                    >
+                      🗺️ Open in Google Maps (Driver Navigation) ↗
+                    </a>
+                  </div>
                 </div>
               </div>
             </div>
@@ -759,6 +772,41 @@ function openReviewFor(item) {
 .delivery-status-note {
   margin-top: 4px;
   color: #78716C;
+}
+
+.delivery-landmark-note {
+  margin-top: 6px;
+  font-size: 0.78rem;
+  background: #FAF6F3;
+  border-left: 2px solid #7A2E22;
+  padding: 4px 8px;
+  border-radius: 4px;
+  color: #44403C;
+  line-height: 1.35;
+}
+
+.delivery-map-action {
+  margin-top: 8px;
+}
+
+.btn-driver-maps {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 5px 10px;
+  background: #FFFFFF;
+  border: 1px solid #7A2E22;
+  border-radius: 6px;
+  font-size: 0.76rem;
+  font-weight: 700;
+  color: #7A2E22;
+  text-decoration: none;
+  transition: all 0.2s ease;
+}
+
+.btn-driver-maps:hover {
+  background: #7A2E22;
+  color: #FFFFFF;
 }
 
 /* Items Table */

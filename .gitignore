@@ -43,6 +43,7 @@ pnpm-debug.log*
 Thumbs.db
 .vscode/
 .idea/
+.agents/
 *.suo
 *.ntvs*
 *.njsproj

@@ -10,7 +10,14 @@ export const useCartStore = defineStore('cart', {
     discountRate: parseFloat(localStorage.getItem('lumea_discount_rate') || '0'),
     freeShippingThreshold: 50.0,
     taxRate: 10.0,
-    standardShippingFee: 15.0,
+    standardShippingFee: 1.50,
+    carrierFeeMap: {
+      vet_express: 1.50,
+      jt_express: 1.75,
+      grab_express: 3.50,
+      lumea_concierge: 3.00,
+    },
+    selectedCarrier: 'vet_express',
     settingsLoaded: false,
   }),
 
@@ -30,7 +37,11 @@ export const useCartStore = defineStore('cart', {
     shippingFee: (state) => {
       const sub = state.items.reduce((acc, item) => acc + item.price * item.quantity, 0)
       if (sub === 0) return 0
-      return sub >= state.freeShippingThreshold ? 0 : state.standardShippingFee
+      const carrierFee = state.carrierFeeMap[state.selectedCarrier] ?? 1.50
+      if (sub >= state.freeShippingThreshold && state.selectedCarrier !== 'grab_express') {
+        return 0
+      }
+      return carrierFee
     },
 
     taxAmount: (state) => {
@@ -43,7 +54,8 @@ export const useCartStore = defineStore('cart', {
     grandTotal: (state) => {
       const sub = state.items.reduce((acc, item) => acc + item.price * item.quantity, 0)
       const discount = Math.round(sub * state.discountRate * 100) / 100
-      const shipping = sub === 0 ? 0 : sub >= state.freeShippingThreshold ? 0 : state.standardShippingFee
+      const carrierFee = state.carrierFeeMap[state.selectedCarrier] ?? 1.50
+      const shipping = sub === 0 ? 0 : (sub >= state.freeShippingThreshold && state.selectedCarrier !== 'grab_express') ? 0 : carrierFee
       return Math.max(0, Math.round((sub - discount + shipping) * 100) / 100)
     },
   },
@@ -53,6 +65,12 @@ export const useCartStore = defineStore('cart', {
       safeSetJSON('lumea_cart', this.items)
       localStorage.setItem('lumea_discount_code', this.discountCode)
       localStorage.setItem('lumea_discount_rate', this.discountRate.toString())
+    },
+
+    setCarrier(carrierId) {
+      if (this.carrierFeeMap[carrierId] !== undefined) {
+        this.selectedCarrier = carrierId
+      }
     },
 
     addItem(product, quantity = 1) {

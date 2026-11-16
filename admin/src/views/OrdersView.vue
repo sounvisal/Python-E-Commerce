@@ -124,6 +124,16 @@ const orderTab = (order) => {
   return status === 'confirmed' ? 'pending' : status
 }
 
+const formatCarrierName = (c) => {
+  const map = {
+    vet_express: 'Vireak Buntham (VET)',
+    jt_express: 'J&T Express',
+    grab_express: 'GrabExpress',
+    lumea_concierge: 'Luméa Concierge',
+  }
+  return map[c] || 'VET Logistics'
+}
+
 // Filtered orders list
 const filteredOrders = computed(() => {
   let list = [...(adminStore.orders || [])]
@@ -566,8 +576,8 @@ const exportOrders = () => {
               </td>
               <td>
                 <div class="delivery-cell">
-                  <span class="delivery-method-txt">Standard</span>
-                  <span class="delivery-courier-sub">J&T Express</span>
+                  <span class="delivery-method-txt">{{ formatCarrierName(order.shipping_carrier) }}</span>
+                  <span class="delivery-courier-sub">{{ order.shipping_city || 'Phnom Penh' }}</span>
                 </div>
               </td>
               <td class="text-center">
@@ -957,16 +967,29 @@ const exportOrders = () => {
             <!-- 2. Shipping Address Card -->
             <div class="card detail-panel-card">
               <div class="card-header-row">
-                <h3 class="panel-card-title">Shipping Address</h3>
-                <span class="btn-edit-text">Edit</span>
+                <h3 class="panel-card-title">Shipping & Courier Dispatch</h3>
+                <span class="carrier-tag">{{ formatCarrierName(activeOrder.shipping_carrier) }}</span>
               </div>
               <div class="shipping-address-content">
                 <MapPin :size="16" class="address-pin-icon" />
                 <div class="address-texts">
                   <strong>{{ activeOrder.customer_name }}</strong>
-                  <p>{{ activeOrder.shipping_address || '#21, St. 271, Boeng Keng Kang 1' }}</p>
-                  <p>{{ activeOrder.shipping_city || 'Phnom Penh' }}, Cambodia</p>
-                  <p>+855 12 345 678</p>
+                  <p>{{ activeOrder.shipping_address }}</p>
+                  <p>{{ activeOrder.shipping_city }} {{ activeOrder.shipping_postal_code || '' }}, Cambodia</p>
+                  <p class="text-muted">{{ activeOrder.customer_phone || '+855 12 345 678' }}</p>
+                  <div v-if="activeOrder.delivery_notes" class="admin-delivery-note">
+                    <strong>📍 Driver Landmark:</strong> {{ activeOrder.delivery_notes }}
+                  </div>
+                  <div v-if="activeOrder.map_url" class="admin-map-link-wrap">
+                    <a
+                      :href="activeOrder.map_url"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      class="btn-admin-driver-map"
+                    >
+                      🗺️ Open Driver Route in Google Maps ↗
+                    </a>
+                  </div>
                 </div>
               </div>
             </div>
@@ -2156,6 +2179,50 @@ const exportOrders = () => {
   font-size: 12px;
   color: #5C544E;
   margin: 2px 0;
+}
+
+.carrier-tag {
+  font-size: 11px;
+  font-weight: 700;
+  padding: 3px 8px;
+  border-radius: 999px;
+  background: #F4EBE6;
+  color: #84261B;
+}
+
+.admin-delivery-note {
+  margin-top: 6px;
+  padding: 5px 8px;
+  background: #FAF6F3;
+  border-left: 2px solid #84261B;
+  border-radius: 4px;
+  font-size: 12px;
+  color: #44403C;
+  line-height: 1.35;
+}
+
+.admin-map-link-wrap {
+  margin-top: 8px;
+}
+
+.btn-admin-driver-map {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 5px 10px;
+  background: #FFFFFF;
+  border: 1px solid #84261B;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 700;
+  color: #84261B;
+  text-decoration: none;
+  transition: all 0.2s ease;
+}
+
+.btn-admin-driver-map:hover {
+  background: #84261B;
+  color: #FFFFFF;
 }
 
 /* Payment Info */

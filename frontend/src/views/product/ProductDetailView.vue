@@ -5,10 +5,10 @@
       <nav class="breadcrumbs" aria-label="Breadcrumb">
         <router-link to="/" class="breadcrumb-link">Home</router-link>
         <ChevronRight :size="14" class="breadcrumb-sep" />
-        <router-link to="/shop" class="breadcrumb-link">Shop</router-link>
+        <router-link to="/brands" class="breadcrumb-link">Brands</router-link>
         <ChevronRight :size="14" class="breadcrumb-sep" />
-        <router-link :to="`/category/${product.category || 'toners'}`" class="breadcrumb-link">
-          {{ product.category_name || 'Essences' }}
+        <router-link :to="`/brand/${brandSlug}`" class="breadcrumb-link">
+          {{ product.brand }}
         </router-link>
         <ChevronRight :size="14" class="breadcrumb-sep" />
         <span class="breadcrumb-current">{{ product.name }}</span>
@@ -188,6 +188,40 @@
                 <strong>Fast Shipping</strong>
                 <span>Nationwide</span>
               </div>
+            </div>
+          </div>
+
+          <!-- Formulation Deep-Link & Social Share Bar -->
+          <div class="pdp-share-bar">
+            <span class="share-label"><Share2 :size="13" /> Share Formulation:</span>
+            <div class="share-buttons-group">
+              <button
+                type="button"
+                class="share-btn copy-btn"
+                :class="{ copied: linkCopied }"
+                @click="copyProductLink"
+                title="Copy shareable direct link to clipboard"
+              >
+                <Check v-if="linkCopied" :size="13" />
+                <Copy v-else :size="13" />
+                <span>{{ linkCopied ? 'Link Copied!' : 'Copy Link' }}</span>
+              </button>
+              <button
+                type="button"
+                class="share-btn tg-btn"
+                @click="shareTelegram"
+                title="Share directly via Telegram"
+              >
+                <span>✈️ Telegram</span>
+              </button>
+              <button
+                type="button"
+                class="share-btn fb-btn"
+                @click="shareFacebook"
+                title="Share to Facebook"
+              >
+                <span>📘 Facebook</span>
+              </button>
             </div>
           </div>
         </div>
@@ -999,6 +1033,8 @@ import {
   ChevronLeft,
   Video,
   Film,
+  Share2,
+  Copy,
 } from 'lucide-vue-next'
 import BrandLogo from '@/components/BrandLogo.vue'
 import ProductCard from '@/components/ProductCard.vue'
@@ -1020,6 +1056,33 @@ const isWishlisted = ref(false)
 const activeThumbIdx = ref(0)
 const addedItemMap = ref({})
 const wishlistItemMap = ref({})
+const linkCopied = ref(false)
+
+function copyProductLink() {
+  const url = window.location.href
+  if (navigator.clipboard) {
+    navigator.clipboard.writeText(url).then(() => {
+      linkCopied.value = true
+      notificationStore.showToast('Product link copied to clipboard', 'success')
+      setTimeout(() => {
+        linkCopied.value = false
+      }, 2500)
+    })
+  } else {
+    notificationStore.showToast('Link copied: ' + url, 'info')
+  }
+}
+
+function shareTelegram() {
+  const url = encodeURIComponent(window.location.href)
+  const text = encodeURIComponent(`Luméa Atelier — ${product.value?.name || 'Curated Formulation'} (${product.value?.brand || 'Luxury Skincare'})`)
+  window.open(`https://t.me/share/url?url=${url}&text=${text}`, '_blank')
+}
+
+function shareFacebook() {
+  const url = encodeURIComponent(window.location.href)
+  window.open(`https://www.facebook.com/sharer/sharer.php?u=${url}`, '_blank')
+}
 
 // Video Reels State & Controls
 const allAtelierVideoReviews = ref([])
@@ -1832,6 +1895,75 @@ function toggleItemWishlist(id) {
 .trust-text span {
   font-size: 0.68rem;
   color: #78716C;
+}
+
+.pdp-share-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  margin-top: 1rem;
+  padding: 0.75rem 0.9rem;
+  background: #FAF6F3;
+  border: 1px solid #EAE5DF;
+  border-radius: 10px;
+}
+
+.share-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.76rem;
+  font-weight: 700;
+  color: #7A2E22;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.share-buttons-group {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.share-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.35rem 0.65rem;
+  border-radius: 6px;
+  font-size: 0.74rem;
+  font-weight: 600;
+  cursor: pointer;
+  border: 1px solid #D6D0C7;
+  background: #FFFFFF;
+  color: #44403C;
+  transition: all 0.18s ease;
+}
+
+.share-btn:hover {
+  background: #F5EFEB;
+  border-color: #7A2E22;
+  color: #7A2E22;
+}
+
+.share-btn.copied {
+  background: #DCFCE7;
+  border-color: #16A34A;
+  color: #16A34A;
+}
+
+.share-btn.tg-btn:hover {
+  background: #E0F2FE;
+  border-color: #0284C7;
+  color: #0284C7;
+}
+
+.share-btn.fb-btn:hover {
+  background: #EFF6FF;
+  border-color: #2563EB;
+  color: #2563EB;
 }
 
 /* Right Sidebar Column */

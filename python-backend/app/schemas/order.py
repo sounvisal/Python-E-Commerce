@@ -16,6 +16,10 @@ class OrderCreate(BaseModel):
     shipping_address: str
     shipping_city: str
     shipping_postal_code: Optional[str] = None
+    shipping_carrier: Optional[str] = "vet_express"
+    delivery_lat: Optional[float] = None
+    delivery_lng: Optional[float] = None
+    delivery_notes: Optional[str] = None
     payment_method: Optional[str] = "card"
     discount_code: Optional[str] = None
     checkout_key: Optional[str] = Field(default=None, min_length=20, max_length=64)
@@ -44,6 +48,11 @@ class OrderOut(BaseModel):
     shipping_address: str
     shipping_city: str
     shipping_postal_code: Optional[str] = None
+    shipping_carrier: Optional[str] = "vet_express"
+    delivery_lat: Optional[float] = None
+    delivery_lng: Optional[float] = None
+    delivery_notes: Optional[str] = None
+    map_url: Optional[str] = None
     subtotal: float
     discount: float
     shipping_fee: float

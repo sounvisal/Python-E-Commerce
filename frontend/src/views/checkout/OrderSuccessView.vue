@@ -83,11 +83,24 @@
 
         <!-- Destination -->
         <div class="address-box">
-          <h4>Delivery Destination</h4>
+          <h4>Delivery Destination & Courier</h4>
           <p>
+            <strong>Courier:</strong> {{ formatCarrier(order.shipping_carrier) }}<br>
             {{ order.shipping_address }}<br>
             {{ order.shipping_city }} {{ order.shipping_postal_code }}
           </p>
+          <p v-if="order.delivery_notes" class="delivery-notes-text">
+            <strong>Driver Landmark:</strong> {{ order.delivery_notes }}
+          </p>
+          <a
+            v-if="order.map_url"
+            :href="order.map_url"
+            target="_blank"
+            rel="noopener noreferrer"
+            class="btn-maps-link"
+          >
+            🗺️ View Delivery Pin on Google Maps ↗
+          </a>
         </div>
 
         <!-- Items Recap -->
@@ -152,6 +165,16 @@ const formatPaymentMethod = (method) => {
     default:
       return 'Credit Card'
   }
+}
+
+function formatCarrier(c) {
+  const map = {
+    vet_express: 'Vireak Buntham (VET Logistics)',
+    jt_express: 'J&T Express Cambodia',
+    grab_express: 'GrabExpress On-Demand',
+    lumea_concierge: 'Luméa Atelier Concierge',
+  }
+  return map[c] || 'Vireak Buntham Express (VET)'
 }
 
 onMounted(async () => {
@@ -443,6 +466,37 @@ onMounted(async () => {
 .address-box p {
   font-size: 0.9rem;
   line-height: 1.5;
+}
+
+.delivery-notes-text {
+  margin-top: 0.5rem;
+  padding: 0.4rem 0.6rem;
+  background: #FAF6F3;
+  border-left: 2px solid #7A2E22;
+  border-radius: 4px;
+  font-size: 0.82rem;
+  color: #44403C;
+}
+
+.btn-maps-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  margin-top: 0.75rem;
+  padding: 0.4rem 0.75rem;
+  background: #FFFFFF;
+  border: 1px solid #7A2E22;
+  border-radius: 6px;
+  color: #7A2E22;
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-decoration: none;
+  transition: all 0.2s ease;
+}
+
+.btn-maps-link:hover {
+  background: #7A2E22;
+  color: #FFFFFF;
 }
 
 .items-recap {

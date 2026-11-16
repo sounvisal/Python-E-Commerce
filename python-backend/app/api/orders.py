@@ -38,6 +38,13 @@ def checkout_fingerprint(payload, user):
     data["user_id"] = user.id if user else None
     return hashlib.sha256(json.dumps(data, sort_keys=True).encode()).hexdigest()
 
+CARRIER_RATES = {
+    "vet_express": {"name": "Vireak Buntham (VET Logistics)", "fee": 1.50, "transit": "1–2 Business Days", "free_over_threshold": True},
+    "jt_express": {"name": "J&T Express Cambodia", "fee": 1.75, "transit": "Next-Day Delivery", "free_over_threshold": True},
+    "grab_express": {"name": "GrabExpress On-Demand", "fee": 3.50, "transit": "60–90 Mins (Phnom Penh)", "free_over_threshold": False},
+    "lumea_concierge": {"name": "Luméa Atelier Concierge", "fee": 3.00, "transit": "White-Glove Scheduled", "free_over_threshold": True},
+}
+
 def money(value):
     return float(Decimal(str(value)).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP))
 
@@ -61,9 +68,62 @@ def calculate_quote(order_in: OrderCreate, db: Session):
     promotion = active_promotion(db, code) if code else None
     discount = money(subtotal * (promotion.percent / 100 if promotion else 0))
     settings = load_settings()
-    shipping = 0.0 if subtotal >= float(settings["free_shipping_threshold"]) else 15.0
+    free_threshold = float(settings.get("free_shipping_threshold", 50.0))
+    
+    carrier_key = (getattr(order_in, "shipping_carrier", None) or "vet_express").lower()
+    carrier = CARRIER_RATES.get(carrier_key, CARRIER_RATES["vet_express"])
+    if subtotal >= free_threshold and carrier["free_over_threshold"]:
+        shipping = 0.0
+    else:
+        shipping = carrier["fee"]
+        
     return dict(subtotal=subtotal, discount=discount, shipping_fee=shipping,
                 total=money(subtotal - discount + shipping)), lines
+
+@router.get("/carriers")
+def list_carriers():
+    """Returns available Cambodian delivery carriers and current tariffs."""
+    return {
+        "status": "success",
+        "data": [
+            {
+                "id": "vet_express",
+                "name": "Vireak Buntham (VET Logistics)",
+                "description": "Cambodia's #1 nationwide courier service. Direct delivery to all 25 provinces.",
+                "fee": 1.50,
+                "transit": "1–2 Business Days",
+                "badge": "Nationwide",
+                "icon": "truck"
+            },
+            {
+                "id": "jt_express",
+                "name": "J&T Express Cambodia",
+                "description": "High-speed door-to-door express parcel courier with real-time van tracking.",
+                "fee": 1.75,
+                "transit": "Next-Day Delivery",
+                "badge": "Popular",
+                "icon": "package"
+            },
+            {
+                "id": "grab_express",
+                "name": "GrabExpress On-Demand",
+                "description": "Dedicated motorbike courier. Immediate dispatch for urgent beauty orders.",
+                "fee": 3.50,
+                "transit": "60–90 Mins (Phnom Penh)",
+                "badge": "Instant Express",
+                "icon": "zap"
+            },
+            {
+                "id": "lumea_concierge",
+                "name": "Luméa Atelier Concierge",
+                "description": "Hand-delivered luxury package with signature ribbon, tissue, and samples.",
+                "fee": 3.00,
+                "transit": "White-Glove Scheduled",
+                "badge": "Luxury Signature",
+                "icon": "sparkles"
+            }
+        ]
+    }
 
 @router.post("/quote")
 def quote_order(payload: OrderCreate, db: Session = Depends(get_db), current_user=Depends(get_optional_user)):
@@ -111,6 +171,12 @@ def place_order(order_in: OrderCreate, db: Session = Depends(get_db), current_us
     if order_in.expected_total is not None and abs(order_in.expected_total - total) > 0.009:
         raise HTTPException(409, detail={"message": "Your bag total changed. Review the updated total before placing the order.", "quote": quote})
 
+    # Delivery carrier & Map coordinates
+    carrier_key = (order_in.shipping_carrier or "vet_express").lower()
+    map_url = None
+    if order_in.delivery_lat is not None and order_in.delivery_lng is not None:
+        map_url = f"https://www.google.com/maps?q={order_in.delivery_lat:.6f},{order_in.delivery_lng:.6f}"
+
     # Create Order
     new_order = Order(
         order_number=generate_order_number(),
@@ -125,6 +191,11 @@ def place_order(order_in: OrderCreate, db: Session = Depends(get_db), current_us
         shipping_address=order_in.shipping_address,
         shipping_city=order_in.shipping_city,
         shipping_postal_code=order_in.shipping_postal_code,
+        shipping_carrier=carrier_key,
+        delivery_lat=order_in.delivery_lat,
+        delivery_lng=order_in.delivery_lng,
+        delivery_notes=(order_in.delivery_notes or "").strip() or None,
+        map_url=map_url,
         subtotal=subtotal,
         discount=discount,
         discount_code=(order_in.discount_code or '').strip().upper() or None,

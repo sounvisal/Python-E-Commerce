@@ -50,6 +50,9 @@
         <button v-if="paywayUrl && !qrError" type="button" class="khqr-payway" @click="openAbaLink">
           Open ABA Pay Link
         </button>
+        <button v-if="!qrError" type="button" class="khqr-copy-link" @click="copyPaymentLink">
+          {{ copiedPaymentLink ? '✓ Payment Link Copied' : '📋 Copy Payment Link' }}
+        </button>
       </div>
 
       <button
@@ -153,25 +156,25 @@ function renderQR() {
     canvasEl.value,
     qrString.value,
     {
-      width: 440,
-      margin: 2,
+      width: 220,
+      margin: 1,
       color: {
         dark: '#000000',
         light: '#FFFFFF'
       },
-      errorCorrectionLevel: 'H' // Allows for the small currency badge
+      errorCorrectionLevel: 'H' // Allows for the central currency badge
     },
     (error) => {
       if (error) console.error('KHQR Canvas render error:', error)
       if (canvasEl.value) {
-        canvasEl.value.style.width = '100%'
-        canvasEl.value.style.height = 'auto'
+        canvasEl.value.style.width = '220px'
+        canvasEl.value.style.height = '220px'
       }
     }
   )
   if (canvasEl.value) {
-    canvasEl.value.style.width = '100%'
-    canvasEl.value.style.height = 'auto'
+    canvasEl.value.style.width = '220px'
+    canvasEl.value.style.height = '220px'
   }
 }
 
@@ -215,6 +218,38 @@ function onSuccess() {
       paid: true
     })
   }, 1600)
+}
+
+const copiedPaymentLink = ref(false)
+
+function copyPaymentLink() {
+  const link = paywayUrl.value || `${window.location.origin}/account/orders/${props.orderNumber}`
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(link).then(() => {
+      copiedPaymentLink.value = true
+      setTimeout(() => { copiedPaymentLink.value = false }, 2500)
+    }).catch(() => fallbackCopy(link))
+  } else {
+    fallbackCopy(link)
+  }
+}
+
+function fallbackCopy(text) {
+  const el = document.createElement('textarea')
+  el.value = text
+  el.setAttribute('readonly', '')
+  el.style.position = 'absolute'
+  el.style.left = '-9999px'
+  document.body.appendChild(el)
+  el.select()
+  try {
+    document.execCommand('copy')
+    copiedPaymentLink.value = true
+    setTimeout(() => { copiedPaymentLink.value = false }, 2500)
+  } catch (e) {
+    console.warn('Copy failed', e)
+  }
+  document.body.removeChild(el)
 }
 
 function openAbaLink() {
@@ -374,40 +409,47 @@ function handleClose() {
 .khqr-canvas-holder {
   position: relative;
   width: 220px;
+  height: 220px;
   max-width: 100%;
   aspect-ratio: 1;
   margin: 0 auto;
   display: flex;
   align-items: center;
   justify-content: center;
+  overflow: hidden;
+  box-sizing: border-box;
 }
 
 .khqr-canvas-img {
   display: block !important;
-  width: 100% !important;
+  width: 220px !important;
+  height: 220px !important;
   max-width: 100% !important;
-  height: 100% !important;
   max-height: 100% !important;
   aspect-ratio: 1;
+  object-fit: contain;
   image-rendering: pixelated;
+  box-sizing: border-box;
 }
 
 .khqr-currency-badge {
   position: absolute;
-  inset: 50% auto auto 50%;
-  display: grid;
-  width: 12%;
-  aspect-ratio: 1;
-  place-items: center;
+  top: 50%;
+  left: 50%;
   transform: translate(-50%, -50%);
+  display: grid;
+  width: 26px;
+  height: 26px;
+  place-items: center;
   border: 2px solid #fff;
   border-radius: 50%;
   background: #111;
   color: #fff;
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 700;
   line-height: 1;
   pointer-events: none;
+  z-index: 2;
 }
 
 .khqr-loading,
@@ -461,11 +503,25 @@ function handleClose() {
   border-color: #00567b;
   background: #00567b;
   color: #fff;
+  cursor: pointer;
+}
+
+.khqr-actions .khqr-copy-link {
+  border-color: #7a2e22;
+  background: #fbf6f3;
+  color: #7a2e22;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.khqr-actions .khqr-copy-link:hover {
+  background: #f5ebe6;
 }
 
 .khqr-cancel {
   background: #fff;
   color: inherit;
+  cursor: pointer;
 }
 
 .khqr-demo-approve {
