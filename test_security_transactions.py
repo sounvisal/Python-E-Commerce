@@ -18,6 +18,7 @@ from app.api.orders import quote_order, place_order, get_order_by_number, list_a
 from app.api.deps import require_admin, get_current_user
 from app.services.order_lifecycle import check_order_access, cancel_order, expire_pending_orders, transition_order, settle_payment, utcnow
 from app.core.database import Base
+from app.core.config import settings
 from app.core.migrations import migrate_schema
 from app.api.promotions import PromotionPayload, update_promotion, validate_promotion
 from app.api.reviews import ReviewSubmission, submit_review, vote_helpful
@@ -116,10 +117,15 @@ class AdditionalFlows(regression.CommerceFlows):
     def test_unverifiable_qr_is_not_offered_as_an_automatic_payment(self):
         order=self.place(self.payload(payment_method='khqr'))
         async def fallback(**kwargs): return {'source':'instant_emvco','qr_string':'unverified'}
-        with patch('app.api.payments.get_bakong_khqr_data',new=fallback):
-            with self.assertRaises(HTTPException) as error:
-                generate_khqr(KHQRGenerateRequest(order_number=order.order_number,amount=50),self.db,self.user,None).send(None)
-            self.assertEqual(error.exception.status_code,503)
+        old = settings.ENABLE_DEMO_PAYMENTS
+        settings.ENABLE_DEMO_PAYMENTS = False
+        try:
+            with patch('app.api.payments.get_bakong_khqr_data',new=fallback):
+                with self.assertRaises(HTTPException) as error:
+                    generate_khqr(KHQRGenerateRequest(order_number=order.order_number,amount=50),self.db,self.user,None).send(None)
+                self.assertEqual(error.exception.status_code,503)
+        finally:
+            settings.ENABLE_DEMO_PAYMENTS = old
     def test_qr_generation_cannot_reset_a_payment_received_during_extraction(self):
         order=self.place(self.payload(payment_method='khqr'))
         async def settled(**kwargs):

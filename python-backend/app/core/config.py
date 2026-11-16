@@ -19,7 +19,7 @@ class Settings(BaseSettings):
     SECRET_KEY: str = os.getenv("SECRET_KEY", "")
     PRODUCTION: bool = False
     SERVE_BUILT_APPS: bool = False
-    ENABLE_DEMO_PAYMENTS: bool = False
+    ENABLE_DEMO_PAYMENTS: bool = os.getenv("ENABLE_DEMO_PAYMENTS", "true").lower() in ("true", "1", "yes")
     ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24 * 7  # 7 days
     
