@@ -1,4 +1,4 @@
-from pydantic import BaseModel, Field, field_serializer
+from pydantic import BaseModel, Field, field_serializer, field_validator
 from typing import Optional, List
 from datetime import datetime, timezone
 
@@ -55,9 +55,14 @@ class OrderOut(BaseModel):
     access_token: Optional[str] = None
     expires_at: Optional[datetime] = None
     delivered_at: Optional[datetime] = None
-    events: list = []
+    events: Optional[list] = []
     created_at: Optional[datetime] = None
     items: List[OrderItemOut] = []
+
+    @field_validator('events', mode='before')
+    @classmethod
+    def ensure_events_list(cls, v):
+        return v if v is not None else []
 
     @field_serializer('created_at', 'expires_at', 'delivered_at')
     def serialize_utc(self, value):

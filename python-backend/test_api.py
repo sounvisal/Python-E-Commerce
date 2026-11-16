@@ -102,7 +102,7 @@ def run_tests():
         "shipping_address": "Norodom Blvd #45",
         "shipping_city": "Phnom Penh",
         "shipping_postal_code": "12000",
-        "payment_method": "aba_pay",
+        "payment_method": "cod",
         "discount_code": "LUMEA10",
         "items": [
             {

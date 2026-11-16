@@ -104,8 +104,8 @@ def place_order(order_in: OrderCreate, db: Session = Depends(get_db), current_us
     if not order_in.items:
         raise HTTPException(status_code=400, detail="Order must contain at least one item")
 
-    if order_in.payment_method not in ("khqr", "cod", "card", "aba_pay", "apple_pay"):
-        raise HTTPException(400, "This payment method is not available. Choose KHQR, card, or cash on delivery.")
+    if order_in.payment_method not in ("khqr", "cod"):
+        raise HTTPException(400, "This payment method is not available. Choose KHQR or cash on delivery.")
     quote, order_items_to_create = calculate_quote(order_in, db)
     subtotal, discount, shipping_fee, total = (quote[k] for k in ("subtotal", "discount", "shipping_fee", "total"))
     if order_in.expected_total is not None and abs(order_in.expected_total - total) > 0.009:

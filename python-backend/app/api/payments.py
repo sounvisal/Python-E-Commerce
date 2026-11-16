@@ -52,6 +52,8 @@ async def generate_khqr(req: KHQRGenerateRequest, db: Session = Depends(get_db),
         raise HTTPException(400, "Payment amount must match the order total")
     qr_data = await get_bakong_khqr_data(amount=order.total, order_number=order.order_number,
                                        try_live=req.try_live if req.try_live is not None else True)
+    if qr_data.get('source') != 'live_aba_payway' and not settings.ENABLE_DEMO_PAYMENTS:
+        raise HTTPException(503, "Live payment verification is unavailable for this order. Choose cash on delivery.")
     # The bank monitor may settle while QR extraction is in progress. Never
     # overwrite that settlement with the earlier Pending snapshot.
     db.refresh(order)
