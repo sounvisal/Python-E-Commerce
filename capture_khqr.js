@@ -43,12 +43,12 @@ const { chromium } = require('playwright');
     await page.click('#btn-authorize-order');
   }
 
-  console.log('Waiting for .khqr-canvas...');
+  console.log('Waiting for .qr-canvas-element...');
   try {
-    await page.waitForSelector('.khqr-canvas', { timeout: 10000 });
-    console.log('SUCCESS: .khqr-canvas found!');
+    await page.waitForSelector('.qr-canvas-element', { timeout: 10000 });
+    console.log('SUCCESS: .qr-canvas-element found!');
   } catch (e) {
-    console.log('Timeout waiting for .khqr-canvas. Current URL:', page.url());
+    console.log('Timeout waiting for .qr-canvas-element. Current URL:', page.url());
     await page.screenshot({ path: 'checkout_debug.png' });
   }
   await page.waitForTimeout(1000);

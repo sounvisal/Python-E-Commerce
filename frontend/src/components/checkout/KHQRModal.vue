@@ -1,135 +1,120 @@
 <template>
   <div class="khqr-modal-backdrop" @click.self="handleClose">
-    <div class="khqr-card-container">
-      <!-- Authentic NBC Bakong KHQR Card -->
-      <div class="khqr-card">
-        <!-- Top KHQR Red Header matching NBC Bakong specification -->
-        <div class="khqr-header">
-          <div class="khqr-logo-wrap">
-            <span class="khqr-logo-kh">KH</span>
-            <div class="khqr-logo-qr-box">
-              <span class="khqr-logo-qr">QR</span>
-              <div class="khqr-ribbon-cut"></div>
-            </div>
-          </div>
-          <div class="khqr-currency-pill">
-            <span>USD</span>
+    <div class="khqr-modal-container">
+      <!-- Modal Header -->
+      <div class="khqr-modal-top-bar">
+        <h2 class="khqr-modal-heading">KHQR Payment</h2>
+        <div v-if="!paymentApproved && !qrError" class="khqr-timer-pill">
+          <span class="timer-dot"></span>
+          <span>{{ formattedTimer }}</span>
+        </div>
+      </div>
+
+      <!-- Exact Official Card from checkout.html (width: 273px, height: 396px) -->
+      <div class="khqr-content">
+        <!-- Top Red Banner -->
+        <div class="khqr-banner">
+          <svg width="60" height="14" viewBox="0 0 60 14" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M39.0058 5.19439V9.59764H34.5316C34.0727 9.59764 33.7285 9.2307 33.7285 8.80731V5.22264C33.7285 4.77103 34.1014 4.43231 34.5316 4.43231H38.174C38.6616 4.40408 39.0058 4.74278 39.0058 5.19439Z" fill="white"/>
+            <path d="M59.9716 6.97176H57.7345C57.7345 4.34676 55.5547 2.20159 52.8874 2.20159C50.765 2.20159 48.9008 3.55645 48.2698 5.53225C48.1264 6.01209 48.0403 6.49192 48.0403 6.97176V13.9718H47.983C46.7784 13.9718 45.8032 13.0121 45.8032 11.8266V6.97176H45.8319C45.8319 5.05241 46.635 3.21773 48.069 1.89112C49.3883 0.677406 51.1092 0 52.9161 0C56.8167 0 59.9716 3.13305 59.9716 6.97176Z" fill="white"/>
+            <path d="M59.9999 13.9713L56.845 13.9996L56.0706 13.2374L54.3497 11.5439L51.9692 9.20117H55.1241L59.9999 13.9713Z" fill="white"/>
+            <path d="M39.7517 11.7702H33.0117C32.18 11.7702 31.5203 11.121 31.5203 10.3024V3.66936C31.5203 2.85081 32.18 2.20159 33.0117 2.20159H39.7517C40.5835 2.20159 41.2431 2.85081 41.2431 3.66936V10.3024L43.4802 12.504V2.14515C43.4802 0.959671 42.5051 0 41.3005 0H31.4629C30.2584 0 29.2832 0.959671 29.2832 2.14515V11.8266C29.2832 13.0121 30.2584 13.9718 31.4629 13.9718H41.9888L39.7517 11.7702Z" fill="white"/>
+            <path d="M12.3614 14H9.20656L2.60996 7.47984V14H0V0H2.60996V6.2379L8.94843 0H12.046L5.16255 6.71772L12.3614 14Z" fill="white"/>
+            <path d="M24.1491 0H26.7016V14H24.1491V7.93145H16.8641V14H14.3115V0H16.8641V5.84273H24.1491V0Z" fill="white"/>
+          </svg>
+        </div>
+
+        <!-- Official Triangle Corner Cut -->
+        <div class="triangle-row">
+          <div class="triangle-top-right"></div>
+        </div>
+
+        <!-- Merchant & Amount Info (from checkout.html) -->
+        <div class="merc-khqr-info">
+          <div class="merc-name">{{ liveMerchantName }}</div>
+          <div class="total-amount-khqr">
+            <span class="amount-value">
+              {{ formattedAmount }}
+              <span class="amount-currency">USD</span>
+            </span>
           </div>
         </div>
 
-        <!-- Merchant & Amount Info -->
-        <div class="khqr-body">
-          <div class="khqr-merchant-info">
-            <h3 class="khqr-merchant-name">{{ liveMerchantName }}</h3>
-            <span class="khqr-merchant-sub">LUMÉA ATELIER &middot; OFFICIAL STORE</span>
-            <div class="khqr-order-tag">Order #{{ orderNumber }}</div>
+        <!-- Line Divider SVG (from checkout.html) -->
+        <div class="line-divider">
+          <svg width="273" height="2" viewBox="0 0 273 2" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M0 0.845703H273" stroke="black" stroke-opacity="0.3" stroke-dasharray="8 8"/>
+          </svg>
+        </div>
+
+        <!-- QR Code Canvas Area with Central USD Logo -->
+        <div class="qr-canvas-box">
+          <div v-if="loadingQr" class="khqr-state-box">
+            <div class="khqr-spinner"></div>
+            <span>Generating QR code…</span>
           </div>
-
-          <div class="khqr-amount-row">
-            <span class="khqr-currency-symbol">$</span>
-            <span class="khqr-amount-val">{{ Number(amount).toFixed(2) }}</span>
-            <span class="khqr-khr-equiv">(&asymp; {{ (Number(amount) * 4100).toLocaleString() }} KHR)</span>
+          <div v-else-if="paymentApproved" class="khqr-state-box status-success">
+            <div class="success-checkmark">✓</div>
+            <strong>Payment Approved</strong>
+            <span>Redirecting to receipt…</span>
           </div>
-
-          <!-- Dynamic QR Code Frame -->
-          <div class="khqr-frame-outer">
-            <div class="khqr-frame-inner">
-              <div v-if="loadingQr" class="khqr-loading-box">
-                <div class="khqr-spinner"></div>
-                <span>Generating dynamic KHQR...</span>
-              </div>
-              <div v-else-if="qrError" class="khqr-error-box">
-                <p class="khqr-error-text">{{ qrError }}</p>
-                <button type="button" class="btn-retry" @click="fetchAndRenderKHQR">Try Again</button>
-              </div>
-              <div v-else class="canvas-wrap">
-                <canvas ref="canvasEl" class="khqr-canvas"></canvas>
-                <!-- Centered Bakong / Currency Badge -->
-                <div class="khqr-center-badge">
-                  <div class="center-badge-inner">
-                    <span class="center-badge-symbol">$</span>
-                  </div>
-                </div>
-              </div>
-            </div>
+          <div v-else-if="qrError" class="khqr-state-box status-err">
+            <p>{{ qrError }}</p>
+            <button type="button" class="btn-retry-khqr" @click="fetchAndRenderKHQR">Retry</button>
           </div>
-
-          <!-- Bank Slogan & Partner Apps -->
-          <div class="khqr-banks-section">
-            <p class="khqr-scan-slogan">Scan to pay with any mobile banking app supporting KHQR</p>
-            <div class="khqr-bank-pills">
-              <span class="bank-pill bank-aba">ABA'Mobile</span>
-              <span class="bank-pill bank-bakong">Bakong</span>
-              <span class="bank-pill bank-wing">Wing</span>
-              <span class="bank-pill bank-acleda">ACLEDA</span>
-              <span class="bank-pill bank-sathapana">Sathapana</span>
-            </div>
-          </div>
-
-          <!-- Live Status & Countdown Timer -->
-          <div class="khqr-status-card" :class="{ 'status-approved': paymentApproved }">
-            <div v-if="!paymentApproved" class="status-pending-row">
-              <div class="pulsing-indicator"></div>
-              <div class="status-texts">
-                <strong>Awaiting bank scan...</strong>
-                <span>Expires in <span class="timer-countdown">{{ formattedTimer }}</span></span>
-              </div>
-            </div>
-            <div v-else class="status-approved-row">
-              <div class="success-icon-wrap">
-                <svg viewBox="0 0 24 24" class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2.5">
-                  <polyline points="20 6 9 17 4 12"></polyline>
-                </svg>
-              </div>
-              <div class="status-texts">
-                <strong class="text-success">Payment Approved!</strong>
-                <span>Official transaction receipt cleared. Redirecting...</span>
-              </div>
-            </div>
-          </div>
-
-          <!-- Interactive Action Buttons -->
-          <div class="khqr-actions">
-            <!-- Demo Simulation Button for Academic Defense / Grading -->
-            <button
-              v-if="!paymentApproved"
-              type="button"
-              class="btn-demo-simulate"
-              @click="handleSimulateApproval"
-              :disabled="simulating"
-            >
-              <span class="btn-demo-icon">⚡</span>
-              <span v-if="!simulating">Demo Mode: Simulate Instant Bank Approval</span>
-              <span v-else>Clearing Bank Transaction...</span>
-            </button>
-
-            <div class="khqr-secondary-actions">
-              <button
-                v-if="paywayUrl"
-                type="button"
-                class="btn-open-aba"
-                @click="openAbaLink"
-              >
-                <span>Open ABA Pay Link</span>
-              </button>
-              <button
-                type="button"
-                class="btn-copy-link"
-                @click="copyPaymentLink"
-              >
-                <span>{{ copiedPaymentLink ? '✓ Copied' : '📋 Copy Link' }}</span>
-              </button>
-              <button
-                type="button"
-                class="btn-cancel-khqr"
-                @click="handleClose"
-              >
-                <span>Cancel</span>
-              </button>
+          <div v-else class="qr-canvas-holder">
+            <canvas ref="canvasEl" class="qr-canvas-element"></canvas>
+            <div class="usd-khqr-badge">
+              <span class="badge-dollar">$</span>
             </div>
           </div>
         </div>
       </div>
+
+      <!-- Slogan (from checkout.html) -->
+      <p class="khqr-text-desc">
+        Scan with ABA Mobile, or other Mobile Banking App supporting KHQR
+      </p>
+
+      <!-- Action buttons -->
+      <div class="khqr-button-group">
+        <button
+          v-if="!paymentApproved"
+          type="button"
+          class="btn-khqr-close"
+          @click="handleClose"
+        >
+          Cancel
+        </button>
+        <button
+          v-if="paywayUrl && !paymentApproved"
+          type="button"
+          class="btn-khqr-aba"
+          @click="openAbaLink"
+        >
+          Open ABA Pay Link
+        </button>
+        <button
+          v-if="!paymentApproved"
+          type="button"
+          class="btn-khqr-copy"
+          @click="copyPaymentLink"
+        >
+          {{ copiedPaymentLink ? '✓ Copied' : '📋 Copy Link' }}
+        </button>
+      </div>
+
+      <!-- Demo Simulation for Presentation / Grading -->
+      <button
+        v-if="!paymentApproved && !qrError"
+        type="button"
+        class="btn-demo-sim"
+        :disabled="simulating"
+        @click="handleSimulateApproval"
+      >
+        <span v-if="!simulating">⚡ Demo Mode: Simulate Instant Bank Approval</span>
+        <span v-else>Clearing bank transaction…</span>
+      </button>
     </div>
   </div>
 </template>
@@ -176,6 +161,8 @@ const copiedPaymentLink = ref(false)
 let timerInterval = null
 let pollInterval = null
 
+const formattedAmount = computed(() => props.amount.toFixed(2))
+
 const formattedTimer = computed(() => {
   const m = Math.floor(timeLeft.value / 60)
   const s = timeLeft.value % 60
@@ -211,8 +198,8 @@ async function fetchAndRenderKHQR() {
       if (d.merchant_name) liveMerchantName.value = d.merchant_name
     }
   } catch (err) {
-    console.warn('Live KHQR generate failed, falling back to local EMVCo string', err)
-    qrError.value = err.response?.data?.detail || 'Unable to connect to payment gateway. Please retry.'
+    console.warn('KHQR generate error:', err)
+    qrError.value = err.response?.data?.detail || 'Unable to generate payment code. Please retry.'
   } finally {
     loadingQr.value = false
     await nextTick()
@@ -227,7 +214,7 @@ function renderQR() {
     canvasEl.value,
     qrString.value,
     {
-      width: 230,
+      width: 200,
       margin: 1,
       color: {
         dark: '#000000',
@@ -236,7 +223,7 @@ function renderQR() {
       errorCorrectionLevel: 'H'
     },
     (error) => {
-      if (error) console.error('KHQR Canvas render error:', error)
+      if (error) console.error('KHQR Canvas error:', error)
     }
   )
 }
@@ -346,521 +333,353 @@ function handleClose() {
 </script>
 
 <style scoped>
+/* Backdrop */
 .khqr-modal-backdrop {
   position: fixed;
   inset: 0;
-  background: rgba(18, 14, 13, 0.75);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
+  background: rgba(8, 27, 55, 0.65);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
   display: flex;
   align-items: center;
   justify-content: center;
   z-index: 9999;
-  padding: 1rem;
-  animation: fadeIn 0.25s ease-out;
+  padding: 16px;
+  overflow-y: auto;
 }
 
-.khqr-card-container {
-  width: 100%;
-  max-width: 390px;
-  animation: cardSlideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-}
-
-/* Authentic Bakong KHQR Card */
-.khqr-card {
+/* Modal Container */
+.khqr-modal-container {
+  width: min(100%, 380px);
+  margin: auto;
+  padding: 24px;
   background: #ffffff;
-  border-radius: 20px;
-  overflow: hidden;
-  box-shadow: 0 25px 60px -15px rgba(0, 0, 0, 0.35), 0 0 0 1px rgba(0, 0, 0, 0.05);
+  border-radius: 24px;
+  box-shadow: 0 16px 48px rgba(8, 27, 55, 0.2);
   display: flex;
   flex-direction: column;
+  align-items: center;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  box-sizing: border-box;
 }
 
-/* Red KHQR Top Banner */
-.khqr-header {
-  background: #e1251b;
-  color: #ffffff;
-  padding: 0.9rem 1.4rem;
+/* Top bar with Heading & Timer */
+.khqr-modal-top-bar {
+  width: 100%;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  position: relative;
+  margin-bottom: 20px;
 }
 
-.khqr-logo-wrap {
+.khqr-modal-heading {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 700;
+  color: #081b37;
+}
+
+.khqr-timer-pill {
   display: flex;
   align-items: center;
-  gap: 3px;
-}
-
-.khqr-logo-kh {
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-  font-size: 1.6rem;
-  font-weight: 900;
-  letter-spacing: -0.5px;
-  color: #ffffff;
-  line-height: 1;
-}
-
-.khqr-logo-qr-box {
-  background: #ffffff;
-  color: #e1251b;
-  padding: 2px 7px 3px 5px;
-  border-radius: 4px;
-  position: relative;
-  display: flex;
-  align-items: center;
-  margin-left: 2px;
-}
-
-.khqr-logo-qr {
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-  font-size: 1.15rem;
-  font-weight: 900;
-  line-height: 1;
-  letter-spacing: -0.5px;
-}
-
-.khqr-ribbon-cut {
-  position: absolute;
-  right: -4px;
-  top: 0;
-  bottom: 0;
-  width: 5px;
-  background: #e1251b;
-  clip-path: polygon(100% 0, 0 50%, 100% 100%);
-}
-
-.khqr-currency-pill {
-  background: rgba(255, 255, 255, 0.22);
-  border: 1px solid rgba(255, 255, 255, 0.4);
-  color: #ffffff;
-  font-size: 0.72rem;
-  font-weight: 800;
-  letter-spacing: 1px;
-  padding: 3px 8px;
+  gap: 6px;
+  background: #f1f5f9;
+  padding: 4px 10px;
   border-radius: 12px;
+  font-size: 13px;
+  font-weight: 700;
+  color: #081b37;
+  font-variant-numeric: tabular-nums;
 }
 
-/* Card Body */
-.khqr-body {
-  padding: 1.25rem 1.4rem 1.4rem;
-  text-align: center;
+.timer-dot {
+  width: 8px;
+  height: 8px;
+  background: #0bbcd4;
+  border-radius: 50%;
+  animation: pulseDot 1.5s infinite;
+}
+
+/* ============================================================
+   EXACT SPECIFICATIONS FROM checkout.html (.khqr-content)
+   width: 273px, height: 396px, border-radius: 22px
+   ============================================================ */
+.khqr-content {
+  border-radius: 22px;
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.08);
+  height: 396px;
+  width: 273px;
+  background: #ffffff;
   display: flex;
   flex-direction: column;
+  position: relative;
+  overflow: hidden;
+  box-sizing: border-box;
+  border: 1px solid rgba(0, 0, 0, 0.04);
+}
+
+/* Top Red Banner (height: 47.52px, background: #e21a1a) */
+.khqr-banner {
+  background: #e21a1a;
+  border-top-left-radius: 22px;
+  border-top-right-radius: 22px;
+  height: 47.52px;
+  display: flex;
   align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
 }
 
-.khqr-merchant-info {
-  margin-bottom: 0.5rem;
+/* Official Triangle Ribbon Cut */
+.triangle-row {
+  display: flex;
+  justify-content: flex-end;
+  height: 0;
 }
 
-.khqr-merchant-name {
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-  font-size: 1.15rem;
-  font-weight: 800;
-  color: #111827;
-  letter-spacing: 0.5px;
-  margin: 0 0 2px 0;
+.triangle-top-right {
+  border-left: 22.86px solid transparent;
+  border-top: 22.86px solid #e21a1a;
+  height: 0;
+  width: 0;
+}
+
+/* Merchant Info & Amount */
+.merc-khqr-info {
+  padding: 8px 16px 4px;
+  text-align: left;
+}
+
+.merc-name {
+  font-size: 11px;
+  color: #737373;
+  font-weight: 500;
   text-transform: uppercase;
+  letter-spacing: 0.3px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
-.khqr-merchant-sub {
-  font-size: 0.68rem;
-  letter-spacing: 1.2px;
-  color: #7A2E22;
-  font-weight: 700;
-  display: block;
-  text-transform: uppercase;
-}
-
-.khqr-order-tag {
-  display: inline-block;
-  background: #F5EFEB;
-  color: #555555;
-  font-size: 0.68rem;
-  font-weight: 600;
-  padding: 2px 8px;
-  border-radius: 4px;
+.total-amount-khqr {
   margin-top: 4px;
 }
 
-/* Amount Row */
-.khqr-amount-row {
-  margin: 0.4rem 0 0.9rem;
-  display: flex;
-  align-items: baseline;
-  justify-content: center;
-  gap: 3px;
-}
-
-.khqr-currency-symbol {
-  font-size: 1.2rem;
+.amount-value {
+  font-size: 21px;
   font-weight: 700;
-  color: #111827;
-}
-
-.khqr-amount-val {
-  font-size: 1.85rem;
-  font-weight: 900;
-  color: #111827;
-  letter-spacing: -0.5px;
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-}
-
-.khqr-khr-equiv {
-  font-size: 0.78rem;
-  font-weight: 500;
-  color: #6B7280;
-  margin-left: 4px;
-}
-
-/* QR Code Outer & Inner Frame */
-.khqr-frame-outer {
-  background: #ffffff;
-  border: 1px solid #E5E7EB;
-  border-radius: 16px;
-  padding: 10px;
-  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.06);
-  margin-bottom: 0.9rem;
-  max-width: 100%;
-}
-
-.khqr-frame-inner {
+  color: #171717;
   position: relative;
+  display: inline-flex;
+  align-items: baseline;
+  gap: 6px;
+}
+
+.amount-currency {
+  font-size: 10px;
+  font-weight: 400;
+  color: #525252;
+}
+
+/* Line Divider (from checkout.html) */
+.line-divider {
+  height: 2px;
+  width: 100%;
+  margin-top: 10px;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.line-divider svg {
+  display: block;
+  width: 100%;
+}
+
+/* QR Code Canvas Area */
+.qr-canvas-box {
+  flex: 1;
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 230px;
-  height: 230px;
-  max-width: 100%;
-  aspect-ratio: 1;
-}
-
-.khqr-loading-box, .khqr-error-box {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 8px;
-  font-size: 0.8rem;
-  color: #666;
-  text-align: center;
-  padding: 12px;
-}
-
-.khqr-error-text {
-  color: #b91c1c;
-  font-size: 0.8rem;
-  margin: 0;
-}
-
-.btn-retry {
-  background: #7A2E22;
-  color: #fff;
-  border: none;
-  font-size: 0.75rem;
-  padding: 4px 12px;
-  border-radius: 6px;
-  cursor: pointer;
-}
-
-.khqr-spinner {
-  width: 28px;
-  height: 28px;
-  border: 3px solid #F5EFEB;
-  border-top-color: #E1251B;
-  border-radius: 50%;
-  animation: spin 0.8s linear infinite;
-}
-
-.canvas-wrap {
   position: relative;
+  padding: 8px;
+  overflow: hidden;
+}
+
+.qr-canvas-holder {
+  position: relative;
+  width: 200px;
+  height: 200px;
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 230px;
-  height: 230px;
-  max-width: 100%;
-  aspect-ratio: 1;
 }
 
-.khqr-canvas {
+.qr-canvas-element {
   display: block !important;
-  width: 230px !important;
-  height: 230px !important;
+  width: 200px !important;
+  height: 200px !important;
   max-width: 100% !important;
   max-height: 100% !important;
-  border-radius: 6px;
+  border-radius: 4px;
   object-fit: contain;
 }
 
-/* Center Emblem */
-.khqr-center-badge {
+/* Center USD Emblem */
+.usd-khqr-badge {
   position: absolute;
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
-  width: 44px;
-  height: 44px;
+  width: 32px;
+  height: 32px;
   background: #ffffff;
-  border: 2.5px solid #E1251B;
+  border: 2px solid #e21a1a;
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
   pointer-events: none;
 }
 
-.center-badge-inner {
-  width: 32px;
-  height: 32px;
-  background: #E1251B;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.center-badge-symbol {
-  color: #ffffff;
-  font-size: 1.1rem;
+.badge-dollar {
+  color: #e21a1a;
   font-weight: 900;
+  font-size: 14px;
   line-height: 1;
 }
 
-/* Banks Section */
-.khqr-banks-section {
-  width: 100%;
-  margin-bottom: 0.9rem;
-}
-
-.khqr-scan-slogan {
-  font-size: 0.72rem;
-  color: #4B5563;
-  font-weight: 500;
-  margin: 0 0 0.5rem 0;
-}
-
-.khqr-bank-pills {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 5px;
-  flex-wrap: wrap;
-}
-
-.bank-pill {
-  font-size: 0.62rem;
-  font-weight: 700;
-  padding: 3px 7px;
-  border-radius: 4px;
-  letter-spacing: 0.2px;
-}
-
-.bank-aba {
-  background: #005D7B;
-  color: #ffffff;
-}
-
-.bank-bakong {
-  background: #E1251B;
-  color: #ffffff;
-}
-
-.bank-wing {
-  background: #8EC03F;
-  color: #111827;
-}
-
-.bank-acleda {
-  background: #0C3C60;
-  color: #F8C300;
-}
-
-.bank-sathapana {
-  background: #0D2E5C;
-  color: #ffffff;
-}
-
-/* Status Card */
-.khqr-status-card {
-  width: 100%;
-  background: #FDF9F6;
-  border: 1px solid #F0E6DD;
-  border-radius: 10px;
-  padding: 0.6rem 0.8rem;
-  margin-bottom: 0.9rem;
-  transition: all 0.3s ease;
-}
-
-.status-approved {
-  background: #F0FDF4;
-  border-color: #BBF7D0;
-}
-
-.status-pending-row, .status-approved-row {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  text-align: left;
-}
-
-.pulsing-indicator {
-  width: 12px;
-  height: 12px;
-  background: #EAB308;
-  border-radius: 50%;
-  box-shadow: 0 0 0 0 rgba(234, 179, 8, 0.7);
-  animation: pulseGold 1.6s infinite;
-  flex-shrink: 0;
-}
-
-.success-icon-wrap {
-  width: 24px;
-  height: 24px;
-  background: #22C55E;
-  color: #ffffff;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-}
-
-.status-texts {
+/* States */
+.khqr-state-box {
   display: flex;
   flex-direction: column;
-  font-size: 0.75rem;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: #666;
+  text-align: center;
 }
 
-.status-texts strong {
-  color: #1F2937;
-  font-size: 0.8rem;
+.status-success strong {
+  color: #16a34a;
+  font-size: 14px;
 }
 
-.text-success {
-  color: #16A34A !important;
+.status-err p {
+  color: #dc2626;
+  font-size: 12px;
+  margin: 0;
 }
 
-.status-texts span {
-  color: #6B7280;
+.btn-retry-khqr {
+  background: #081b37;
+  color: #fff;
+  border: none;
+  font-size: 11px;
+  padding: 4px 10px;
+  border-radius: 4px;
+  cursor: pointer;
 }
 
-.timer-countdown {
-  font-weight: 700;
-  color: #E1251B;
+.khqr-spinner {
+  width: 26px;
+  height: 26px;
+  border: 3px solid #e2e8f0;
+  border-top-color: #e21a1a;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+/* Description from checkout.html */
+.khqr-text-desc {
+  font-size: 13px;
+  line-height: 1.4;
+  color: #555555;
+  text-align: center;
+  max-width: 273px;
+  margin: 16px 0 14px;
 }
 
 /* Actions */
-.khqr-actions {
-  width: 100%;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.btn-demo-simulate {
-  background: linear-gradient(135deg, #FFFBEB 0%, #FEF3C7 100%);
-  border: 1.5px solid #F59E0B;
-  color: #92400E;
-  font-weight: 700;
-  font-size: 0.78rem;
-  padding: 0.65rem 1rem;
-  border-radius: 8px;
-  cursor: pointer;
+.khqr-button-group {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 6px;
-  transition: all 0.2s ease;
-  box-shadow: 0 2px 4px rgba(245, 158, 11, 0.15);
-}
-
-.btn-demo-simulate:hover:not(:disabled) {
-  background: linear-gradient(135deg, #FEF3C7 0%, #FDE68A 100%);
-  transform: translateY(-1px);
-  box-shadow: 0 4px 10px rgba(245, 158, 11, 0.25);
-}
-
-.btn-demo-simulate:disabled {
-  opacity: 0.7;
-  cursor: not-allowed;
-}
-
-.btn-demo-icon {
-  font-size: 0.95rem;
-}
-
-.khqr-secondary-actions {
-  display: flex;
   gap: 8px;
+  width: 100%;
+  flex-wrap: wrap;
 }
 
-.btn-open-aba {
-  flex: 1;
-  background: #005D7B;
-  color: #ffffff;
-  border: none;
-  font-size: 0.75rem;
+.btn-khqr-close, .btn-khqr-copy, .btn-khqr-aba {
+  padding: 8px 14px;
+  font-size: 13px;
   font-weight: 600;
-  padding: 0.55rem;
-  border-radius: 6px;
+  border-radius: 8px;
   cursor: pointer;
+  transition: all 0.15s ease;
 }
 
-.btn-open-aba:hover {
-  background: #004d66;
-}
-
-.btn-copy-link {
-  flex: 1;
+.btn-khqr-close {
   background: #f1f5f9;
-  color: #334155;
   border: 1px solid #cbd5e1;
-  font-size: 0.75rem;
-  font-weight: 600;
-  padding: 0.55rem;
-  border-radius: 6px;
-  cursor: pointer;
+  color: #334155;
 }
 
-.btn-copy-link:hover {
+.btn-khqr-close:hover {
   background: #e2e8f0;
 }
 
-.btn-cancel-khqr {
-  background: #F3F4F6;
-  color: #4B5563;
+.btn-khqr-aba {
+  background: #005d7b;
   border: none;
-  font-size: 0.75rem;
-  font-weight: 600;
-  padding: 0.55rem 0.9rem;
-  border-radius: 6px;
-  cursor: pointer;
+  color: #ffffff;
 }
 
-.btn-cancel-khqr:hover {
-  background: #E5E7EB;
+.btn-khqr-aba:hover {
+  background: #004d66;
+}
+
+.btn-khqr-copy {
+  background: #ffffff;
+  border: 1px solid #cbd5e1;
+  color: #334155;
+}
+
+.btn-khqr-copy:hover {
+  background: #f8fafc;
+}
+
+.btn-demo-sim {
+  margin-top: 12px;
+  width: 100%;
+  padding: 8px 12px;
+  background: #fffbeb;
+  border: 1px solid #fcd34d;
+  color: #92400e;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.btn-demo-sim:hover:not(:disabled) {
+  background: #fef3c7;
+}
+
+.btn-demo-sim:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
 }
 
 @keyframes spin {
   to { transform: rotate(360deg); }
 }
 
-@keyframes pulseGold {
-  0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(234, 179, 8, 0.7); }
-  70% { transform: scale(1); box-shadow: 0 0 0 8px rgba(234, 179, 8, 0); }
-  100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(234, 179, 8, 0); }
-}
-
-@keyframes fadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
-}
-
-@keyframes cardSlideUp {
-  from { opacity: 0; transform: translateY(20px) scale(0.97); }
-  to { opacity: 1; transform: translateY(0) scale(1); }
+@keyframes pulseDot {
+  0% { transform: scale(0.9); opacity: 0.7; }
+  50% { transform: scale(1.15); opacity: 1; }
+  100% { transform: scale(0.9); opacity: 0.7; }
 }
 </style>
