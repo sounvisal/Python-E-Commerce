@@ -5,34 +5,36 @@
       <nav class="breadcrumb-nav" aria-label="Breadcrumb">
         <router-link to="/">Home</router-link>
         <span class="bc-sep">›</span>
-        <router-link to="/cart">Cart</router-link>
+        <router-link to="/cart">Shopping Bag</router-link>
         <span class="bc-sep">›</span>
         <span class="bc-current">Checkout</span>
       </nav>
 
-      <!-- Panoramic Hero Banner matching format/Checkout_Information.png -->
-      <section class="checkout-hero-banner">
-        <div class="hero-left-content">
-          <h1 class="hero-title">Checkout</h1>
-          <p class="hero-desc">Almost there! Complete your order and start your journey to healthier, happier skin.</p>
+      <!-- Refined Editorial Header -->
+      <header class="checkout-editorial-header">
+        <div class="header-titles">
+          <span class="atelier-tag">LUMÉA ATELIER · ORDER CHECKOUT</span>
+          <h1 class="checkout-title">Review & Dispatch</h1>
+          <p class="checkout-subtitle">Authentic dermatological formulations dispatched directly across Cambodia.</p>
         </div>
 
-        <div class="hero-right-stage">
-          <img
-            src="/images/banners/banner-best-sellers-clean.jpg"
-            alt="Luméa Checkout Care"
-            class="hero-banner-image"
-          />
-          <div class="hero-fade-overlay"></div>
-          <div class="banner-script-overlay">
-            <span class="script-row">Good</span>
-            <span class="script-row">Skin Today.</span>
-            <span class="script-row">Brighter</span>
-            <span class="script-row">Tomorrows.</span>
-            <div class="script-underline"></div>
+        <div class="checkout-progress-pills">
+          <div class="progress-pill done">
+            <span class="pill-dot">✓</span>
+            <span>1. Bag</span>
+          </div>
+          <span class="pill-sep">→</span>
+          <div class="progress-pill active">
+            <span class="pill-dot">2</span>
+            <span>2. Delivery & Payment</span>
+          </div>
+          <span class="pill-sep">→</span>
+          <div class="progress-pill">
+            <span class="pill-dot">3</span>
+            <span>3. Order Complete</span>
           </div>
         </div>
-      </section>
+      </header>
 
       <div v-if="cartStore.items.length === 0" class="empty-checkout">
         <p>You have no items in your shopping bag.</p>
@@ -42,82 +44,138 @@
       <form v-else @submit.prevent="handleSubmitOrder" class="checkout-grid">
         <!-- Customer Details & Shipping Form -->
         <div class="checkout-form-section">
-          <!-- Contact Info -->
-          <div class="form-card">
-            <h3>1. Contact Information</h3>
+          <!-- 1. Contact Info Card -->
+          <div class="form-card atelier-card">
+            <div class="card-title-row">
+              <div class="step-num-badge">01</div>
+              <div class="card-title-meta">
+                <h3 class="card-title">Client Information</h3>
+                <span class="card-subtitle">Your contact details for order confirmation & courier handover</span>
+              </div>
+            </div>
+
             <div class="form-row">
               <div class="form-group">
-                <label class="form-label" for="cName">Full Name *</label>
-                <input
-                  type="text"
-                  id="cName"
-                  v-model="form.customer_name"
-                  required
-                  placeholder="e.g. Elena Rostova"
-                  class="form-input"
-                />
+                <label class="form-label" for="cName">
+                  Full Name <span class="req">*</span>
+                </label>
+                <div class="input-with-icon">
+                  <User :size="16" class="input-icon" />
+                  <input
+                    type="text"
+                    id="cName"
+                    v-model="form.customer_name"
+                    required
+                    placeholder="e.g. Sreynich Chan"
+                    class="form-input"
+                  />
+                </div>
               </div>
+
               <div class="form-group">
-                <label class="form-label" for="cEmail">Email Address *</label>
+                <label class="form-label" for="cPhone">
+                  Phone Number (Courier Contact) <span class="req">*</span>
+                </label>
+                <div class="input-with-icon">
+                  <Phone :size="16" class="input-icon" />
+                  <input
+                    type="tel"
+                    id="cPhone"
+                    v-model="form.customer_phone"
+                    required
+                    placeholder="012 345 678 / +855 12 345 678"
+                    class="form-input"
+                  />
+                </div>
+                <span class="field-hint">Used by VET, J&T, or Grab driver to call before arrival</span>
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label" for="cEmail">
+                Email Address <span class="req">*</span>
+              </label>
+              <div class="input-with-icon">
+                <Mail :size="16" class="input-icon" />
                 <input
                   type="email"
                   id="cEmail"
                   v-model="form.customer_email"
                   required
-                  placeholder="elena@example.com"
+                  placeholder="sreynich.chan@example.com"
                   class="form-input"
                 />
               </div>
-            </div>
-
-            <div class="form-group">
-              <label class="form-label" for="cPhone">Phone Number (For delivery updates)</label>
-              <input
-                type="tel"
-                id="cPhone"
-                v-model="form.customer_phone"
-                placeholder="+1 (555) 019-2834"
-                class="form-input"
-              />
+              <span class="field-hint">Your itemized digital invoice & tracking link will be sent here</span>
             </div>
           </div>
 
-          <!-- Shipping Address -->
-          <div class="form-card">
-            <h3>2. White-Glove Delivery Address</h3>
-            <div class="form-group">
-              <label class="form-label" for="sAddress">Street Address *</label>
-              <input
-                type="text"
-                id="sAddress"
-                v-model="form.shipping_address"
-                required
-                placeholder="452 Architectural Boulevard, Apt 14B"
-                class="form-input"
-              />
+          <!-- 2. Delivery Address & Cambodia Courier Card (Postal code completely removed!) -->
+          <div class="form-card atelier-card">
+            <div class="card-title-row">
+              <div class="step-num-badge">02</div>
+              <div class="card-title-meta">
+                <h3 class="card-title">Delivery & Courier Dispatch</h3>
+                <span class="card-subtitle">Select your province, address, preferred Cambodian courier, and pin location</span>
+              </div>
             </div>
 
             <div class="form-row">
               <div class="form-group">
-                <label class="form-label" for="sCity">City / Province *</label>
-                <input
-                  type="text"
-                  id="sCity"
-                  v-model="form.shipping_city"
-                  required
-                  placeholder="Phnom Penh / Siem Reap / Battambang"
-                  class="form-input"
-                />
+                <label class="form-label" for="sCity">
+                  Province / City <span class="req">*</span>
+                </label>
+                <div class="select-wrapper">
+                  <select
+                    id="sCity"
+                    v-model="form.shipping_city"
+                    required
+                    class="form-select"
+                  >
+                    <option value="Phnom Penh">Phnom Penh (Capital)</option>
+                    <option value="Siem Reap">Siem Reap</option>
+                    <option value="Battambang">Battambang</option>
+                    <option value="Sihanoukville">Sihanoukville (Preah Sihanouk)</option>
+                    <option value="Kampot">Kampot</option>
+                    <option value="Kandal">Kandal</option>
+                    <option value="Banteay Meanchey">Banteay Meanchey</option>
+                    <option value="Kampong Cham">Kampong Cham</option>
+                    <option value="Kampong Chhnang">Kampong Chhnang</option>
+                    <option value="Kampong Speu">Kampong Speu</option>
+                    <option value="Kampong Thom">Kampong Thom</option>
+                    <option value="Kep">Kep</option>
+                    <option value="Koh Kong">Koh Kong</option>
+                    <option value="Kratie">Kratie</option>
+                    <option value="Mondulkiri">Mondulkiri</option>
+                    <option value="Oddar Meanchey">Oddar Meanchey</option>
+                    <option value="Pailin">Pailin</option>
+                    <option value="Preah Vihear">Preah Vihear</option>
+                    <option value="Prey Veng">Prey Veng</option>
+                    <option value="Pursat">Pursat</option>
+                    <option value="Ratanakiri">Ratanakiri</option>
+                    <option value="Stung Treng">Stung Treng</option>
+                    <option value="Svay Rieng">Svay Rieng</option>
+                    <option value="Takeo">Takeo</option>
+                    <option value="Tboung Khmum">Tboung Khmum</option>
+                  </select>
+                </div>
               </div>
+
               <div class="form-group">
-                <label class="form-label" for="sZip">Postal / ZIP Code</label>
-                <input
-                  type="text"
-                  id="sZip"
-                  v-model="form.shipping_postal_code"
-                  placeholder="12000"
-                  class="form-input"
-                />
+                <label class="form-label" for="sAddress">
+                  Street Address, Sangkat & Khan <span class="req">*</span>
+                </label>
+                <div class="input-with-icon">
+                  <MapPin :size="16" class="input-icon" />
+                  <input
+                    type="text"
+                    id="sAddress"
+                    v-model="form.shipping_address"
+                    required
+                    placeholder="e.g. #12A, Street 240, Sangkat Chaktomuk, Khan Daun Penh"
+                    class="form-input"
+                  />
+                </div>
               </div>
             </div>
 
@@ -138,136 +196,103 @@
             />
           </div>
 
-          <!-- Payment Simulation -->
-          <div class="form-card">
-            <h3>3. Payment Method</h3>
-            <div class="payment-options">
+          <!-- 3. Payment Selection -->
+          <div class="form-card atelier-card">
+            <div class="card-title-row">
+              <div class="step-num-badge">03</div>
+              <div class="card-title-meta">
+                <h3 class="card-title">Payment Selection</h3>
+                <span class="card-subtitle">Choose instant bank QR clearance or cash on doorstep delivery</span>
+              </div>
+            </div>
+
+            <div class="payment-options-grid">
               <!-- 1. Bakong KHQR Option -->
               <label
-                class="payment-option khqr-payment-option"
+                class="payment-option-card khqr-card-option"
                 :class="{ selected: form.payment_method === 'khqr' }"
               >
-                <input
-                  type="radio"
-                  v-model="form.payment_method"
-                  value="khqr"
-                  name="payMethod"
-                />
-                <div class="pay-label">
-                  <div class="khqr-badge-mini">
-                    <span class="badge-kh">KH</span>
-                    <span class="badge-qr">QR</span>
-                  </div>
-                  <div class="pay-details-col">
-                    <div class="pay-title-row">
-                      <strong>Bakong KHQR &middot; ABA Mobile</strong>
-                      <span class="badge-popular-kh">Instant Scan</span>
+                <div class="option-radio-wrap">
+                  <input
+                    type="radio"
+                    v-model="form.payment_method"
+                    value="khqr"
+                    name="payMethod"
+                  />
+                </div>
+                <div class="option-content">
+                  <div class="option-header-row">
+                    <div class="khqr-emblem-badge">
+                      <span class="emblem-kh">KH</span>
+                      <span class="emblem-qr">QR</span>
                     </div>
-                    <span class="pay-desc-sub">ABA, Bakong, Wing, ACLEDA &amp; all Cambodian banking apps</span>
+                    <div class="option-title-group">
+                      <strong class="option-title">Bakong KHQR · ABA Mobile</strong>
+                      <span class="instant-pill">⚡ Instant Clearance</span>
+                    </div>
+                  </div>
+                  <p class="option-desc">Scan with ABA Mobile, Bakong, Wing, ACLEDA, Sathapana, or any Cambodian banking app.</p>
+                  <div class="option-banks-preview">
+                    <span class="bank-pill">ABA'Mobile</span>
+                    <span class="bank-pill">Bakong</span>
+                    <span class="bank-pill">Wing</span>
+                    <span class="bank-pill">ACLEDA</span>
+                    <span class="bank-pill">+ All Banks</span>
                   </div>
                 </div>
               </label>
 
-              <!-- 2. Credit Card -->
+              <!-- 2. Cash on Delivery -->
               <label
-                v-if="!hostedCheckout"
-                class="payment-option"
-                :class="{ selected: form.payment_method === 'card' }"
-              >
-                <input
-                  type="radio"
-                  v-model="form.payment_method"
-                  value="card" disabled
-                  name="payMethod"
-                />
-                <div class="pay-label">
-                  <CreditCard :size="18" />
-                  <span>Credit / Debit Card (coming soon)</span>
-                </div>
-              </label>
-
-              <!-- 3. Apple Pay -->
-              <label
-                v-if="!hostedCheckout"
-                class="payment-option"
-                :class="{ selected: form.payment_method === 'apple_pay' }"
-              >
-                <input
-                  type="radio"
-                  v-model="form.payment_method"
-                  value="apple_pay" disabled
-                  name="payMethod"
-                />
-                <div class="pay-label">
-                  <Smartphone :size="18" />
-                  <span>Apple Pay (coming soon)</span>
-                </div>
-              </label>
-
-              <!-- 4. Cash on Delivery -->
-              <label
-                class="payment-option"
+                class="payment-option-card cod-card-option"
                 :class="{ selected: form.payment_method === 'cod' }"
               >
-                <input
-                  type="radio"
-                  v-model="form.payment_method"
-                  value="cod"
-                  name="payMethod"
-                />
-                <div class="pay-label">
-                  <Truck :size="18" />
-                  <span>Cash on delivery</span>
+                <div class="option-radio-wrap">
+                  <input
+                    type="radio"
+                    v-model="form.payment_method"
+                    value="cod"
+                    name="payMethod"
+                  />
+                </div>
+                <div class="option-content">
+                  <div class="option-header-row">
+                    <div class="cod-emblem-badge">
+                      <Truck :size="18" />
+                    </div>
+                    <div class="option-title-group">
+                      <strong class="option-title">Cash on Delivery (COD)</strong>
+                      <span class="cod-pill">Doorstep Handover</span>
+                    </div>
+                  </div>
+                  <p class="option-desc">Pay in cash (USD $ or KHR ៛) directly to the delivery driver upon receiving your package.</p>
+                  <div class="option-banks-preview">
+                    <span class="bank-pill">💵 USD Cash</span>
+                    <span class="bank-pill">៛ Khmer Riel</span>
+                    <span class="bank-pill">Zero Surcharge</span>
+                  </div>
                 </div>
               </label>
             </div>
 
-            <!-- KHQR Info Box -->
-            <div v-if="form.payment_method === 'khqr'" class="khqr-teaser-box">
-              <div class="teaser-icon-wrap">
-                <QrCode :size="26" class="teaser-qr-icon" />
+            <!-- Dynamic Teaser Note -->
+            <div v-if="form.payment_method === 'khqr'" class="payment-teaser-box">
+              <div class="teaser-icon">
+                <QrCode :size="24" />
               </div>
-              <div class="teaser-body">
-                <strong>Dynamic Bakong KHQR will be generated upon authorization</strong>
-                <p>Scan with ABA Mobile or any Bakong-enabled app for real-time clearance. Includes 1-click evaluation demo mode for presentation.</p>
+              <div class="teaser-text">
+                <strong>Dynamic NBC-Certified Bakong QR</strong>
+                <p>An official KHQR code with your order amount will be generated when you place this order. Includes real-time ABA bank clearance and evaluation demo mode.</p>
               </div>
             </div>
 
-            <div v-if="form.payment_method === 'card'" class="card-inputs">
-              <div class="form-group">
-                <label class="form-label" for="cardNum">Card Number</label>
-                <input
-                  id="cardNum"
-                  type="text"
-                  placeholder="4242 •••• •••• 4242"
-                  class="form-input"
-                  v-model="form.card_number"
-                  maxlength="19"
-                />
+            <div v-else-if="form.payment_method === 'cod'" class="payment-teaser-box cod-teaser">
+              <div class="teaser-icon">
+                <CheckCircle2 :size="24" />
               </div>
-              <div class="form-row">
-                <div class="form-group">
-                  <label class="form-label" for="cardExp">Expiry</label>
-                  <input
-                    id="cardExp"
-                    type="text"
-                    placeholder="MM/YY"
-                    class="form-input"
-                    v-model="form.card_expiry"
-                    maxlength="5"
-                  />
-                </div>
-                <div class="form-group">
-                  <label class="form-label" for="cardCvc">CVC</label>
-                  <input
-                    id="cardCvc"
-                    type="text"
-                    placeholder="CVC"
-                    class="form-input"
-                    v-model="form.card_cvc"
-                    maxlength="4"
-                  />
-                </div>
+              <div class="teaser-text">
+                <strong>No Advance Payment Required</strong>
+                <p>Your order will be packaged at our atelier and dispatched immediately via {{ selectedCarrierName }}. Please prepare the exact cash amount ($ or ៛) for the courier.</p>
               </div>
             </div>
           </div>
@@ -277,13 +302,16 @@
             <div class="action-card-header">
               <div class="action-total-group">
                 <span class="action-total-lbl">Total Payable (with Delivery)</span>
-                <span class="action-total-val">${{ cartStore.grandTotal.toFixed(2) }}</span>
+                <div class="action-total-price-row">
+                  <span class="action-total-val">${{ cartStore.grandTotal.toFixed(2) }}</span>
+                  <span class="action-total-khr">≈ {{ khrEquivalent }} KHR</span>
+                </div>
               </div>
               <div class="action-payment-preview">
                 <span class="preview-badge" :class="form.payment_method">
                   <span v-if="form.payment_method === 'khqr'">🇰HM Bakong KHQR · ABA Mobile</span>
                   <span v-else-if="form.payment_method === 'cod'">💵 Cash on Delivery</span>
-                  <span v-else>💳 Credit / Debit Card</span>
+                  <span v-else>💳 Card</span>
                 </span>
                 <span class="carrier-preview">via {{ selectedCarrierName }}</span>
               </div>
@@ -327,23 +355,29 @@
           </div>
         </div>
 
-        <!-- Order Summary Side Panel -->
+        <!-- Order Summary Side Panel (Sticky on Desktop) -->
         <aside class="order-summary-panel">
-          <div class="summary-card">
-            <h3>Order Overview</h3>
+          <div class="summary-card atelier-summary-card">
+            <div class="summary-header">
+              <h3 class="summary-title">Order Overview</h3>
+              <span class="summary-badge">{{ cartStore.items.length }} {{ cartStore.items.length === 1 ? 'item' : 'items' }}</span>
+            </div>
 
             <!-- Item Mini List -->
             <div class="summary-items">
               <div v-for="item in cartStore.items" :key="item.id" class="summary-item">
-                <img
-                  :src="item.image_url"
-                  :alt="item.name"
-                  class="mini-img"
-                  @error="$event.target.src = '/images/prod-essence.jpg'"
-                />
+                <div class="mini-img-wrap">
+                  <img
+                    :src="item.image_url"
+                    :alt="item.name"
+                    class="mini-img"
+                    @error="$event.target.src = '/images/prod-essence.jpg'"
+                  />
+                  <span class="mini-qty-badge">{{ item.quantity }}</span>
+                </div>
                 <div class="mini-info">
                   <span class="mini-title">{{ item.name }}</span>
-                  <span class="mini-qty">Qty: {{ item.quantity }}</span>
+                  <span class="mini-subtext">${{ item.price.toFixed(2) }} each</span>
                 </div>
                 <span class="mini-price">
                   ${{ (item.price * item.quantity).toFixed(2) }}
@@ -364,16 +398,21 @@
                 <span>-${{ cartStore.discountAmount.toFixed(2) }}</span>
               </div>
               <div class="b-row">
-                <span>Shipping (White-Glove)</span>
-                <span>{{ cartStore.shippingFee === 0 ? 'Complimentary' : `$${cartStore.shippingFee.toFixed(2)}` }}</span>
+                <span>Delivery ({{ selectedCarrierName }})</span>
+                <span :class="{ 'free-shipping-tag': cartStore.shippingFee === 0 }">
+                  {{ cartStore.shippingFee === 0 ? 'FREE' : `$${cartStore.shippingFee.toFixed(2)}` }}
+                </span>
               </div>
               <div class="b-row grand-total">
-                <span>Grand Total</span>
+                <div class="grand-label-col">
+                  <span>Grand Total</span>
+                  <span class="khr-hint">≈ {{ khrEquivalent }} KHR</span>
+                </div>
                 <span class="grand-num">${{ cartStore.grandTotal.toFixed(2) }}</span>
               </div>
             </div>
 
-            <!-- Error Banner -->
+            <!-- Error Banner in sidebar -->
             <div v-if="submitError" class="error-banner">
               {{ submitError }}
             </div>
@@ -389,7 +428,7 @@
             </button>
 
             <p class="terms-note">
-              By authorizing this order, you agree to the LUMEA Terms of Concierge Service. All transactions are 256-bit encrypted.
+              Transactions are protected by 256-bit encryption. Handcrafted delivery by certified Cambodian logistics.
             </p>
           </div>
         </aside>
@@ -417,7 +456,7 @@ import { useCartStore } from '@/stores/cart'
 import { useOrdersStore } from '@/stores/orders'
 import { useAuthStore } from '@/stores/auth'
 import { useNotificationStore } from '@/stores/notification'
-import { CreditCard, Smartphone, Truck, QrCode, ShieldCheck, Lock, ArrowRight } from 'lucide-vue-next'
+import { User, Phone, Mail, MapPin, Truck, QrCode, ShieldCheck, Lock, ArrowRight, CheckCircle2, CreditCard } from 'lucide-vue-next'
 import { rememberOrderAccess } from '@/utils/orderAccess'
 import KHQRModal from '@/components/checkout/KHQRModal.vue'
 import DeliveryCarrierSelector from '@/components/checkout/DeliveryCarrierSelector.vue'
@@ -487,6 +526,10 @@ const selectedCarrierName = computed(() => {
     lumea_concierge: 'Luméa Concierge'
   }
   return map[form.shipping_carrier] || 'Domestic Courier'
+})
+
+const khrEquivalent = computed(() => {
+  return Math.round(cartStore.grandTotal * 4100).toLocaleString('en-US')
 })
 
 const submitButtonText = computed(() => {
@@ -610,7 +653,9 @@ const handleKHQRCancelled = (result) => {
 
 <style scoped>
 .checkout-page {
-  padding: 1rem 0 4rem;
+  padding: 1rem 0 5rem;
+  background: #FCFAF8;
+  min-height: 100vh;
 }
 
 /* Breadcrumbs */
@@ -620,7 +665,7 @@ const handleKHQRCancelled = (result) => {
   gap: 0.5rem;
   font-size: 0.85rem;
   color: #78716C;
-  margin-bottom: 0.85rem;
+  margin-bottom: 1.25rem;
 }
 
 .breadcrumb-nav a {
@@ -630,413 +675,481 @@ const handleKHQRCancelled = (result) => {
 }
 
 .breadcrumb-nav a:hover {
-  color: #8E4A3E;
+  color: #7A2E22;
 }
 
 .bc-sep {
-  color: #A8A29E;
+  color: #D6D3D1;
 }
 
 .bc-current {
-  color: #8E4A3E;
-  font-weight: 500;
+  color: #7A2E22;
+  font-weight: 600;
 }
 
-/* Panoramic Hero Banner matching format/Checkout_Information.png */
-.checkout-hero-banner {
-  background: linear-gradient(135deg, #FAF7F2 0%, #F5EFE7 50%, #ECE4DB 100%);
-  border-radius: 18px;
-  border: 1px solid rgba(234, 229, 223, 0.7);
-  box-shadow: 0 4px 20px rgba(28, 25, 23, 0.03);
-  display: grid;
-  grid-template-columns: 1.15fr 1.1fr;
-  min-height: 275px;
+/* Refined Editorial Header */
+.checkout-editorial-header {
+  background: linear-gradient(135deg, #FAF7F2 0%, #F5EFEB 100%);
+  border-radius: 20px;
+  border: 1px solid rgba(122, 46, 34, 0.12);
+  box-shadow: 0 4px 20px rgba(122, 46, 34, 0.03);
+  padding: 2rem 2.5rem;
   margin-bottom: 2.25rem;
-  overflow: hidden;
-  align-items: stretch;
-  position: relative;
-  animation: heroEntrance 0.6s cubic-bezier(0.16, 1, 0.3, 1) both;
-}
-
-@keyframes heroEntrance {
-  from { opacity: 0; transform: translateY(12px); }
-  to { opacity: 1; transform: translateY(0); }
-}
-
-.hero-left-content {
-  padding: 1.75rem 2.5rem;
   display: flex;
-  flex-direction: column;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 1.5rem;
+}
+
+.atelier-tag {
+  display: inline-block;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  color: #7A2E22;
+  margin-bottom: 0.35rem;
+}
+
+.checkout-title {
+  font-family: var(--font-serif, 'Playfair Display', serif);
+  font-size: 2.25rem;
+  font-weight: 700;
+  color: #1F2937;
+  line-height: 1.15;
+  margin: 0 0 0.4rem;
+}
+
+.checkout-subtitle {
+  font-size: 0.95rem;
+  color: #57534E;
+  margin: 0;
+  max-width: 520px;
+  line-height: 1.5;
+}
+
+.checkout-progress-pills {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  background: #FFFFFF;
+  padding: 0.65rem 1.15rem;
+  border-radius: 999px;
+  border: 1px solid rgba(122, 46, 34, 0.1);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.02);
+}
+
+.progress-pill {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: #A8A29E;
+}
+
+.progress-pill.done {
+  color: #15803D;
+}
+
+.progress-pill.active {
+  color: #7A2E22;
+}
+
+.pill-dot {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: #F5EFEB;
+  color: #78716C;
+  font-size: 0.75rem;
+  display: flex;
+  align-items: center;
   justify-content: center;
 }
 
-.hero-title {
-  font-family: var(--font-serif, 'Playfair Display', serif);
-  font-size: 2.75rem;
-  font-weight: 700;
-  color: #111C38;
-  line-height: 1.15;
-  letter-spacing: -0.01em;
-  margin-bottom: 0.5rem;
+.progress-pill.active .pill-dot {
+  background: #7A2E22;
+  color: #FFFFFF;
 }
 
-.hero-desc {
-  font-family: var(--font-sans, 'Plus Jakarta Sans', sans-serif);
-  font-size: 1.15rem;
-  line-height: 1.55;
-  color: #44403C;
-  max-width: 520px;
+.progress-pill.done .pill-dot {
+  background: #DCFCE7;
+  color: #15803D;
 }
 
-.hero-right-stage {
-  position: relative;
-  width: 100%;
-  min-height: 275px;
-  overflow: hidden;
+.pill-sep {
+  color: #D6D3D1;
+  font-size: 0.85rem;
 }
 
-.hero-banner-image {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  object-position: center 25%;
-  display: block;
-  -webkit-mask-image: linear-gradient(to right, transparent 0%, black 15%);
-  mask-image: linear-gradient(to right, transparent 0%, black 15%);
-}
-
-.hero-fade-overlay {
-  position: absolute;
-  top: 0;
-  bottom: 0;
-  left: 0;
-  width: 100px;
-  background: linear-gradient(to right, #FAF7F2, transparent);
-  pointer-events: none;
-}
-
-.banner-script-overlay {
-  position: absolute;
-  top: 2rem;
-  right: 2.5rem;
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  pointer-events: none;
-}
-
-.script-row {
-  font-family: var(--font-script, 'Cormorant Garamond', Georgia, serif);
-  font-style: italic;
-  font-weight: 700;
-  font-size: 1.7rem;
-  line-height: 1.15;
-  color: #8E4A3E;
-  text-shadow: 0 2px 8px rgba(255, 255, 255, 0.85);
-}
-
-.script-underline {
-  width: 42px;
-  height: 2px;
-  background: #8E4A3E;
-  margin-top: 0.5rem;
-}
-
+/* Empty Checkout */
 .empty-checkout {
   padding: 4rem 2rem;
   text-align: center;
-  background: var(--bg-surface);
-  border-radius: var(--radius-lg);
+  background: #FFFFFF;
+  border-radius: 20px;
+  border: 1px solid #EFEAE3;
 }
 
+/* Main Grid */
 .checkout-grid {
   display: grid;
-  grid-template-columns: 1fr 420px;
-  gap: 3.5rem;
+  grid-template-columns: 1fr 400px;
+  gap: 2.75rem;
   align-items: start;
 }
 
-.form-card {
-  background: var(--bg-surface);
-  border-radius: var(--radius-xl);
-  border: 1px solid var(--border-subtle);
-  padding: 2rem;
+/* Atelier Cards */
+.atelier-card {
+  background: #FFFFFF;
+  border-radius: 20px;
+  border: 1.5px solid rgba(234, 229, 223, 0.85);
+  padding: 2.25rem;
   margin-bottom: 2rem;
+  box-shadow: 0 4px 20px rgba(28, 25, 23, 0.025);
+  transition: all 0.25s ease;
 }
 
-.form-card h3 {
-  font-size: 1.2rem;
-  margin-bottom: 1.5rem;
+.atelier-card:hover {
+  border-color: rgba(122, 46, 34, 0.2);
+  box-shadow: 0 8px 24px rgba(122, 46, 34, 0.04);
 }
 
-.form-row {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 1.25rem;
-}
-
-.payment-options {
-  display: flex;
-  flex-direction: column;
-  gap: 0.75rem;
-  margin-bottom: 1.5rem;
-}
-
-.payment-option {
+.card-title-row {
   display: flex;
   align-items: center;
-  gap: 0.75rem;
-  padding: 1rem 1.25rem;
-  border: 1px solid var(--border-strong);
-  border-radius: var(--radius-md);
-  cursor: pointer;
-  transition: all var(--transition-fast);
+  gap: 1.15rem;
+  margin-bottom: 1.75rem;
+  padding-bottom: 1.15rem;
+  border-bottom: 1px solid #F5EFEB;
 }
 
-.payment-option.selected {
-  border-color: var(--text-primary);
-  background: var(--bg-muted);
-}
-
-.pay-label {
-  display: flex;
-  align-items: center;
-  gap: 0.6rem;
-  font-size: 0.9rem;
-  font-weight: 500;
-}
-
-.card-inputs {
-  padding: 1.25rem;
-  background: var(--bg-muted);
-  border-radius: var(--radius-md);
-}
-
-/* Bakong KHQR Payment Option Styling */
-.khqr-payment-option {
-  border-color: rgba(225, 37, 27, 0.25);
-  background: #fffafa;
-}
-
-.khqr-payment-option.selected {
-  border-color: #E1251B;
-  background: #FFF5F5;
-  box-shadow: 0 0 0 1px #E1251B;
-}
-
-.khqr-badge-mini {
-  display: flex;
-  align-items: center;
-  gap: 2px;
-  background: #E1251B;
-  color: #ffffff;
-  padding: 3px 6px;
-  border-radius: 4px;
-  line-height: 1;
-}
-
-.badge-kh {
-  font-size: 0.82rem;
-  font-weight: 900;
-  letter-spacing: -0.5px;
-}
-
-.badge-qr {
-  font-size: 0.72rem;
-  font-weight: 800;
-  background: #ffffff;
-  color: #E1251B;
-  padding: 1px 3px;
-  border-radius: 2px;
-}
-
-.pay-details-col {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  text-align: left;
-}
-
-.pay-title-row {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.badge-popular-kh {
-  font-size: 0.65rem;
+.step-num-badge {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  background: #FAF7F2;
+  border: 1.5px solid #7A2E22;
+  color: #7A2E22;
+  font-family: var(--font-serif, 'Playfair Display', serif);
+  font-size: 0.95rem;
   font-weight: 700;
-  background: #E1251B;
-  color: #ffffff;
-  padding: 2px 6px;
-  border-radius: 10px;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-}
-
-.pay-desc-sub {
-  font-size: 0.76rem;
-  color: #6B7280;
-  font-weight: 400;
-}
-
-/* KHQR Teaser Box */
-.khqr-teaser-box {
-  display: flex;
-  align-items: flex-start;
-  gap: 12px;
-  background: #FFFBF8;
-  border: 1px solid #F5EFEB;
-  border-left: 3px solid #E1251B;
-  padding: 1rem 1.25rem;
-  border-radius: var(--radius-md);
-  margin-bottom: 1.5rem;
-}
-
-.teaser-icon-wrap {
-  background: #FFF0F0;
-  color: #E1251B;
-  padding: 6px;
-  border-radius: 8px;
   display: flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
 }
 
-.teaser-body strong {
-  display: block;
-  font-size: 0.85rem;
+.card-title {
+  font-family: var(--font-serif, 'Playfair Display', serif);
+  font-size: 1.35rem;
+  font-weight: 700;
   color: #1F2937;
-  margin-bottom: 2px;
-}
-
-.teaser-body p {
   margin: 0;
-  font-size: 0.78rem;
-  color: #6B7280;
-  line-height: 1.4;
+  line-height: 1.2;
 }
 
-.summary-card {
-  background: var(--bg-surface);
-  border-radius: var(--radius-xl);
-  border: 1px solid var(--border-subtle);
-  padding: 2rem;
-  box-shadow: var(--shadow-sm);
+.card-subtitle {
+  font-size: 0.82rem;
+  color: #78716C;
+  margin-top: 0.25rem;
+  display: block;
 }
 
-.summary-card h3 {
-  font-size: 1.25rem;
+/* Form Groups & Inputs */
+.form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.25rem;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  margin-bottom: 1.25rem;
+}
+
+.form-label {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #374151;
+  margin-bottom: 0.45rem;
+}
+
+.req {
+  color: #B91C1C;
+}
+
+.input-with-icon {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.input-icon {
+  position: absolute;
+  left: 1rem;
+  color: #9CA3AF;
+  pointer-events: none;
+  transition: color 0.2s ease;
+}
+
+.form-input {
+  width: 100%;
+  height: 48px;
+  border-radius: 12px;
+  border: 1.5px solid #E5DFD7;
+  background: #FFFFFF;
+  padding: 0 1rem 0 2.75rem;
+  font-size: 0.92rem;
+  color: #1F2937;
+  transition: all 0.2s ease;
+}
+
+.form-input:focus {
+  border-color: #7A2E22;
+  box-shadow: 0 0 0 3px rgba(122, 46, 34, 0.12);
+  outline: none;
+}
+
+.input-with-icon:focus-within .input-icon {
+  color: #7A2E22;
+}
+
+.select-wrapper {
+  position: relative;
+}
+
+.form-select {
+  width: 100%;
+  height: 48px;
+  border-radius: 12px;
+  border: 1.5px solid #E5DFD7;
+  background: #FFFFFF;
+  padding: 0 1rem;
+  font-size: 0.92rem;
+  color: #1F2937;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.form-select:focus {
+  border-color: #7A2E22;
+  box-shadow: 0 0 0 3px rgba(122, 46, 34, 0.12);
+  outline: none;
+}
+
+.field-hint {
+  font-size: 0.74rem;
+  color: #78716C;
+  margin-top: 0.35rem;
+}
+
+/* Payment Options Grid */
+.payment-options-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.25rem;
   margin-bottom: 1.5rem;
 }
 
-.summary-items {
+.payment-option-card {
+  position: relative;
   display: flex;
-  flex-direction: column;
-  gap: 1rem;
-  max-height: 280px;
-  overflow-y: auto;
-}
-
-.summary-item {
-  display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 0.85rem;
+  padding: 1.35rem;
+  border: 1.5px solid #E5DFD7;
+  border-radius: 16px;
+  background: #FFFFFF;
+  cursor: pointer;
+  transition: all 0.25s ease;
 }
 
-.mini-img {
-  width: 52px;
-  height: 52px;
-  object-fit: cover;
-  border-radius: var(--radius-sm);
-  background: var(--bg-muted);
+.payment-option-card:hover {
+  border-color: #7A2E22;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 18px rgba(122, 46, 34, 0.06);
 }
 
-.mini-info {
+.payment-option-card.selected {
+  border-color: #7A2E22;
+  background: #FAF7F2;
+  box-shadow: 0 0 0 1px #7A2E22, 0 6px 20px rgba(122, 46, 34, 0.08);
+}
+
+.khqr-card-option.selected {
+  border-color: #E1251B;
+  background: #FFF9F9;
+  box-shadow: 0 0 0 1px #E1251B, 0 6px 20px rgba(225, 37, 27, 0.08);
+}
+
+.option-radio-wrap {
+  padding-top: 2px;
+}
+
+.option-radio-wrap input[type="radio"] {
+  accent-color: #7A2E22;
+  width: 17px;
+  height: 17px;
+  cursor: pointer;
+}
+
+.khqr-card-option input[type="radio"] {
+  accent-color: #E1251B;
+}
+
+.option-content {
   flex: 1;
   display: flex;
   flex-direction: column;
+  gap: 0.45rem;
 }
 
-.mini-title {
-  font-size: 0.85rem;
-  font-weight: 600;
-  color: var(--text-primary);
-  line-height: 1.3;
+.option-header-row {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  flex-wrap: wrap;
 }
 
-.mini-qty {
+.khqr-emblem-badge {
+  display: flex;
+  align-items: center;
+  background: #E1251B;
+  color: #FFFFFF;
+  padding: 3px 6px;
+  border-radius: 6px;
+  font-weight: 800;
   font-size: 0.75rem;
-  color: var(--text-muted);
+  line-height: 1;
 }
 
-.mini-price {
-  font-weight: 600;
-  font-size: 0.9rem;
+.emblem-qr {
+  background: #FFFFFF;
+  color: #E1251B;
+  padding: 1px 3px;
+  border-radius: 3px;
+  margin-left: 2px;
 }
 
-.summary-divider {
-  border: none;
-  border-top: 1px solid var(--border-subtle);
-  margin: 1.5rem 0;
-}
-
-.breakdown {
+.cod-emblem-badge {
+  background: #FAF7F2;
+  color: #7A2E22;
+  padding: 6px;
+  border-radius: 8px;
   display: flex;
-  flex-direction: column;
-  gap: 0.75rem;
-  margin-bottom: 1.75rem;
+  align-items: center;
+  justify-content: center;
 }
 
-.b-row {
+.option-title-group {
   display: flex;
-  justify-content: space-between;
-  font-size: 0.88rem;
-  color: var(--text-secondary);
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
 }
 
-.discount-text {
-  color: #10B981;
-}
-
-.grand-total {
-  padding-top: 0.85rem;
-  border-top: 1px solid var(--border-subtle);
-  font-size: 1.15rem;
+.option-title {
+  font-size: 0.95rem;
   font-weight: 700;
-  color: var(--text-primary);
+  color: #1F2937;
 }
 
-.grand-num {
-  font-size: 1.35rem;
+.instant-pill {
+  font-size: 0.65rem;
+  font-weight: 700;
+  background: #E1251B;
+  color: #FFFFFF;
+  padding: 2px 7px;
+  border-radius: 12px;
+  text-transform: uppercase;
 }
 
-.error-banner {
-  background: #FEE2E2;
-  color: #B91C1C;
-  padding: 0.75rem 1rem;
-  border-radius: var(--radius-md);
-  font-size: 0.85rem;
-  margin-bottom: 1rem;
+.cod-pill {
+  font-size: 0.65rem;
+  font-weight: 700;
+  background: #F5EFEB;
+  color: #7A2E22;
+  padding: 2px 7px;
+  border-radius: 12px;
+  text-transform: uppercase;
 }
 
-.btn-block {
-  width: 100%;
+.option-desc {
+  font-size: 0.8rem;
+  color: #57534E;
+  line-height: 1.4;
+  margin: 0;
 }
 
-.order-summary-panel {
-  position: sticky;
-  top: 90px;
+.option-banks-preview {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  margin-top: 0.35rem;
 }
 
+.bank-pill {
+  font-size: 0.68rem;
+  font-weight: 600;
+  padding: 2px 7px;
+  border-radius: 6px;
+  background: #F3F4F6;
+  color: #4B5563;
+}
+
+/* Payment Teaser Box */
+.payment-teaser-box {
+  display: flex;
+  align-items: flex-start;
+  gap: 1rem;
+  background: #FFF8F8;
+  border: 1px solid rgba(225, 37, 27, 0.2);
+  border-left: 4px solid #E1251B;
+  padding: 1.15rem 1.35rem;
+  border-radius: 14px;
+}
+
+.payment-teaser-box.cod-teaser {
+  background: #FDFBF8;
+  border: 1px solid rgba(122, 46, 34, 0.18);
+  border-left: 4px solid #7A2E22;
+}
+
+.teaser-icon {
+  color: #E1251B;
+  flex-shrink: 0;
+  padding-top: 2px;
+}
+
+.payment-teaser-box.cod-teaser .teaser-icon {
+  color: #7A2E22;
+}
+
+.teaser-text strong {
+  display: block;
+  font-size: 0.88rem;
+  color: #1F2937;
+  margin-bottom: 0.25rem;
+}
+
+.teaser-text p {
+  font-size: 0.8rem;
+  color: #57534E;
+  line-height: 1.45;
+  margin: 0;
+}
+
+/* Final Action Card */
 .checkout-final-action-card {
-  background: linear-gradient(180deg, #FBF8F5 0%, #F5EFEB 100%);
+  background: linear-gradient(180deg, #FDFBF9 0%, #F5EFEB 100%);
   border: 1.5px solid rgba(122, 46, 34, 0.22);
-  border-radius: 20px;
-  padding: 2rem;
-  box-shadow: 0 10px 30px rgba(122, 46, 34, 0.08);
-  margin-top: 1.5rem;
+  border-radius: 22px;
+  padding: 2.25rem;
+  box-shadow: 0 10px 32px rgba(122, 46, 34, 0.08);
+  margin-top: 2rem;
 }
 
 .action-card-header {
@@ -1045,9 +1158,9 @@ const handleKHQRCancelled = (result) => {
   align-items: center;
   flex-wrap: wrap;
   gap: 1rem;
-  padding-bottom: 1.25rem;
+  padding-bottom: 1.35rem;
   border-bottom: 1px solid rgba(122, 46, 34, 0.12);
-  margin-bottom: 1.25rem;
+  margin-bottom: 1.35rem;
 }
 
 .action-total-group {
@@ -1056,20 +1169,32 @@ const handleKHQRCancelled = (result) => {
 }
 
 .action-total-lbl {
-  font-size: 0.85rem;
-  font-weight: 500;
+  font-size: 0.8rem;
+  font-weight: 600;
   color: #78716C;
   text-transform: uppercase;
-  letter-spacing: 0.05em;
+  letter-spacing: 0.08em;
+}
+
+.action-total-price-row {
+  display: flex;
+  align-items: baseline;
+  gap: 0.75rem;
+  margin-top: 0.25rem;
 }
 
 .action-total-val {
   font-family: var(--font-serif, 'Playfair Display', serif);
-  font-size: 2.1rem;
+  font-size: 2.3rem;
   font-weight: 700;
   color: #7A2E22;
-  line-height: 1.1;
-  margin-top: 0.2rem;
+  line-height: 1;
+}
+
+.action-total-khr {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: #78716C;
 }
 
 .action-payment-preview {
@@ -1083,7 +1208,7 @@ const handleKHQRCancelled = (result) => {
   display: inline-flex;
   align-items: center;
   gap: 0.4rem;
-  padding: 0.35rem 0.85rem;
+  padding: 0.4rem 0.95rem;
   border-radius: 999px;
   background: #FFFFFF;
   border: 1px solid rgba(122, 46, 34, 0.15);
@@ -1107,27 +1232,27 @@ const handleKHQRCancelled = (result) => {
 
 .btn-finish-checkout {
   width: 100%;
-  min-height: 56px;
+  min-height: 58px;
   background: #7A2E22;
   color: #FFFFFF;
   border: none;
   border-radius: 14px;
-  padding: 1rem 1.75rem;
-  font-size: 1.08rem;
+  padding: 1.1rem 2rem;
+  font-size: 1.1rem;
   font-weight: 600;
   letter-spacing: 0.02em;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 6px 20px rgba(122, 46, 34, 0.28);
+  box-shadow: 0 8px 24px rgba(122, 46, 34, 0.3);
   transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .btn-finish-checkout:hover:not(:disabled) {
   background: #622217;
   transform: translateY(-2px);
-  box-shadow: 0 10px 26px rgba(122, 46, 34, 0.35);
+  box-shadow: 0 12px 30px rgba(122, 46, 34, 0.38);
 }
 
 .btn-finish-checkout:active:not(:disabled) {
@@ -1143,12 +1268,12 @@ const handleKHQRCancelled = (result) => {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 0.75rem;
+  gap: 0.85rem;
   width: 100%;
 }
 
 .finish-btn-text {
-  font-size: 1.05rem;
+  font-size: 1.08rem;
   font-weight: 600;
 }
 
@@ -1184,16 +1309,16 @@ const handleKHQRCancelled = (result) => {
   display: flex;
   justify-content: center;
   flex-wrap: wrap;
-  gap: 1.25rem;
-  margin-top: 1.25rem;
-  padding-top: 1rem;
+  gap: 1.35rem;
+  margin-top: 1.35rem;
+  padding-top: 1.15rem;
   border-top: 1px dashed rgba(122, 46, 34, 0.15);
 }
 
 .guarantee-pill {
   display: inline-flex;
   align-items: center;
-  gap: 0.4rem;
+  gap: 0.45rem;
   font-size: 0.78rem;
   color: #6B7280;
   font-weight: 500;
@@ -1203,310 +1328,248 @@ const handleKHQRCancelled = (result) => {
   color: #7A2E22;
 }
 
+/* Order Summary Panel (Sticky) */
+.order-summary-panel {
+  position: sticky;
+  top: 90px;
+}
+
+.atelier-summary-card {
+  background: #FFFFFF;
+  border-radius: 20px;
+  border: 1.5px solid rgba(234, 229, 223, 0.9);
+  padding: 2rem;
+  box-shadow: 0 4px 24px rgba(28, 25, 23, 0.04);
+}
+
+.summary-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.35rem;
+  padding-bottom: 0.85rem;
+  border-bottom: 1px solid #F5EFEB;
+}
+
+.summary-title {
+  font-family: var(--font-serif, 'Playfair Display', serif);
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: #1F2937;
+  margin: 0;
+}
+
+.summary-badge {
+  font-size: 0.75rem;
+  font-weight: 600;
+  background: #FAF7F2;
+  color: #7A2E22;
+  padding: 3px 9px;
+  border-radius: 12px;
+  border: 1px solid rgba(122, 46, 34, 0.15);
+}
+
+.summary-items {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  max-height: 260px;
+  overflow-y: auto;
+  padding-right: 0.25rem;
+}
+
+.summary-item {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+}
+
+.mini-img-wrap {
+  position: relative;
+  width: 52px;
+  height: 52px;
+  flex-shrink: 0;
+}
+
+.mini-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 10px;
+  background: #F9F7F5;
+  border: 1px solid #EFEAE3;
+}
+
+.mini-qty-badge {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: #7A2E22;
+  color: #FFFFFF;
+  font-size: 0.7rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+}
+
+.mini-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.mini-title {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #1F2937;
+  line-height: 1.3;
+}
+
+.mini-subtext {
+  font-size: 0.74rem;
+  color: #78716C;
+  margin-top: 2px;
+}
+
+.mini-price {
+  font-weight: 700;
+  font-size: 0.92rem;
+  color: #1F2937;
+}
+
+.summary-divider {
+  border: none;
+  border-top: 1px solid #F5EFEB;
+  margin: 1.35rem 0;
+}
+
+.breakdown {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin-bottom: 1.5rem;
+}
+
+.b-row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.88rem;
+  color: #57534E;
+}
+
+.discount-text {
+  color: #15803D;
+  font-weight: 600;
+}
+
+.free-shipping-tag {
+  color: #15803D;
+  font-weight: 700;
+}
+
+.grand-total {
+  padding-top: 0.95rem;
+  border-top: 1px solid #E8E2D9;
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: #1F2937;
+  align-items: baseline;
+}
+
+.grand-label-col {
+  display: flex;
+  flex-direction: column;
+}
+
+.khr-hint {
+  font-size: 0.78rem;
+  font-weight: 500;
+  color: #78716C;
+  margin-top: 2px;
+}
+
+.grand-num {
+  font-family: var(--font-serif, 'Playfair Display', serif);
+  font-size: 1.45rem;
+  font-weight: 700;
+  color: #7A2E22;
+}
+
+.error-banner {
+  background: #FEE2E2;
+  color: #B91C1C;
+  padding: 0.75rem 1rem;
+  border-radius: 10px;
+  font-size: 0.85rem;
+  margin-bottom: 1rem;
+  border-left: 3px solid #DC2626;
+}
+
 .btn-summary-submit {
+  width: 100%;
+  min-height: 50px;
   background: #7A2E22 !important;
   color: #FFFFFF !important;
   border-radius: 12px;
   font-weight: 600;
-  transition: all 0.2s ease;
+  font-size: 0.98rem;
+  transition: all 0.25s ease;
+  border: none;
+  cursor: pointer;
+  box-shadow: 0 4px 16px rgba(122, 46, 34, 0.22);
 }
 
 .btn-summary-submit:hover:not(:disabled) {
   background: #622217 !important;
-  transform: translateY(-1px);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(122, 46, 34, 0.3);
 }
 
 .terms-note {
-  font-size: 0.75rem;
-  color: var(--text-muted);
-  line-height: 1.5;
+  font-size: 0.74rem;
+  color: #78716C;
+  line-height: 1.45;
   margin-top: 1rem;
   text-align: center;
 }
 
+/* Responsive Media Queries */
 @media (max-width: 960px) {
   .checkout-grid {
     grid-template-columns: 1fr;
+    gap: 2rem;
   }
-}
-
-.checkout-stepper-bar {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  background: var(--bg-surface);
-  border: 1px solid #EFE6DD;
-  border-radius: 16px;
-  padding: 1.25rem 2rem;
-  margin-bottom: 2rem;
-  box-shadow: 0 4px 18px rgba(28, 25, 23, 0.03);
-}
-
-.step-item {
-  display: flex;
-  align-items: center;
-  gap: 0.85rem;
-  cursor: pointer;
-  user-select: none;
-  transition: opacity 0.2s ease;
-}
-
-.step-circle {
-  width: 34px;
-  height: 34px;
-  border-radius: 50%;
-  background: #EFE9E2;
-  color: #78716C;
-  font-weight: 700;
-  font-size: 0.85rem;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: all 0.25s ease;
-}
-
-.step-item.active .step-circle {
-  background: #8E4A3E;
-  color: #FFFFFF;
-  box-shadow: 0 4px 12px rgba(142, 74, 62, 0.3);
-}
-
-.step-item.completed .step-circle {
-  background: #8E4A3E;
-  color: #FFFFFF;
-}
-
-.step-label-group {
-  display: flex;
-  flex-direction: column;
-}
-
-.step-name {
-  font-weight: 700;
-  font-size: 0.92rem;
-  color: #78716C;
-  line-height: 1.2;
-}
-
-.step-item.active .step-name {
-  color: #8E4A3E;
-}
-
-.step-item.completed .step-name {
-  color: #111C38;
-}
-
-.step-sub {
-  font-size: 0.74rem;
-  color: #A8A29E;
-  line-height: 1.2;
-}
-
-.step-line {
-  flex: 1;
-  height: 2px;
-  background: #EFE9E2;
-  margin: 0 1.25rem;
-  border-radius: 2px;
-  transition: background 0.3s ease;
-}
-
-.step-line.filled {
-  background: #8E4A3E;
-}
-
-/* ================= STEP CONTENT CARDS ================= */
-.card-header-row {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 1.25rem;
-}
-
-.card-hint {
-  font-size: 0.85rem;
-  color: #78716C;
-}
-
-.login-link, .edit-cart-link, .btn-link-edit {
-  color: #8E4A3E;
-  font-weight: 600;
-  text-decoration: underline;
-  text-underline-offset: 3px;
-  background: none;
-  border: none;
-  cursor: pointer;
-  padding: 0;
-  font-size: 0.85rem;
-}
-
-.step-nav-actions {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-top: 1.5rem;
-}
-
-/* Shipping Options */
-.shipping-options-list {
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
-}
-
-.shipping-choice-card {
-  display: flex;
-  align-items: flex-start;
-  gap: 1rem;
-  padding: 1.25rem 1.5rem;
-  border: 1.5px solid #EFE6DD;
-  border-radius: 12px;
-  background: #FFFFFF;
-  cursor: pointer;
-  transition: all 0.2s ease;
-}
-
-.shipping-choice-card:hover {
-  border-color: #D4A373;
-}
-
-.shipping-choice-card.selected {
-  border-color: #8E4A3E;
-  background: #FDF9F7;
-}
-
-.shipping-choice-card input[type="radio"] {
-  margin-top: 0.25rem;
-  accent-color: #8E4A3E;
-}
-
-.choice-content {
-  flex: 1;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.choice-meta {
-  display: flex;
-  flex-direction: column;
-  gap: 0.25rem;
-}
-
-.choice-title {
-  font-weight: 600;
-  font-size: 0.95rem;
-  color: #111C38;
-}
-
-.choice-desc {
-  font-size: 0.82rem;
-  color: #78716C;
-}
-
-.choice-price {
-  font-weight: 700;
-  color: #8E4A3E;
-  font-size: 0.95rem;
-}
-
-.review-brief-card {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  background: #FAF7F2;
-  border: 1px solid #EFE6DD;
-  border-radius: 12px;
-  padding: 1rem 1.25rem;
-  margin-top: 1rem;
-}
-
-.brief-label {
-  font-size: 0.78rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  color: #8E4A3E;
-  display: block;
-  margin-bottom: 0.2rem;
-}
-
-.brief-val {
-  font-size: 0.88rem;
-  color: #111C38;
-}
-
-/* Review details block */
-.review-details-grid {
-  display: flex;
-  flex-direction: column;
-  gap: 1.5rem;
-}
-
-.review-block {
-  padding-bottom: 1.25rem;
-  border-bottom: 1px solid #EFE6DD;
-}
-
-.review-block:last-child {
-  border-bottom: none;
-  padding-bottom: 0;
-}
-
-.review-block-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 0.5rem;
-}
-
-.review-block-header h4 {
-  font-size: 0.95rem;
-  font-weight: 700;
-  color: #111C38;
-}
-
-.review-val-name {
-  font-weight: 600;
-  font-size: 0.92rem;
-  color: #111C38;
-  margin-bottom: 0.2rem;
-}
-
-.review-val-sub {
-  font-size: 0.86rem;
-  color: #57534E;
-  line-height: 1.4;
-}
-
-.reward-points-strip {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  background: #FDF9F7;
-  border: 1px dashed #EADBCE;
-  border-radius: 8px;
-  padding: 0.65rem 0.85rem;
-  font-size: 0.82rem;
-  color: #8E4A3E;
-  margin-bottom: 1rem;
-}
-
-.btn-place-order {
-  padding: 0.9rem 2rem;
-  font-size: 1.05rem;
-}
-
-@media (max-width: 960px) {
-  .checkout-grid {
+  .order-summary-panel {
+    position: static;
+  }
+  .payment-options-grid {
     grid-template-columns: 1fr;
   }
-  .checkout-stepper-bar {
-    flex-wrap: wrap;
-    gap: 1rem;
+  .checkout-editorial-header {
+    flex-direction: column;
+    align-items: flex-start;
+    padding: 1.5rem;
   }
-  .step-line {
-    display: none;
+}
+
+@media (max-width: 640px) {
+  .form-row {
+    grid-template-columns: 1fr;
+  }
+  .atelier-card {
+    padding: 1.5rem;
+  }
+  .action-card-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  .action-payment-preview {
+    align-items: flex-start;
   }
 }
 </style>
