@@ -1,21 +1,10 @@
 <template>
-  <div class="map-picker-card">
-    <div class="map-picker-header">
+  <div class="map-picker-card" :class="{ 'compact-mode': compact }">
+    <!-- Header (only shown if not in compact mode) -->
+    <div v-if="!compact" class="map-picker-header">
       <div class="header-left">
         <span class="map-title">📍 Pinpoint Exact Delivery Location</span>
         <span class="map-subtitle">Click map, search landmark, or paste Google Maps link to auto-fill your delivery address</span>
-      </div>
-      <div class="header-actions">
-        <button
-          type="button"
-          class="locate-btn"
-          :disabled="isLocating"
-          @click="locateUser"
-          title="Detect your current location via device GPS"
-        >
-          <span v-if="isLocating" class="locate-spinner"></span>
-          <span v-else>📍 Locate Me</span>
-        </button>
       </div>
     </div>
 
@@ -82,9 +71,22 @@
       </div>
     </div>
 
-    <!-- Map Canvas Container -->
+    <!-- Map Canvas Container with Floating Locate Me Button -->
     <div class="map-viewport-wrapper">
       <div ref="mapContainer" class="leaflet-map-canvas"></div>
+
+      <!-- Floating Locate Me Button on the map matching mockup -->
+      <button
+        type="button"
+        class="locate-btn-on-map"
+        :disabled="isLocating"
+        @click="locateUser"
+        title="Detect your current location via device GPS"
+      >
+        <span v-if="isLocating" class="locate-spinner"></span>
+        <span v-else>📍 Locate Me</span>
+      </button>
+
       <div class="map-coords-badge">
         <span class="coords-label">GPS:</span>
         <span class="coords-val">{{ formattedCoords }}</span>
@@ -111,8 +113,8 @@
       </button>
     </div>
 
-    <!-- Landmark Notes & Google Maps Verification Link -->
-    <div class="landmark-section">
+    <!-- Landmark Notes & Google Maps Verification Link (only when not compact) -->
+    <div v-if="!compact" class="landmark-section">
       <div class="landmark-label-row">
         <label class="landmark-label" for="driverNotes">
           Delivery Landmark & Driver Instructions (Optional)
@@ -157,6 +159,10 @@ const props = defineProps({
   initialNotes: {
     type: String,
     default: ''
+  },
+  compact: {
+    type: Boolean,
+    default: false
   }
 })
 
@@ -353,11 +359,8 @@ function applyPastedGmaps() {
   const raw = pasteGmapsInput.value.trim()
   if (!raw) return
 
-  // Format 1: Direct coordinates e.g. "11.5564, 104.9282" or "11.5564 104.9282"
   const coordRegex = /(-?\d+\.\d+)[,\s]+(-?\d+\.\d+)/
-  // Format 2: Google Maps @lat,lng e.g. /@11.5564,104.9282,15z
   const gmapsAtRegex = /@(-?\d+\.\d+),(-?\d+\.\d+)/
-  // Format 3: Google Maps ?q=lat,lng
   const gmapsQRegex = /[?&]q=(-?\d+\.\d+),(-?\d+\.\d+)/
 
   let match = raw.match(gmapsAtRegex) || raw.match(gmapsQRegex) || raw.match(coordRegex)
@@ -381,7 +384,7 @@ onMounted(async () => {
   await nextTick()
   if (!mapContainer.value) return
 
-  // Custom luxury pin marker HTML
+  // Custom luxury pin marker HTML matching Luméa theme
   const customIcon = L.divIcon({
     className: 'lumea-map-marker',
     html: `
@@ -423,7 +426,7 @@ onMounted(async () => {
     currentPreset.value = 'Custom Pin'
   })
 
-  // Perform initial reverse-geocoding
+  // Initial reverse-geocoding
   triggerReverseGeocode(selectedLat.value, selectedLng.value)
   emitChanges()
 })
@@ -483,78 +486,48 @@ onBeforeUnmount(() => {
 
 <style scoped>
 .map-picker-card {
-  margin-top: 1.25rem;
-  padding: 1.15rem;
+  margin-top: 10px;
+  padding: 14px;
   background: #FCFAF8;
-  border: 1.5px solid #EAE5DF;
-  border-radius: 14px;
+  border: 1px solid #EAE5DF;
+  border-radius: 12px;
+}
+
+.map-picker-card.compact-mode {
+  margin-top: 6px;
+  padding: 0;
+  background: transparent;
+  border: none;
 }
 
 .map-picker-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 1rem;
   margin-bottom: 0.75rem;
-  flex-wrap: wrap;
 }
 
 .map-title {
   display: block;
   font-family: 'Playfair Display', Georgia, serif;
-  font-size: 0.98rem;
+  font-size: 0.95rem;
   font-weight: 700;
   color: #1C1917;
 }
 
 .map-subtitle {
   display: block;
-  font-size: 0.76rem;
+  font-size: 0.75rem;
   color: #78716C;
   margin-top: 2px;
-}
-
-.locate-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  background: #FFFFFF;
-  border: 1.5px solid #7A2E22;
-  color: #7A2E22;
-  font-size: 0.76rem;
-  font-weight: 700;
-  padding: 6px 14px;
-  border-radius: 20px;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  white-space: nowrap;
-}
-
-.locate-btn:hover:not(:disabled) {
-  background: #7A2E22;
-  color: #FFFFFF;
-}
-
-.locate-btn:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-}
-
-.locate-spinner {
-  width: 12px;
-  height: 12px;
-  border: 2px solid #7A2E22;
-  border-top-color: transparent;
-  border-radius: 50%;
-  animation: spin 0.6s linear infinite;
 }
 
 /* Map Toolbar (Search + Paste Gmaps) */
 .map-toolbar {
   display: grid;
-  grid-template-columns: 1.3fr 1fr;
+  grid-template-columns: 1.25fr 1fr;
   gap: 8px;
-  margin-bottom: 0.75rem;
+  margin-bottom: 0.65rem;
 }
 
 @media (max-width: 768px) {
@@ -587,7 +560,7 @@ onBeforeUnmount(() => {
   background: #FFFFFF;
   border: 1px solid #D6D3D1;
   border-radius: 8px;
-  font-size: 0.78rem;
+  font-size: 0.76rem;
   color: #1C1917;
   transition: border-color 0.2s;
 }
@@ -595,7 +568,7 @@ onBeforeUnmount(() => {
 .map-search-input:focus, .gmaps-paste-input:focus {
   outline: none;
   border-color: #7A2E22;
-  box-shadow: 0 0 0 2px rgba(122, 46, 34, 0.1);
+  box-shadow: 0 0 0 2px rgba(122, 46, 34, 0.08);
 }
 
 .btn-clear-search {
@@ -709,7 +682,7 @@ onBeforeUnmount(() => {
   color: #44403C;
   font-size: 0.72rem;
   font-weight: 600;
-  padding: 4px 10px;
+  padding: 3px 9px;
   border-radius: 14px;
   cursor: pointer;
   white-space: nowrap;
@@ -727,21 +700,52 @@ onBeforeUnmount(() => {
   border-color: #7A2E22;
 }
 
-/* Map Canvas */
+/* Map Canvas Container */
 .map-viewport-wrapper {
   position: relative;
   width: 100%;
-  height: 250px;
+  height: 190px;
   border-radius: 10px;
   overflow: hidden;
   border: 1px solid #D6D3D1;
-  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.04);
 }
 
 .leaflet-map-canvas {
   width: 100%;
   height: 100%;
   z-index: 1;
+}
+
+/* Locate Me Button Floating on Map */
+.locate-btn-on-map {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  z-index: 500;
+  background: #FFFFFF;
+  border: 1px solid #D1D5DB;
+  color: #1C1917;
+  font-size: 0.74rem;
+  font-weight: 700;
+  padding: 6px 12px;
+  border-radius: 20px;
+  cursor: pointer;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.12);
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  transition: all 0.15s ease;
+}
+
+.locate-btn-on-map:hover:not(:disabled) {
+  background: #FDF9F6;
+  border-color: #7A2E22;
+  color: #7A2E22;
+}
+
+.locate-btn-on-map:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
 }
 
 .map-coords-badge {
@@ -751,9 +755,9 @@ onBeforeUnmount(() => {
   background: rgba(255, 255, 255, 0.95);
   backdrop-filter: blur(4px);
   border: 1px solid #E7E5E4;
-  padding: 3px 8px;
+  padding: 2px 7px;
   border-radius: 6px;
-  font-size: 0.68rem;
+  font-size: 0.66rem;
   z-index: 500;
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
   display: flex;
@@ -774,7 +778,7 @@ onBeforeUnmount(() => {
 /* Geocoded Address Banner */
 .geocoded-address-banner {
   margin-top: 0.65rem;
-  padding: 0.65rem 0.85rem;
+  padding: 0.6rem 0.8rem;
   background: #F5EFEB;
   border: 1px solid #DECFC4;
   border-radius: 8px;
@@ -827,7 +831,7 @@ onBeforeUnmount(() => {
   border: none;
   font-size: 0.7rem;
   font-weight: 700;
-  padding: 5px 12px;
+  padding: 4px 10px;
   border-radius: 6px;
   cursor: pointer;
   white-space: nowrap;
@@ -849,11 +853,9 @@ onBeforeUnmount(() => {
   justify-content: space-between;
   gap: 8px;
   margin-bottom: 4px;
-  flex-wrap: wrap;
 }
 
 .landmark-label {
-  display: block;
   font-size: 0.75rem;
   font-weight: 600;
   color: #44403C;
@@ -864,13 +866,6 @@ onBeforeUnmount(() => {
   font-weight: 600;
   color: #7A2E22;
   text-decoration: none;
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-}
-
-.gmaps-preview-link:hover {
-  text-decoration: underline;
 }
 
 .landmark-input {
@@ -881,13 +876,6 @@ onBeforeUnmount(() => {
   border-radius: 8px;
   font-size: 0.78rem;
   color: #1C1917;
-  transition: border-color 0.2s;
-}
-
-.landmark-input:focus {
-  outline: none;
-  border-color: #7A2E22;
-  box-shadow: 0 0 0 2px rgba(122, 46, 34, 0.1);
 }
 
 @keyframes spin {

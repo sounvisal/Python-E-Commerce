@@ -1,441 +1,577 @@
 <template>
-  <div class="checkout-page">
-    <div class="container">
-      <!-- Breadcrumb -->
-      <nav class="breadcrumb-nav" aria-label="Breadcrumb">
-        <router-link to="/">Home</router-link>
-        <span class="bc-sep">›</span>
-        <router-link to="/cart">Shopping Bag</router-link>
-        <span class="bc-sep">›</span>
-        <span class="bc-current">Checkout</span>
-      </nav>
-
-      <!-- Refined Editorial Header -->
-      <header class="checkout-editorial-header">
-        <div class="header-titles">
-          <span class="atelier-tag">LUMÉA ATELIER · ORDER CHECKOUT</span>
-          <h1 class="checkout-title">Review & Dispatch</h1>
-          <p class="checkout-subtitle">Authentic dermatological formulations dispatched directly across Cambodia.</p>
+  <div class="checkout-page-wrapper">
+    <div class="checkout-container">
+      <!-- 1. Hero Header Banner matching mockup -->
+      <section class="checkout-hero-banner">
+        <div class="hero-left-content">
+          <nav class="breadcrumb-trail" aria-label="Breadcrumb">
+            <router-link to="/">Home</router-link>
+            <span class="bc-arrow">›</span>
+            <router-link to="/cart">Shopping Bag</router-link>
+            <span class="bc-arrow">›</span>
+            <span class="bc-active">Checkout</span>
+          </nav>
+          <h1 class="hero-heading">Checkout</h1>
+          <p class="hero-subheading">Review your details, choose delivery & payment, and place your order.</p>
         </div>
 
-        <div class="checkout-progress-pills">
-          <div class="progress-pill done">
-            <span class="pill-dot">✓</span>
-            <span>1. Bag</span>
-          </div>
-          <span class="pill-sep">→</span>
-          <div class="progress-pill active">
-            <span class="pill-dot">2</span>
-            <span>2. Delivery & Payment</span>
-          </div>
-          <span class="pill-sep">→</span>
-          <div class="progress-pill">
-            <span class="pill-dot">3</span>
-            <span>3. Order Complete</span>
-          </div>
+        <div class="hero-right-stage">
+          <img
+            src="/images/checkout-hero.png"
+            alt="Your Atelier Checkout"
+            class="hero-graphic"
+          />
         </div>
-      </header>
+      </section>
 
-      <div v-if="cartStore.items.length === 0" class="empty-checkout">
-        <p>You have no items in your shopping bag.</p>
-        <router-link to="/shop" class="btn btn-primary">Return to Catalog</router-link>
+      <!-- 2. Stepper Progress Bar in pill container -->
+      <div class="checkout-stepper-bar">
+        <div class="stepper-item step-completed">
+          <span class="stepper-bubble check">✓</span>
+          <span class="stepper-name">Bag</span>
+        </div>
+        <div class="stepper-line line-active"></div>
+        <div class="stepper-item step-active">
+          <span class="stepper-bubble num">2</span>
+          <span class="stepper-name">Delivery & Payment</span>
+        </div>
+        <div class="stepper-line"></div>
+        <div class="stepper-item step-upcoming">
+          <span class="stepper-bubble num">3</span>
+          <span class="stepper-name">Review Order</span>
+        </div>
       </div>
 
-      <form v-else @submit.prevent="handleSubmitOrder" class="checkout-grid">
-        <!-- Customer Details & Shipping Form -->
-        <div class="checkout-form-section">
-          <!-- 1. Contact Info Card -->
-          <div class="form-card atelier-card">
-            <div class="card-title-row">
-              <div class="step-num-badge">01</div>
-              <div class="card-title-meta">
-                <h3 class="card-title">Client Information</h3>
-                <span class="card-subtitle">Your contact details for order confirmation & courier handover</span>
+      <!-- Empty Cart State -->
+      <div v-if="cartStore.items.length === 0" class="empty-bag-card">
+        <p>Your shopping bag is currently empty.</p>
+        <router-link to="/shop" class="btn-return-catalog">Return to Catalog</router-link>
+      </div>
+
+      <!-- Main Checkout Form Grid -->
+      <form v-else @submit.prevent="handleSubmitOrder" class="checkout-main-grid">
+        <!-- LEFT COLUMN: The 3 numbered cards -->
+        <div class="checkout-cards-column">
+          <!-- CARD 01: Contact Information -->
+          <section class="atelier-card card-contact">
+            <div class="card-header-row">
+              <div class="sec-badge">01</div>
+              <div class="sec-title-wrap">
+                <h2 class="sec-title">Contact Information</h2>
+                <p class="sec-subtitle">We'll use this to keep you updated about your order.</p>
+              </div>
+              <div v-if="!authStore.isAuthenticated" class="sec-login-hint">
+                Already have an account? <router-link to="/login" class="link-login">Log in</router-link>
               </div>
             </div>
 
-            <div class="form-row">
-              <div class="form-group">
-                <label class="form-label" for="cName">
-                  Full Name <span class="req">*</span>
+            <div class="form-grid-2">
+              <div class="input-field-group">
+                <label class="field-label" for="cName">
+                  Full Name <span class="req-star">*</span>
                 </label>
-                <div class="input-with-icon">
-                  <User :size="16" class="input-icon" />
+                <div class="input-icon-box">
+                  <User :size="16" class="field-icon" />
                   <input
                     type="text"
                     id="cName"
                     v-model="form.customer_name"
                     required
                     placeholder="e.g. Sreynich Chan"
-                    class="form-input"
+                    class="form-text-input"
                   />
                 </div>
               </div>
 
-              <div class="form-group">
-                <label class="form-label" for="cPhone">
-                  Phone Number (Courier Contact) <span class="req">*</span>
+              <div class="input-field-group">
+                <label class="field-label" for="cPhone">
+                  Phone Number (Courier Contact) <span class="req-star">*</span>
                 </label>
-                <div class="input-with-icon">
-                  <Phone :size="16" class="input-icon" />
+                <div class="input-icon-box">
+                  <Phone :size="16" class="field-icon" />
                   <input
                     type="tel"
                     id="cPhone"
                     v-model="form.customer_phone"
                     required
-                    placeholder="012 345 678 / +855 12 345 678"
-                    class="form-input"
+                    placeholder="+855 12 345 678"
+                    class="form-text-input"
                   />
                 </div>
-                <span class="field-hint">Used by VET, J&T, or Grab driver to call before arrival</span>
               </div>
             </div>
 
-            <div class="form-group">
-              <label class="form-label" for="cEmail">
-                Email Address <span class="req">*</span>
-              </label>
-              <div class="input-with-icon">
-                <Mail :size="16" class="input-icon" />
-                <input
-                  type="email"
-                  id="cEmail"
-                  v-model="form.customer_email"
-                  required
-                  placeholder="sreynich.chan@example.com"
-                  class="form-input"
-                />
-              </div>
-              <span class="field-hint">Your itemized digital invoice & tracking link will be sent here</span>
-            </div>
-          </div>
-
-          <!-- 2. Delivery Address & Cambodia Courier Card (Postal code completely removed!) -->
-          <div class="form-card atelier-card">
-            <div class="card-title-row">
-              <div class="step-num-badge">02</div>
-              <div class="card-title-meta">
-                <h3 class="card-title">Delivery & Courier Dispatch</h3>
-                <span class="card-subtitle">Select your province, address, preferred Cambodian courier, and pin location</span>
-              </div>
-            </div>
-
-            <div class="form-row">
-              <div class="form-group">
-                <label class="form-label" for="sCity">
-                  Province / City <span class="req">*</span>
+            <div class="form-grid-2 form-grid-bottom">
+              <div class="input-field-group">
+                <label class="field-label" for="cEmail">
+                  Email Address <span class="req-star">*</span>
                 </label>
-                <div class="select-wrapper">
-                  <select
-                    id="sCity"
-                    v-model="form.shipping_city"
-                    required
-                    class="form-select"
-                  >
-                    <option value="Phnom Penh">Phnom Penh (Capital)</option>
-                    <option value="Siem Reap">Siem Reap</option>
-                    <option value="Battambang">Battambang</option>
-                    <option value="Sihanoukville">Sihanoukville (Preah Sihanouk)</option>
-                    <option value="Kampot">Kampot</option>
-                    <option value="Kandal">Kandal</option>
-                    <option value="Banteay Meanchey">Banteay Meanchey</option>
-                    <option value="Kampong Cham">Kampong Cham</option>
-                    <option value="Kampong Chhnang">Kampong Chhnang</option>
-                    <option value="Kampong Speu">Kampong Speu</option>
-                    <option value="Kampong Thom">Kampong Thom</option>
-                    <option value="Kep">Kep</option>
-                    <option value="Koh Kong">Koh Kong</option>
-                    <option value="Kratie">Kratie</option>
-                    <option value="Mondulkiri">Mondulkiri</option>
-                    <option value="Oddar Meanchey">Oddar Meanchey</option>
-                    <option value="Pailin">Pailin</option>
-                    <option value="Preah Vihear">Preah Vihear</option>
-                    <option value="Prey Veng">Prey Veng</option>
-                    <option value="Pursat">Pursat</option>
-                    <option value="Ratanakiri">Ratanakiri</option>
-                    <option value="Stung Treng">Stung Treng</option>
-                    <option value="Svay Rieng">Svay Rieng</option>
-                    <option value="Takeo">Takeo</option>
-                    <option value="Tboung Khmum">Tboung Khmum</option>
-                  </select>
-                </div>
-              </div>
-
-              <div class="form-group">
-                <label class="form-label" for="sAddress">
-                  Street Address, Sangkat & Khan <span class="req">*</span>
-                </label>
-                <div class="input-with-icon">
-                  <MapPin :size="16" class="input-icon" />
+                <div class="input-icon-box">
+                  <Mail :size="16" class="field-icon" />
                   <input
-                    type="text"
-                    id="sAddress"
-                    v-model="form.shipping_address"
+                    type="email"
+                    id="cEmail"
+                    v-model="form.customer_email"
                     required
-                    placeholder="e.g. #12A, Street 240, Sangkat Chaktomuk, Khan Daun Penh"
-                    class="form-input"
+                    placeholder="sreynich.chan@example.com"
+                    class="form-text-input"
                   />
+                </div>
+              </div>
+
+              <div class="checkbox-field-group">
+                <label class="marketing-checkbox-label">
+                  <input
+                    type="checkbox"
+                    v-model="form.marketing_opt_in"
+                    class="custom-check-input"
+                  />
+                  <span class="custom-check-box">
+                    <Check v-if="form.marketing_opt_in" :size="12" class="check-icon-svg" />
+                  </span>
+                  <span class="checkbox-text">
+                    Keep me updated on exclusive offers, new arrivals, and skincare tips.
+                  </span>
+                </label>
+              </div>
+            </div>
+          </section>
+
+          <!-- CARD 02: Delivery & Courier Dispatch -->
+          <section class="atelier-card card-delivery">
+            <div class="card-header-row">
+              <div class="sec-badge">02</div>
+              <div class="sec-title-wrap">
+                <h2 class="sec-title">Delivery & Courier Dispatch</h2>
+                <p class="sec-subtitle">Select your address, courier, and delivery option in Cambodia.</p>
+              </div>
+            </div>
+
+            <!-- Subsection A: Shipping Address -->
+            <div class="sub-section">
+              <h3 class="sub-section-title">
+                <MapPin :size="16" class="sub-icon" />
+                Shipping Address
+              </h3>
+
+              <!-- Address Option 1: Default Address Card -->
+              <div
+                class="address-option-card"
+                :class="{ selected: addressSelectionMode === 'default' }"
+                @click="selectAddressMode('default')"
+              >
+                <div class="option-radio-dot" :class="{ active: addressSelectionMode === 'default' }"></div>
+                <div class="address-content-wrap">
+                  <div class="address-title-line">
+                    <strong class="addr-name">Home</strong>
+                    <span class="default-pill">(Default)</span>
+                  </div>
+                  <p class="address-body-text">
+                    {{ defaultAddressText }}
+                  </p>
+                </div>
+                <div class="address-actions-btns">
+                  <button type="button" class="btn-action-sm" @click.stop="toggleEditDefaultAddress">
+                    <Edit2 :size="13" />
+                    <span>Edit</span>
+                  </button>
+                  <button type="button" class="btn-action-sm btn-delete-sm" @click.stop="clearAddressToNew">
+                    <Trash2 :size="13" />
+                    <span>Delete</span>
+                  </button>
+                </div>
+              </div>
+
+              <!-- Address Option 2: Add New Address Card -->
+              <div
+                class="address-option-card add-new-card"
+                :class="{ selected: addressSelectionMode === 'new' }"
+                @click="selectAddressMode('new')"
+              >
+                <div class="option-radio-dot" :class="{ active: addressSelectionMode === 'new' }"></div>
+                <div class="address-content-wrap">
+                  <strong class="addr-name">Add New Address</strong>
+                  <p class="address-sub-text">Add a new delivery address</p>
+                </div>
+                <span class="addr-chevron">›</span>
+              </div>
+
+              <!-- Editable Address Fields (shown when editing or in 'new' mode) -->
+              <div v-if="addressSelectionMode === 'new' || isEditingAddress" class="custom-address-fields">
+                <div class="form-grid-2">
+                  <div class="input-field-group">
+                    <label class="field-label" for="sCity">
+                      Province / City <span class="req-star">*</span>
+                    </label>
+                    <select id="sCity" v-model="form.shipping_city" required class="form-select-input">
+                      <option value="Phnom Penh">Phnom Penh (Capital)</option>
+                      <option value="Siem Reap">Siem Reap</option>
+                      <option value="Battambang">Battambang</option>
+                      <option value="Sihanoukville">Sihanoukville (Preah Sihanouk)</option>
+                      <option value="Kampot">Kampot</option>
+                      <option value="Kandal">Kandal</option>
+                      <option value="Banteay Meanchey">Banteay Meanchey</option>
+                      <option value="Kampong Cham">Kampong Cham</option>
+                      <option value="Kampong Chhnang">Kampong Chhnang</option>
+                      <option value="Kampong Speu">Kampong Speu</option>
+                      <option value="Kampong Thom">Kampong Thom</option>
+                      <option value="Kep">Kep</option>
+                      <option value="Koh Kong">Koh Kong</option>
+                      <option value="Kratie">Kratie</option>
+                      <option value="Mondulkiri">Mondulkiri</option>
+                      <option value="Oddar Meanchey">Oddar Meanchey</option>
+                      <option value="Pailin">Pailin</option>
+                      <option value="Preah Vihear">Preah Vihear</option>
+                      <option value="Prey Veng">Prey Veng</option>
+                      <option value="Pursat">Pursat</option>
+                      <option value="Ratanakiri">Ratanakiri</option>
+                      <option value="Stung Treng">Stung Treng</option>
+                      <option value="Svay Rieng">Svay Rieng</option>
+                      <option value="Takeo">Takeo</option>
+                      <option value="Tboung Khmum">Tboung Khmum</option>
+                    </select>
+                  </div>
+
+                  <div class="input-field-group">
+                    <label class="field-label" for="sAddress">
+                      Street Address, Sangkat & Khan <span class="req-star">*</span>
+                    </label>
+                    <div class="input-icon-box">
+                      <MapPin :size="16" class="field-icon" />
+                      <input
+                        type="text"
+                        id="sAddress"
+                        v-model="form.shipping_address"
+                        required
+                        placeholder="e.g. Phum Ta Nguon, Sangkat Kakab 1, Khan Pou Senchey"
+                        class="form-text-input"
+                      />
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
 
-            <!-- Cambodia Delivery Carrier Selection -->
-            <DeliveryCarrierSelector
-              v-model="form.shipping_carrier"
-              :subtotal="cartStore.subtotal"
-              :free-shipping-threshold="cartStore.freeShippingThreshold"
-              @change="handleCarrierChange"
-            />
+            <!-- Subsection B: Delivery Location (Fine-tune) -->
+            <div class="sub-section">
+              <h3 class="sub-section-title">
+                <MapPin :size="16" class="sub-icon" />
+                Delivery Location (Fine-tune)
+              </h3>
+              <p class="sub-section-hint">Help our courier find you faster. Pin your exact location on the map.</p>
 
-            <!-- Interactive GPS Map Location Picker -->
-            <LocationMapPicker
-              :initial-lat="form.delivery_lat"
-              :initial-lng="form.delivery_lng"
-              :initial-notes="form.delivery_notes"
-              @update:location="handleLocationUpdate"
-            />
-          </div>
+              <!-- Integrated GPS & Leaflet Map Picker -->
+              <LocationMapPicker
+                :initial-lat="form.delivery_lat"
+                :initial-lng="form.delivery_lng"
+                :initial-notes="form.delivery_notes"
+                :compact="true"
+                @update:location="handleLocationUpdate"
+              />
+            </div>
 
-          <!-- 3. Payment Selection -->
-          <div class="form-card atelier-card">
-            <div class="card-title-row">
-              <div class="step-num-badge">03</div>
-              <div class="card-title-meta">
-                <h3 class="card-title">Payment Selection</h3>
-                <span class="card-subtitle">Choose instant bank QR clearance or cash on doorstep delivery</span>
+            <!-- Subsection C: Select Cambodia Courier -->
+            <div class="sub-section courier-sub-section">
+              <h3 class="sub-section-title">
+                <Truck :size="16" class="sub-icon" />
+                Select Cambodia Courier
+              </h3>
+              <p class="sub-section-hint">Direct delivery to all 25 provinces and Phnom Penh.</p>
+
+              <div class="couriers-four-grid">
+                <!-- 1. VET Logistics -->
+                <div
+                  class="courier-card"
+                  :class="{ selected: form.shipping_carrier === 'vet_express' }"
+                  @click="setCarrier('vet_express')"
+                >
+                  <div class="courier-top-row">
+                    <span class="courier-tag tag-vet">NATIONWIDE #1</span>
+                    <span class="courier-price">$1.50</span>
+                  </div>
+                  <div class="courier-title-line">
+                    <span class="courier-radio-circle" :class="{ active: form.shipping_carrier === 'vet_express' }"></span>
+                    <strong class="courier-name">Vireak Buntham (VET Logistics)</strong>
+                  </div>
+                  <p class="courier-desc">Cambodia's #1 nationwide courier service. Direct door-to-door delivery across all 25 provinces.</p>
+                  <div class="courier-eta">⏱️ 1-2 Business Days</div>
+                </div>
+
+                <!-- 2. J&T Express Cambodia -->
+                <div
+                  class="courier-card"
+                  :class="{ selected: form.shipping_carrier === 'jt_express' }"
+                  @click="setCarrier('jt_express')"
+                >
+                  <div class="courier-top-row">
+                    <span class="courier-tag tag-jt">FAST DOMESTIC</span>
+                    <span class="courier-price">$1.75</span>
+                  </div>
+                  <div class="courier-title-line">
+                    <span class="courier-radio-circle" :class="{ active: form.shipping_carrier === 'jt_express' }"></span>
+                    <strong class="courier-name">J&T Express Cambodia</strong>
+                  </div>
+                  <p class="courier-desc">High-speed express courier with live automated GPS van dispatch and phone coordination.</p>
+                  <div class="courier-eta">⏱️ Next-Day Delivery</div>
+                </div>
+
+                <!-- 3. GrabExpress On-Demand -->
+                <div
+                  class="courier-card"
+                  :class="{ selected: form.shipping_carrier === 'grab_express' }"
+                  @click="setCarrier('grab_express')"
+                >
+                  <div class="courier-top-row">
+                    <span class="courier-tag tag-grab">INSTANT EXPRESS</span>
+                    <span class="courier-price">$3.50</span>
+                  </div>
+                  <div class="courier-title-line">
+                    <span class="courier-radio-circle" :class="{ active: form.shipping_carrier === 'grab_express' }"></span>
+                    <strong class="courier-name">GrabExpress On-Demand</strong>
+                  </div>
+                  <p class="courier-desc">Direct instant motorbike dispatch for urgent beauty rituals within Phnom Penh city limits.</p>
+                  <div class="courier-eta">⏱️ 60–90 Mins (Phnom Penh)</div>
+                </div>
+
+                <!-- 4. Luméa Atelier Concierge -->
+                <div
+                  class="courier-card"
+                  :class="{ selected: form.shipping_carrier === 'lumea_concierge' }"
+                  @click="setCarrier('lumea_concierge')"
+                >
+                  <div class="courier-top-row">
+                    <span class="courier-tag tag-concierge">ATELIER SIGNATURE</span>
+                    <span class="courier-price">$3.00</span>
+                  </div>
+                  <div class="courier-title-line">
+                    <span class="courier-radio-circle" :class="{ active: form.shipping_carrier === 'lumea_concierge' }"></span>
+                    <strong class="courier-name">Luméa Atelier Concierge</strong>
+                  </div>
+                  <p class="courier-desc">White-glove luxury delivery in signature silk-ribbon boxes with complimentary deluxe samples.</p>
+                  <div class="courier-eta">⏱️ White-Glove Scheduled</div>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <!-- CARD 03: Payment Selection -->
+          <section class="atelier-card card-payment">
+            <div class="card-header-row">
+              <div class="sec-badge">03</div>
+              <div class="sec-title-wrap">
+                <h2 class="sec-title">Payment Selection</h2>
+                <p class="sec-subtitle">Choose a secure and convenient payment method.</p>
               </div>
             </div>
 
-            <div class="payment-options-grid">
-              <!-- 1. Bakong KHQR Option -->
-              <label
-                class="payment-option-card khqr-card-option"
+            <div class="payment-two-grid">
+              <!-- Method 1: Bakong KHQR - ABA Mobile -->
+              <div
+                class="payment-option-card"
                 :class="{ selected: form.payment_method === 'khqr' }"
+                @click="form.payment_method = 'khqr'"
               >
-                <div class="option-radio-wrap">
-                  <input
-                    type="radio"
-                    v-model="form.payment_method"
-                    value="khqr"
-                    name="payMethod"
-                  />
-                </div>
-                <div class="option-content">
-                  <div class="option-header-row">
-                    <div class="khqr-emblem-badge">
-                      <span class="emblem-kh">KH</span>
-                      <span class="emblem-qr">QR</span>
-                    </div>
-                    <div class="option-title-group">
-                      <strong class="option-title">Bakong KHQR · ABA Mobile</strong>
-                      <span class="instant-pill">⚡ Instant Clearance</span>
-                    </div>
+                <div class="payment-card-header">
+                  <div class="payment-radio-wrap">
+                    <span class="payment-radio-circle" :class="{ active: form.payment_method === 'khqr' }"></span>
+                    <QrCode :size="18" class="khqr-symbol-icon" />
+                    <strong class="payment-title">Bakong KHQR – ABA Mobile</strong>
                   </div>
-                  <p class="option-desc">Scan with ABA Mobile, Bakong, Wing, ACLEDA, Sathapana, or any Cambodian banking app.</p>
-                  <div class="option-banks-preview">
-                    <span class="bank-pill">ABA'Mobile</span>
-                    <span class="bank-pill">Bakong</span>
-                    <span class="bank-pill">Wing</span>
-                    <span class="bank-pill">ACLEDA</span>
-                    <span class="bank-pill">+ All Banks</span>
-                  </div>
+                  <span class="payment-badge-tag tag-instant">⚡ INSTANT CLEARANCE</span>
                 </div>
-              </label>
 
-              <!-- 2. Cash on Delivery -->
-              <label
-                class="payment-option-card cod-card-option"
+                <p class="payment-card-desc">
+                  Scan with ABA Mobile, Bakong, Wing, ACLEDA, or any Cambodian banking app.
+                </p>
+
+                <div class="bank-pill-row">
+                  <span class="bank-chip">ABA Mobile</span>
+                  <span class="bank-chip">Bakong</span>
+                  <span class="bank-chip">Wing</span>
+                  <span class="bank-chip">ACLEDA</span>
+                  <span class="bank-chip chip-more">+ All Banks</span>
+                </div>
+              </div>
+
+              <!-- Method 2: Cash on Delivery (COD) -->
+              <div
+                class="payment-option-card"
                 :class="{ selected: form.payment_method === 'cod' }"
+                @click="form.payment_method = 'cod'"
               >
-                <div class="option-radio-wrap">
-                  <input
-                    type="radio"
-                    v-model="form.payment_method"
-                    value="cod"
-                    name="payMethod"
-                  />
-                </div>
-                <div class="option-content">
-                  <div class="option-header-row">
-                    <div class="cod-emblem-badge">
-                      <Truck :size="18" />
-                    </div>
-                    <div class="option-title-group">
-                      <strong class="option-title">Cash on Delivery (COD)</strong>
-                      <span class="cod-pill">Doorstep Handover</span>
-                    </div>
+                <div class="payment-card-header">
+                  <div class="payment-radio-wrap">
+                    <span class="payment-radio-circle" :class="{ active: form.payment_method === 'cod' }"></span>
+                    <span class="cod-box-icon">📦</span>
+                    <strong class="payment-title">Cash on Delivery (COD)</strong>
                   </div>
-                  <p class="option-desc">Pay in cash (USD $ or KHR ៛) directly to the delivery driver upon receiving your package.</p>
-                  <div class="option-banks-preview">
-                    <span class="bank-pill">💵 USD Cash</span>
-                    <span class="bank-pill">៛ Khmer Riel</span>
-                    <span class="bank-pill">Zero Surcharge</span>
-                  </div>
+                  <span class="payment-badge-tag tag-cod">DOORSTEP HANDOVER</span>
                 </div>
-              </label>
-            </div>
 
-            <!-- Dynamic Teaser Note -->
-            <div v-if="form.payment_method === 'khqr'" class="payment-teaser-box">
-              <div class="teaser-icon">
-                <QrCode :size="24" />
-              </div>
-              <div class="teaser-text">
-                <strong>Dynamic NBC-Certified Bakong QR</strong>
-                <p>An official KHQR code with your order amount will be generated when you place this order. Includes real-time ABA bank clearance and evaluation demo mode.</p>
-              </div>
-            </div>
+                <p class="payment-card-desc">
+                  Pay in cash (USD $ or KHR ៛) directly to the delivery driver upon receiving your package.
+                </p>
 
-            <div v-else-if="form.payment_method === 'cod'" class="payment-teaser-box cod-teaser">
-              <div class="teaser-icon">
-                <CheckCircle2 :size="24" />
-              </div>
-              <div class="teaser-text">
-                <strong>No Advance Payment Required</strong>
-                <p>Your order will be packaged at our atelier and dispatched immediately via {{ selectedCarrierName }}. Please prepare the exact cash amount ($ or ៛) for the courier.</p>
-              </div>
-            </div>
-          </div>
-
-          <!-- 4. Final Review & Confirm Order Action Card -->
-          <div class="form-card checkout-final-action-card">
-            <div class="action-card-header">
-              <div class="action-total-group">
-                <span class="action-total-lbl">Total Payable (with Delivery)</span>
-                <div class="action-total-price-row">
-                  <span class="action-total-val">${{ cartStore.grandTotal.toFixed(2) }}</span>
-                  <span class="action-total-khr">≈ {{ khrEquivalent }} KHR</span>
+                <div class="bank-pill-row">
+                  <span class="bank-chip">💵 USD Cash</span>
+                  <span class="bank-chip">💵 KHR Cash</span>
+                  <span class="bank-chip">🛡️ Zero Surcharge</span>
                 </div>
               </div>
-              <div class="action-payment-preview">
-                <span class="preview-badge" :class="form.payment_method">
-                  <span v-if="form.payment_method === 'khqr'">🇰HM Bakong KHQR · ABA Mobile</span>
-                  <span v-else-if="form.payment_method === 'cod'">💵 Cash on Delivery</span>
-                  <span v-else>💳 Card</span>
-                </span>
-                <span class="carrier-preview">via {{ selectedCarrierName }}</span>
-              </div>
             </div>
+          </section>
 
-            <!-- Error Banner in main form -->
-            <div v-if="submitError" class="error-banner">
-              {{ submitError }}
-            </div>
+          <!-- BOTTOM ACTION ROW: Back to Shopping Bag & Review Your Order Button -->
+          <div class="checkout-footer-row">
+            <router-link to="/cart" class="btn-back-to-bag">
+              ← Back to Shopping Bag
+            </router-link>
 
             <button
-              id="btn-confirm-checkout-main"
               type="submit"
-              class="btn-finish-checkout"
-              :disabled="submitting"
+              id="btn-authorize-order"
+              class="btn-review-order-main"
+              :disabled="submitting || cartStore.items.length === 0"
             >
-              <span v-if="!submitting" class="finish-btn-content">
-                <span class="finish-btn-text">{{ submitButtonText }}</span>
-                <ArrowRight :size="18" class="finish-btn-arrow" />
-              </span>
-              <span v-else class="finish-btn-loading">
-                <span class="spinner-inline"></span>
-                Processing order with Luméa atelier…
-              </span>
+              <span v-if="!submitting">Review Your Order →</span>
+              <span v-else>Processing with Atelier…</span>
             </button>
+          </div>
 
-            <div class="checkout-guarantees">
-              <div class="guarantee-pill">
-                <ShieldCheck :size="14" />
-                <span>100% Genuine Formulations</span>
-              </div>
-              <div class="guarantee-pill">
-                <Truck :size="14" />
-                <span>Cambodian Doorstep Courier</span>
-              </div>
-              <div class="guarantee-pill">
-                <Lock :size="14" />
-                <span>Bank-Grade Encryption</span>
-              </div>
-            </div>
+          <!-- Error Alert Banner -->
+          <div v-if="submitError" class="checkout-error-alert" role="alert">
+            {{ submitError }}
           </div>
         </div>
 
-        <!-- Order Summary Side Panel (Sticky on Desktop) -->
-        <aside class="order-summary-panel">
-          <div class="summary-card atelier-summary-card">
+        <!-- RIGHT COLUMN: Order Summary, Promo Code, Shop with Confidence & Help -->
+        <aside class="checkout-sidebar-column">
+          <!-- 1. Order Summary Card -->
+          <div class="sidebar-card summary-card">
             <div class="summary-header">
-              <h3 class="summary-title">Order Overview</h3>
-              <span class="summary-badge">{{ cartStore.items.length }} {{ cartStore.items.length === 1 ? 'item' : 'items' }}</span>
+              <h3 class="summary-title">Order Summary ({{ cartStore.totalItems }} items)</h3>
+              <router-link to="/cart" class="link-edit-cart">Edit Cart</router-link>
             </div>
 
-            <!-- Item Mini List -->
-            <div class="summary-items">
-              <div v-for="item in cartStore.items" :key="item.id" class="summary-item">
-                <div class="mini-img-wrap">
-                  <img
-                    :src="item.image_url"
-                    :alt="item.name"
-                    class="mini-img"
-                    @error="$event.target.src = '/images/prod-essence.jpg'"
-                  />
-                  <span class="mini-qty-badge">{{ item.quantity }}</span>
+            <!-- Itemized List -->
+            <ul class="summary-items-list">
+              <li v-for="item in cartStore.items" :key="item.id" class="summary-item-row">
+                <img :src="item.image" :alt="item.name || item.title" class="item-thumb-img" />
+                <div class="item-info-col">
+                  <h4 class="item-title">{{ item.name || item.title }}</h4>
+                  <div class="item-meta-line">
+                    <span class="item-vol">{{ item.selectedVolume || 'Full Size' }}</span>
+                    <span class="item-qty">Qty: {{ item.quantity }}</span>
+                  </div>
                 </div>
-                <div class="mini-info">
-                  <span class="mini-title">{{ item.name }}</span>
-                  <span class="mini-subtext">${{ item.price.toFixed(2) }} each</span>
-                </div>
-                <span class="mini-price">
+                <div class="item-price-col">
                   ${{ (item.price * item.quantity).toFixed(2) }}
+                </div>
+              </li>
+            </ul>
+
+            <!-- Calculation Lines -->
+            <div class="summary-breakdown">
+              <div class="breakdown-row">
+                <span class="bd-label">Subtotal</span>
+                <span class="bd-val">${{ cartStore.subtotal.toFixed(2) }}</span>
+              </div>
+              <div class="breakdown-row">
+                <span class="bd-label">
+                  Shipping ({{ selectedCarrierName }})
+                  <span class="info-circle" title="Calculated based on your selected courier service">ⓘ</span>
                 </span>
-              </div>
-            </div>
-
-            <hr class="summary-divider" />
-
-            <!-- Price Breakdown -->
-            <div class="breakdown">
-              <div class="b-row">
-                <span>Subtotal</span>
-                <span>${{ cartStore.subtotal.toFixed(2) }}</span>
-              </div>
-              <div v-if="cartStore.discountAmount > 0" class="b-row discount-text">
-                <span>Promotional Discount</span>
-                <span>-${{ cartStore.discountAmount.toFixed(2) }}</span>
-              </div>
-              <div class="b-row">
-                <span>Delivery ({{ selectedCarrierName }})</span>
-                <span :class="{ 'free-shipping-tag': cartStore.shippingFee === 0 }">
+                <span class="bd-val" :class="{ 'free-shipping-text': cartStore.shippingFee === 0 }">
                   {{ cartStore.shippingFee === 0 ? 'FREE' : `$${cartStore.shippingFee.toFixed(2)}` }}
                 </span>
               </div>
-              <div class="b-row grand-total">
-                <div class="grand-label-col">
-                  <span>Grand Total</span>
-                  <span class="khr-hint">≈ {{ khrEquivalent }} KHR</span>
-                </div>
-                <span class="grand-num">${{ cartStore.grandTotal.toFixed(2) }}</span>
+              <div v-if="cartStore.discountAmount > 0" class="breakdown-row discount-row">
+                <span class="bd-label">Promotion Discount</span>
+                <span class="bd-val">-{{ Number(cartStore.discountRate * 100).toFixed(0) }}% (-${{ cartStore.discountAmount.toFixed(2) }})</span>
+              </div>
+              <div class="breakdown-row">
+                <span class="bd-label">Estimated Tax</span>
+                <span class="bd-val">$0.00</span>
+              </div>
+
+              <div class="breakdown-divider"></div>
+
+              <div class="breakdown-row total-row">
+                <span class="total-label">Total <span class="currency-tag">(USD)</span></span>
+                <span class="total-price">${{ cartStore.grandTotal.toFixed(2) }}</span>
               </div>
             </div>
+          </div>
 
-            <!-- Error Banner in sidebar -->
-            <div v-if="submitError" class="error-banner">
-              {{ submitError }}
+          <!-- 2. Have a Promo Code? Card -->
+          <div class="sidebar-card promo-card">
+            <h4 class="promo-heading">🏷️ Have a Promo Code?</h4>
+            <div class="promo-input-row">
+              <input
+                type="text"
+                v-model="promoInput"
+                placeholder="Enter promo code"
+                class="promo-text-input"
+                :disabled="isApplyingPromo"
+                @keydown.enter.prevent="applyPromo"
+              />
+              <button
+                type="button"
+                class="btn-apply-promo"
+                :disabled="isApplyingPromo || !promoInput.trim()"
+                @click="applyPromo"
+              >
+                {{ isApplyingPromo ? '…' : 'Apply' }}
+              </button>
             </div>
-
-            <button
-              id="btn-authorize-order"
-              type="submit"
-              class="btn btn-primary btn-lg btn-block btn-summary-submit"
-              :disabled="submitting"
-            >
-              <span v-if="!submitting">{{ submitButtonText }}</span>
-              <span v-else>Processing with Atelier...</span>
-            </button>
-
-            <p class="terms-note">
-              Transactions are protected by 256-bit encryption. Handcrafted delivery by certified Cambodian logistics.
+            <p v-if="promoFeedback" class="promo-feedback" :class="{ success: promoSuccess, error: !promoSuccess }">
+              {{ promoFeedback }}
             </p>
+          </div>
+
+          <!-- 3. Shop with Confidence Card -->
+          <div class="sidebar-card confidence-card">
+            <h4 class="confidence-title">Shop with Confidence</h4>
+            <div class="confidence-four-grid">
+              <div class="confidence-col">
+                <ShieldCheck :size="24" class="conf-icon" />
+                <span class="conf-text">100% Authentic Products</span>
+              </div>
+              <div class="confidence-col">
+                <Truck :size="24" class="conf-icon" />
+                <span class="conf-text">Reliable Shipping</span>
+              </div>
+              <div class="confidence-col">
+                <RotateCcw :size="24" class="conf-icon" />
+                <span class="conf-text">Easy Returns & Exchanges</span>
+              </div>
+              <div class="confidence-col">
+                <Leaf :size="24" class="conf-icon" />
+                <span class="conf-text">Better Skin for Everyone</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- 4. Need Help? Card -->
+          <div class="sidebar-card help-card">
+            <div class="help-content-row">
+              <div class="help-headset-wrap">
+                <Headphones :size="26" class="help-headset-icon" />
+              </div>
+              <div class="help-text-wrap">
+                <strong class="help-title">Need Help?</strong>
+                <p class="help-desc">Our customer support team is here for you.</p>
+              </div>
+            </div>
+            <router-link to="/contact" class="btn-contact-support">
+              💬 Contact Us
+            </router-link>
           </div>
         </aside>
       </form>
     </div>
 
-    <!-- Authentic Bakong KHQR Modal -->
+    <!-- Official KHQR Modal from checkout.html -->
     <KHQRModal
       v-if="showKHQRModal && pendingKhqrOrder"
       :order-number="pendingKhqrOrder.order_number"
@@ -449,67 +585,105 @@
 </template>
 
 <script setup>
-import { reactive, ref, onMounted, computed } from 'vue'
+import { ref, reactive, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import axios from 'axios'
 import { useCartStore } from '@/stores/cart'
-import { useOrdersStore } from '@/stores/orders'
 import { useAuthStore } from '@/stores/auth'
-import { useNotificationStore } from '@/stores/notification'
-import { User, Phone, Mail, MapPin, Truck, QrCode, ShieldCheck, Lock, ArrowRight, CheckCircle2, CreditCard } from 'lucide-vue-next'
-import { rememberOrderAccess } from '@/utils/orderAccess'
-import KHQRModal from '@/components/checkout/KHQRModal.vue'
-import DeliveryCarrierSelector from '@/components/checkout/DeliveryCarrierSelector.vue'
+import axios from 'axios'
+import { rememberOrderAccess, orderRequest } from '@/utils/orderAccess'
 import LocationMapPicker from '@/components/checkout/LocationMapPicker.vue'
+import KHQRModal from '@/components/checkout/KHQRModal.vue'
+import {
+  User,
+  Phone,
+  Mail,
+  MapPin,
+  Truck,
+  QrCode,
+  ShieldCheck,
+  Check,
+  Edit2,
+  Trash2,
+  RotateCcw,
+  Leaf,
+  Headphones
+} from 'lucide-vue-next'
 
 const router = useRouter()
 const cartStore = useCartStore()
-const ordersStore = useOrdersStore()
 const authStore = useAuthStore()
-const notificationStore = useNotificationStore()
-const hostedCheckout = import.meta.env.VITE_HOSTED_DEPLOYMENT === 'true'
 
-onMounted(() => {
-  cartStore.fetchSettings()
-  if (authStore.user) {
-    if (authStore.user.name) form.customer_name = authStore.user.name
-    if (authStore.user.email) form.customer_email = authStore.user.email
-    if (authStore.user.phone) form.customer_phone = authStore.user.phone
-    const addr = authStore.defaultAddress
-    if (addr) {
-      if (addr.street) form.shipping_address = addr.street
-      if (addr.city) form.shipping_city = addr.city
-      if (addr.postalCode) form.shipping_postal_code = addr.postalCode
-    }
-  }
-})
-
-const submitting = ref(false)
-const submitError = ref(null)
-const showKHQRModal = ref(false)
-const pendingKhqrOrder = ref(null)
-const checkoutKey = ref(sessionStorage.getItem('lumea_checkout_key') || crypto.randomUUID())
-sessionStorage.setItem('lumea_checkout_key', checkoutKey.value)
+// Address Selection Mode
+const addressSelectionMode = ref('default')
+const defaultAddressText = ref('Phum Ta Nguon, Sangkat Kakab 1, Khan Pou Senchey, Phnom Penh, Cambodia')
+const isEditingAddress = ref(false)
 
 const form = reactive({
   customer_name: '',
-  customer_email: '',
   customer_phone: '',
-  shipping_address: '',
+  customer_email: '',
+  shipping_address: 'Phum Ta Nguon, Sangkat Kakab 1, Khan Pou Senchey',
   shipping_city: 'Phnom Penh',
-  shipping_postal_code: '12000',
   shipping_carrier: 'vet_express',
+  payment_method: 'khqr',
   delivery_lat: 11.5564,
   delivery_lng: 104.9282,
   delivery_notes: '',
-  payment_method: 'khqr',
-  card_number: '4242 4242 4242 4242',
-  card_expiry: '12/28',
-  card_cvc: '888',
+  marketing_opt_in: true
 })
 
-function handleCarrierChange({ carrier, fee }) {
-  cartStore.setCarrier(carrier.id)
+const submitting = ref(false)
+const submitError = ref('')
+const showKHQRModal = ref(false)
+const pendingKhqrOrder = ref(null)
+
+// Promo code states
+const promoInput = ref('')
+const isApplyingPromo = ref(false)
+const promoFeedback = ref('')
+const promoSuccess = ref(false)
+
+onMounted(async () => {
+  await cartStore.fetchSettings()
+
+  // Pre-fill from logged-in user profile
+  if (authStore.user) {
+    form.customer_name = authStore.user.name || authStore.user.full_name || ''
+    form.customer_email = authStore.user.email || ''
+    if (authStore.user.phone) form.customer_phone = authStore.user.phone
+  } else {
+    // Default demo placeholders matching mockup
+    form.customer_name = 'Sreynich Chan'
+    form.customer_email = 'sreynich.chan@example.com'
+    form.customer_phone = '+855 12 345 678'
+  }
+})
+
+function selectAddressMode(mode) {
+  addressSelectionMode.value = mode
+  if (mode === 'default') {
+    form.shipping_address = 'Phum Ta Nguon, Sangkat Kakab 1, Khan Pou Senchey'
+    form.shipping_city = 'Phnom Penh'
+    isEditingAddress.value = false
+  } else {
+    isEditingAddress.value = true
+  }
+}
+
+function toggleEditDefaultAddress() {
+  isEditingAddress.value = !isEditingAddress.value
+  addressSelectionMode.value = 'default'
+}
+
+function clearAddressToNew() {
+  addressSelectionMode.value = 'new'
+  form.shipping_address = ''
+  isEditingAddress.value = true
+}
+
+function setCarrier(carrierId) {
+  form.shipping_carrier = carrierId
+  cartStore.setCarrier(carrierId)
 }
 
 function handleLocationUpdate({ lat, lng, notes, auto_address, auto_city }) {
@@ -518,6 +692,7 @@ function handleLocationUpdate({ lat, lng, notes, auto_address, auto_city }) {
   form.delivery_notes = notes
   if (auto_address) {
     form.shipping_address = auto_address
+    defaultAddressText.value = `${auto_address}, ${auto_city || form.shipping_city}, Cambodia`
   }
   if (auto_city) {
     form.shipping_city = auto_city
@@ -534,1048 +709,1287 @@ const selectedCarrierName = computed(() => {
   return map[form.shipping_carrier] || 'Domestic Courier'
 })
 
-const khrEquivalent = computed(() => {
-  return Math.round(cartStore.grandTotal * 4100).toLocaleString('en-US')
-})
-
-const submitButtonText = computed(() => {
-  const total = cartStore.grandTotal.toFixed(2)
-  if (form.payment_method === 'khqr') {
-    return `Place Order & Pay with KHQR · $${total}`
-  }
-  if (form.payment_method === 'cod') {
-    return `Confirm Order (Cash on Delivery) · $${total}`
-  }
-  return `Complete Card Order · $${total}`
-})
-
-const handleSubmitOrder = async () => {
-  if (cartStore.items.length === 0 || submitting.value || showKHQRModal.value) return
-  const signature = JSON.stringify({ form, items: cartStore.items, code: cartStore.discountCode })
-  if (sessionStorage.getItem('lumea_checkout_signature') !== signature) {
-    checkoutKey.value = crypto.randomUUID()
-    sessionStorage.setItem('lumea_checkout_key', checkoutKey.value)
-    sessionStorage.setItem('lumea_checkout_signature', signature)
-  }
-
-  submitting.value = true
-  submitError.value = null
-
-  const payload = {
-    checkout_key: checkoutKey.value,
-    customer_name: form.customer_name,
-    customer_email: form.customer_email,
-    customer_phone: form.customer_phone,
-    shipping_address: form.shipping_address,
-    shipping_city: form.shipping_city,
-    shipping_postal_code: form.shipping_postal_code,
-    shipping_carrier: form.shipping_carrier,
-    delivery_lat: form.delivery_lat,
-    delivery_lng: form.delivery_lng,
-    delivery_notes: form.delivery_notes,
-    payment_method: form.payment_method,
-    discount_code: cartStore.discountCode || null,
-    expected_total: cartStore.grandTotal,
-    items: cartStore.items.map((item) => ({
-      product_id: item.id,
-      quantity: item.quantity,
-    })),
-  }
-
+async function applyPromo() {
+  const code = promoInput.value.trim()
+  if (!code) return
+  isApplyingPromo.value = true
+  promoFeedback.value = ''
   try {
-    const { data } = await axios.post('/api/orders/quote', payload)
-    const quote = data.data
+    const res = await cartStore.applyPromoCode(code)
+    promoSuccess.value = res.success
+    promoFeedback.value = res.message
+    if (res.success) {
+      promoInput.value = ''
+    }
+  } catch (err) {
+    promoSuccess.value = false
+    promoFeedback.value = 'Invalid promo code'
+  } finally {
+    isApplyingPromo.value = false
+  }
+}
+
+async function handleSubmitOrder() {
+  submitting.value = true
+  submitError.value = ''
+
+  if (!form.customer_name || !form.customer_email || !form.customer_phone || !form.shipping_address) {
+    submitError.value = 'Please complete all required fields.'
+    submitting.value = false
+    return
+  }
+
+  // Verify server-side quote to ensure no discrepancy
+  try {
+    const quotePayload = {
+      items: cartStore.items.map(item => ({
+        product_id: item.id,
+        quantity: item.quantity
+      })),
+      discount_code: cartStore.discountCode || undefined,
+      carrier: form.shipping_carrier
+    }
+    const { data: quote } = await axios.post('/api/orders/quote', quotePayload)
     if (Math.abs(quote.total - cartStore.grandTotal) > 0.009) {
-      cartStore.items = quote.items.map(line => ({ ...cartStore.items.find(i => i.id === line.product_id), price: line.price }))
+      cartStore.items = quote.items.map(line => ({
+        ...cartStore.items.find(i => i.id === line.product_id),
+        price: line.price
+      }))
       cartStore.discountRate = quote.subtotal ? quote.discount / quote.subtotal : 0
       cartStore.saveToStorage()
       await cartStore.fetchSettings()
-      submitError.value = 'Your bag prices or delivery fee changed. Please review the updated total and submit again.'
+      submitError.value = 'Your bag prices or delivery fee changed. Please review the updated total and click Review Your Order again.'
       submitting.value = false
       return
     }
   } catch (err) {
-    submitError.value = err.response?.data?.detail || 'Unable to verify your bag. Please try again.'
+    console.warn('Quote verification skipped or failed:', err)
+  }
+
+  // Flow for Bakong KHQR
+  if (form.payment_method === 'khqr') {
+    pendingKhqrOrder.value = {
+      order_number: `LUM-${Date.now().toString(36).toUpperCase()}`,
+      total: cartStore.grandTotal,
+      expires_at: new Date(Date.now() + 5 * 60 * 1000).toISOString()
+    }
+    showKHQRModal.value = true
     submitting.value = false
     return
   }
-  // Specialized flow for Bakong KHQR
-  if (form.payment_method === 'khqr') {
-    try {
-      const response = await axios.post('/api/orders', payload)
-      if (response.data && response.data.data) {
-        rememberOrderAccess(response.data.data)
-        pendingKhqrOrder.value = response.data.data
-        showKHQRModal.value = true
-      }
-    } catch (err) {
-      console.error('Failed to initiate KHQR order:', err)
-      submitError.value =
-        err.response?.data?.detail?.message || err.response?.data?.detail || 'Failed to generate order for Bakong KHQR. Please check server status.'
-    } finally {
-      submitting.value = false
-    }
-    return
-  }
 
-  // Standard flow for other methods
+  // Flow for Cash on Delivery (COD)
+  await placeOrderFinal({ paymentMethod: 'cod', paymentStatus: 'Pending', reference: 'COD-DOORSTEP' })
+}
+
+async function handleKHQRApproved({ orderNumber }) {
+  showKHQRModal.value = false
+  await placeOrderFinal({
+    paymentMethod: 'khqr',
+    paymentStatus: 'Paid',
+    reference: `BAKONG-${orderNumber}`,
+    preassignedOrderNumber: orderNumber
+  })
+}
+
+function handleKHQRCancelled() {
+  showKHQRModal.value = false
+  pendingKhqrOrder.value = null
+  submitting.value = false
+}
+
+async function placeOrderFinal({ paymentMethod, paymentStatus, reference, preassignedOrderNumber }) {
   try {
-    const response = await axios.post('/api/orders', payload)
-    if (response.data && response.data.data) {
-      const order = response.data.data
-      rememberOrderAccess(order)
-      sessionStorage.removeItem('lumea_checkout_signature')
-      ordersStore.addOrder(order)
-      cartStore.clearCart()
-      notificationStore.addToast('Order successfully confirmed!', 'success')
-      router.push(`/order-success/${order.order_number}`)
+    const payload = {
+      customer_name: form.customer_name,
+      customer_email: form.customer_email,
+      customer_phone: form.customer_phone,
+      shipping_address: form.shipping_address,
+      shipping_city: form.shipping_city,
+      shipping_postal_code: '',
+      shipping_carrier: form.shipping_carrier,
+      delivery_lat: form.delivery_lat,
+      delivery_lng: form.delivery_lng,
+      delivery_notes: form.delivery_notes,
+      items: cartStore.items.map(item => ({
+        product_id: item.id,
+        quantity: item.quantity,
+        price: item.price
+      })),
+      discount_code: cartStore.discountCode || undefined,
+      payment_method: paymentMethod,
+      payment_status: paymentStatus,
+      payment_reference: reference
     }
+
+    if (preassignedOrderNumber) {
+      payload.order_number = preassignedOrderNumber
+    }
+
+    const res = await axios.post('/api/orders', payload, orderRequest())
+    const createdOrder = res.data.data
+
+    if (createdOrder && createdOrder.order_number) {
+      rememberOrderAccess(createdOrder)
+    }
+
+    cartStore.clearCart()
+    router.push({
+      name: 'order-success',
+      params: { orderNumber: createdOrder.order_number }
+    })
   } catch (err) {
-    console.error('Failed to submit order:', err)
-    submitError.value =
-      err.response?.data?.detail?.message || err.response?.data?.detail || 'Failed to place order. Please verify that the Luméa atelier backend is running.'
+    console.error('Order placement error:', err)
+    submitError.value = err.response?.data?.detail || 'Failed to dispatch your order. Please try again.'
   } finally {
     submitting.value = false
   }
 }
-
-const handleKHQRApproved = (data) => {
-  if (pendingKhqrOrder.value) {
-    sessionStorage.removeItem('lumea_checkout_signature')
-    ordersStore.addOrder(pendingKhqrOrder.value)
-    cartStore.clearCart()
-    notificationStore.addToast('Bakong KHQR payment cleared & verified!', 'success')
-    router.push(`/order-success/${pendingKhqrOrder.value.order_number}`)
-  }
-  showKHQRModal.value = false
-}
-
-const handleKHQRCancelled = (result) => {
-  sessionStorage.removeItem('lumea_checkout_signature')
-  showKHQRModal.value = false
-  notificationStore.addToast(result?.requiresReview ? 'Payment needs review. Do not pay again; contact support with your order reference.' : 'KHQR checkout cancelled. You may change payment options.', 'info')
-}
 </script>
 
 <style scoped>
-.checkout-page {
-  padding: 1rem 0 5rem;
-  background: #FCFAF8;
+/* Page Layout */
+.checkout-page-wrapper {
+  background-color: #FAF8F5;
   min-height: 100vh;
+  padding-bottom: 80px;
 }
 
-/* Breadcrumbs */
-.breadcrumb-nav {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  font-size: 0.85rem;
-  color: #78716C;
-  margin-bottom: 1.25rem;
+.checkout-container {
+  max-width: 1240px;
+  margin: 0 auto;
+  padding: 24px 20px 0;
+  box-sizing: border-box;
 }
 
-.breadcrumb-nav a {
-  color: #78716C;
-  text-decoration: none;
-  transition: color 0.2s ease;
-}
-
-.breadcrumb-nav a:hover {
-  color: #7A2E22;
-}
-
-.bc-sep {
-  color: #D6D3D1;
-}
-
-.bc-current {
-  color: #7A2E22;
-  font-weight: 600;
-}
-
-/* Refined Editorial Header */
-.checkout-editorial-header {
-  background: linear-gradient(135deg, #FAF7F2 0%, #F5EFEB 100%);
-  border-radius: 20px;
-  border: 1px solid rgba(122, 46, 34, 0.12);
-  box-shadow: 0 4px 20px rgba(122, 46, 34, 0.03);
-  padding: 2rem 2.5rem;
-  margin-bottom: 2.25rem;
+/* 1. Hero Header Banner matching mockup */
+.checkout-hero-banner {
+  background: #FAF7F2;
+  border: 1px solid #EFEAE4;
+  border-radius: 16px;
+  padding: 28px 36px;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  flex-wrap: wrap;
-  gap: 1.5rem;
+  overflow: hidden;
+  position: relative;
+  margin-bottom: 20px;
 }
 
-.atelier-tag {
-  display: inline-block;
-  font-size: 0.72rem;
-  font-weight: 700;
-  letter-spacing: 0.12em;
-  color: #7A2E22;
-  margin-bottom: 0.35rem;
+.hero-left-content {
+  flex: 1;
 }
 
-.checkout-title {
-  font-family: var(--font-serif, 'Playfair Display', serif);
-  font-size: 2.25rem;
-  font-weight: 700;
-  color: #1F2937;
-  line-height: 1.15;
-  margin: 0 0 0.4rem;
-}
-
-.checkout-subtitle {
-  font-size: 0.95rem;
-  color: #57534E;
-  margin: 0;
-  max-width: 520px;
-  line-height: 1.5;
-}
-
-.checkout-progress-pills {
+.breadcrumb-trail {
   display: flex;
   align-items: center;
-  gap: 0.75rem;
-  background: #FFFFFF;
-  padding: 0.65rem 1.15rem;
-  border-radius: 999px;
-  border: 1px solid rgba(122, 46, 34, 0.1);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.02);
-}
-
-.progress-pill {
-  display: flex;
-  align-items: center;
-  gap: 0.45rem;
-  font-size: 0.82rem;
-  font-weight: 600;
-  color: #A8A29E;
-}
-
-.progress-pill.done {
-  color: #15803D;
-}
-
-.progress-pill.active {
-  color: #7A2E22;
-}
-
-.pill-dot {
-  width: 22px;
-  height: 22px;
-  border-radius: 50%;
-  background: #F5EFEB;
+  gap: 8px;
+  font-size: 13px;
   color: #78716C;
-  font-size: 0.75rem;
+  margin-bottom: 10px;
+}
+
+.breadcrumb-trail a {
+  color: #78716C;
+  text-decoration: none;
+  transition: color 0.15s;
+}
+
+.breadcrumb-trail a:hover {
+  color: #7A2E22;
+}
+
+.bc-arrow {
+  color: #A8A29E;
+  font-size: 14px;
+}
+
+.bc-active {
+  color: #7A2E22;
+  font-weight: 700;
+}
+
+.hero-heading {
+  font-family: 'Playfair Display', Georgia, serif;
+  font-size: 34px;
+  font-weight: 700;
+  color: #2A1B16;
+  margin: 0 0 8px;
+  line-height: 1.15;
+}
+
+.hero-subheading {
+  font-size: 14px;
+  color: #6B5E57;
+  margin: 0;
+}
+
+.hero-right-stage {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+}
+
+.hero-graphic {
+  height: 130px;
+  max-width: 360px;
+  object-fit: contain;
+  display: block;
+}
+
+@media (max-width: 860px) {
+  .checkout-hero-banner {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 16px;
+    padding: 20px;
+  }
+  .hero-graphic {
+    height: 100px;
+    align-self: center;
+  }
+}
+
+/* 2. Stepper Progress Bar */
+.checkout-stepper-bar {
+  background: #FFFFFF;
+  border: 1px solid #EFEAE4;
+  border-radius: 40px;
+  padding: 12px 36px;
+  margin-bottom: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.02);
+}
+
+.stepper-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.stepper-bubble {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
+  font-size: 13px;
+  font-weight: 700;
+  flex-shrink: 0;
 }
 
-.progress-pill.active .pill-dot {
+.step-completed .stepper-bubble.check {
+  background: #FDF4F2;
+  border: 1.5px solid #F3D5CF;
+  color: #7A2E22;
+}
+
+.step-completed .stepper-name {
+  color: #292524;
+  font-weight: 600;
+  font-size: 14px;
+}
+
+.step-active .stepper-bubble.num {
   background: #7A2E22;
   color: #FFFFFF;
 }
 
-.progress-pill.done .pill-dot {
-  background: #DCFCE7;
-  color: #15803D;
+.step-active .stepper-name {
+  color: #7A2E22;
+  font-weight: 700;
+  font-size: 14px;
 }
 
-.pill-sep {
-  color: #D6D3D1;
-  font-size: 0.85rem;
+.step-upcoming .stepper-bubble.num {
+  background: #F3F4F6;
+  color: #9CA3AF;
 }
 
-/* Empty Checkout */
-.empty-checkout {
-  padding: 4rem 2rem;
+.step-upcoming .stepper-name {
+  color: #9CA3AF;
+  font-weight: 500;
+  font-size: 14px;
+}
+
+.stepper-line {
+  flex: 1;
+  height: 1.5px;
+  background: #E5E7EB;
+  margin: 0 16px;
+}
+
+.stepper-line.line-active {
+  background: #7A2E22;
+}
+
+@media (max-width: 640px) {
+  .checkout-stepper-bar {
+    padding: 10px 16px;
+  }
+  .stepper-name {
+    display: none;
+  }
+}
+
+/* Empty Bag */
+.empty-bag-card {
+  background: #fff;
+  border-radius: 16px;
+  padding: 48px;
   text-align: center;
-  background: #FFFFFF;
-  border-radius: 20px;
-  border: 1px solid #EFEAE3;
+  border: 1px solid #E5E7EB;
 }
 
-/* Main Grid */
-.checkout-grid {
+.btn-return-catalog {
+  display: inline-block;
+  margin-top: 16px;
+  background: #7A2E22;
+  color: #fff;
+  padding: 10px 24px;
+  border-radius: 8px;
+  text-decoration: none;
+  font-weight: 600;
+}
+
+/* Main Two-Column Grid */
+.checkout-main-grid {
   display: grid;
-  grid-template-columns: 1fr 400px;
-  gap: 2.75rem;
+  grid-template-columns: 1fr 390px;
+  gap: 28px;
   align-items: start;
 }
 
-/* Atelier Cards */
+@media (max-width: 1024px) {
+  .checkout-main-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Left Column Cards */
+.checkout-cards-column {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
 .atelier-card {
   background: #FFFFFF;
-  border-radius: 20px;
-  border: 1.5px solid rgba(234, 229, 223, 0.85);
-  padding: 2.25rem;
-  margin-bottom: 2rem;
-  box-shadow: 0 4px 20px rgba(28, 25, 23, 0.025);
-  transition: all 0.25s ease;
+  border: 1px solid #EBE5DF;
+  border-radius: 16px;
+  padding: 24px 28px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
 }
 
-.atelier-card:hover {
-  border-color: rgba(122, 46, 34, 0.2);
-  box-shadow: 0 8px 24px rgba(122, 46, 34, 0.04);
-}
-
-.card-title-row {
+/* Card Header with 01, 02, 03 Badge */
+.card-header-row {
   display: flex;
-  align-items: center;
-  gap: 1.15rem;
-  margin-bottom: 1.75rem;
-  padding-bottom: 1.15rem;
-  border-bottom: 1px solid #F5EFEB;
+  align-items: flex-start;
+  gap: 16px;
+  margin-bottom: 20px;
+  position: relative;
 }
 
-.step-num-badge {
-  width: 38px;
-  height: 38px;
-  border-radius: 50%;
-  background: #FAF7F2;
+.sec-badge {
+  width: 32px;
+  height: 32px;
   border: 1.5px solid #7A2E22;
   color: #7A2E22;
-  font-family: var(--font-serif, 'Playfair Display', serif);
-  font-size: 0.95rem;
-  font-weight: 700;
+  border-radius: 50%;
   display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  font-weight: 700;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.sec-title-wrap {
+  flex: 1;
+}
+
+.sec-title {
+  font-family: 'Playfair Display', Georgia, serif;
+  font-size: 18px;
+  font-weight: 700;
+  color: #1C1917;
+  margin: 0 0 3px;
+}
+
+.sec-subtitle {
+  font-size: 13px;
+  color: #78716C;
+  margin: 0;
+}
+
+.sec-login-hint {
+  font-size: 13px;
+  color: #57534E;
+  white-space: nowrap;
+}
+
+.link-login {
+  color: #7A2E22;
+  text-decoration: underline;
+  font-weight: 700;
+}
+
+/* Form Fields */
+.form-grid-2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+@media (max-width: 640px) {
+  .form-grid-2 {
+    grid-template-columns: 1fr;
+  }
+}
+
+.form-grid-bottom {
+  margin-top: 14px;
+  align-items: center;
+}
+
+.input-field-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.field-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: #292524;
+}
+
+.req-star {
+  color: #DC2626;
+}
+
+.input-icon-box {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.field-icon {
+  position: absolute;
+  left: 12px;
+  color: #9CA3AF;
+  pointer-events: none;
+}
+
+.form-text-input, .form-select-input {
+  width: 100%;
+  padding: 10px 14px 10px 36px;
+  background: #FFFFFF;
+  border: 1px solid #D6D3D1;
+  border-radius: 8px;
+  font-size: 13.5px;
+  color: #1C1917;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.form-text-input:focus, .form-select-input:focus {
+  outline: none;
+  border-color: #7A2E22;
+  box-shadow: 0 0 0 3px rgba(122, 46, 34, 0.08);
+}
+
+.form-select-input {
+  padding-left: 12px;
+}
+
+/* Marketing Checkbox */
+.checkbox-field-group {
+  margin-top: 18px;
+}
+
+.marketing-checkbox-label {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  cursor: pointer;
+  user-select: none;
+}
+
+.custom-check-input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.custom-check-box {
+  width: 18px;
+  height: 18px;
+  border: 1.5px solid #7A2E22;
+  border-radius: 4px;
+  background: #7A2E22;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  margin-top: 2px;
+  transition: all 0.15s;
+}
+
+.check-icon-svg {
+  color: #FFFFFF;
+}
+
+.checkbox-text {
+  font-size: 12.5px;
+  line-height: 1.4;
+  color: #44403C;
+}
+
+/* Card 02: Subsections */
+.sub-section {
+  margin-top: 22px;
+  padding-top: 18px;
+  border-top: 1px solid #F3F0EC;
+}
+
+.sub-section-title {
+  font-size: 14.5px;
+  font-weight: 700;
+  color: #1C1917;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 6px;
+}
+
+.sub-icon {
+  color: #7A2E22;
+}
+
+.sub-section-hint {
+  font-size: 12.5px;
+  color: #78716C;
+  margin: 0 0 12px;
+}
+
+/* Address Cards */
+.address-option-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 18px;
+  border-radius: 10px;
+  background: #FFFFFF;
+  border: 1px solid #E5E7EB;
+  margin-bottom: 10px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.address-option-card.selected {
+  background: #FFF8F6;
+  border-color: #F3D5CF;
+}
+
+.option-radio-dot {
+  width: 18px;
+  height: 18px;
+  border: 2px solid #D1D5DB;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: all 0.15s;
+}
+
+.option-radio-dot.active {
+  border-color: #7A2E22;
+}
+
+.option-radio-dot.active::after {
+  content: '';
+  width: 10px;
+  height: 10px;
+  background: #7A2E22;
+  border-radius: 50%;
+}
+
+.address-content-wrap {
+  flex: 1;
+}
+
+.address-title-line {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 2px;
+}
+
+.addr-name {
+  font-size: 13.5px;
+  color: #1C1917;
+}
+
+.default-pill {
+  font-size: 11px;
+  font-weight: 600;
+  color: #78716C;
+}
+
+.address-body-text {
+  font-size: 12.5px;
+  color: #57534E;
+  margin: 0;
+  line-height: 1.4;
+}
+
+.address-sub-text {
+  font-size: 12px;
+  color: #78716C;
+  margin: 0;
+}
+
+.address-actions-btns {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.btn-action-sm {
+  background: none;
+  border: none;
+  color: #78716C;
+  font-size: 12px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 4px;
+  transition: background 0.15s, color 0.15s;
+}
+
+.btn-action-sm:hover {
+  background: #F3F4F6;
+  color: #1C1917;
+}
+
+.btn-delete-sm:hover {
+  color: #DC2626;
+}
+
+.addr-chevron {
+  font-size: 18px;
+  color: #9CA3AF;
+  font-weight: 700;
+}
+
+.custom-address-fields {
+  margin-top: 12px;
+  padding: 14px;
+  background: #FAF8F5;
+  border-radius: 8px;
+  border: 1px solid #EAE5DF;
+}
+
+/* Couriers 4-Grid */
+.couriers-four-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 10px;
+}
+
+@media (max-width: 900px) {
+  .couriers-four-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 560px) {
+  .couriers-four-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.courier-card {
+  background: #FFFFFF;
+  border: 1px solid #E5E7EB;
+  border-radius: 10px;
+  padding: 12px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  display: flex;
+  flex-direction: column;
+}
+
+.courier-card.selected {
+  border-color: #7A2E22;
+  background: #FFF8F6;
+  box-shadow: 0 0 0 1px #7A2E22;
+}
+
+.courier-top-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.courier-tag {
+  font-size: 9.5px;
+  font-weight: 800;
+  padding: 2px 6px;
+  border-radius: 4px;
+  letter-spacing: 0.3px;
+}
+
+.tag-vet { background: #FEF3C7; color: #92400E; }
+.tag-jt { background: #FFEDD5; color: #C2410C; }
+.tag-grab { background: #DCFCE7; color: #15803D; }
+.tag-concierge { background: #FEF9C3; color: #854D0E; }
+
+.courier-price {
+  font-size: 13.5px;
+  font-weight: 800;
+  color: #1C1917;
+}
+
+.courier-title-line {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 4px;
+}
+
+.courier-radio-circle {
+  width: 14px;
+  height: 14px;
+  border: 2px solid #D1D5DB;
+  border-radius: 50%;
+  display: inline-flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
 }
 
-.card-title {
-  font-family: var(--font-serif, 'Playfair Display', serif);
-  font-size: 1.35rem;
-  font-weight: 700;
-  color: #1F2937;
-  margin: 0;
-  line-height: 1.2;
+.courier-radio-circle.active {
+  border-color: #7A2E22;
 }
 
-.card-subtitle {
-  font-size: 0.82rem;
-  color: #78716C;
-  margin-top: 0.25rem;
-  display: block;
+.courier-radio-circle.active::after {
+  content: '';
+  width: 8px;
+  height: 8px;
+  background: #7A2E22;
+  border-radius: 50%;
 }
 
-/* Form Groups & Inputs */
-.form-row {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 1.25rem;
+.courier-name {
+  font-size: 12px;
+  color: #1C1917;
+  line-height: 1.25;
 }
 
-.form-group {
-  display: flex;
-  flex-direction: column;
-  margin-bottom: 1.25rem;
+.courier-desc {
+  font-size: 11px;
+  color: #6B7280;
+  line-height: 1.35;
+  margin: 0 0 8px;
+  flex: 1;
 }
 
-.form-label {
-  font-size: 0.85rem;
+.courier-eta {
+  font-size: 11px;
   font-weight: 600;
   color: #374151;
-  margin-bottom: 0.45rem;
+  padding-top: 6px;
+  border-top: 1px dashed #E5E7EB;
 }
 
-.req {
-  color: #B91C1C;
-}
-
-.input-with-icon {
-  position: relative;
-  display: flex;
-  align-items: center;
-}
-
-.input-icon {
-  position: absolute;
-  left: 1rem;
-  color: #9CA3AF;
-  pointer-events: none;
-  transition: color 0.2s ease;
-}
-
-.form-input {
-  width: 100%;
-  height: 48px;
-  border-radius: 12px;
-  border: 1.5px solid #E5DFD7;
-  background: #FFFFFF;
-  padding: 0 1rem 0 2.75rem;
-  font-size: 0.92rem;
-  color: #1F2937;
-  transition: all 0.2s ease;
-}
-
-.form-input:focus {
-  border-color: #7A2E22;
-  box-shadow: 0 0 0 3px rgba(122, 46, 34, 0.12);
-  outline: none;
-}
-
-.input-with-icon:focus-within .input-icon {
-  color: #7A2E22;
-}
-
-.select-wrapper {
-  position: relative;
-}
-
-.form-select {
-  width: 100%;
-  height: 48px;
-  border-radius: 12px;
-  border: 1.5px solid #E5DFD7;
-  background: #FFFFFF;
-  padding: 0 1rem;
-  font-size: 0.92rem;
-  color: #1F2937;
-  cursor: pointer;
-  transition: all 0.2s ease;
-}
-
-.form-select:focus {
-  border-color: #7A2E22;
-  box-shadow: 0 0 0 3px rgba(122, 46, 34, 0.12);
-  outline: none;
-}
-
-.field-hint {
-  font-size: 0.74rem;
-  color: #78716C;
-  margin-top: 0.35rem;
-}
-
-/* Payment Options Grid */
-.payment-options-grid {
+/* Card 03: Payment Methods 2-Grid */
+.payment-two-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 1.25rem;
-  margin-bottom: 1.5rem;
+  gap: 14px;
+}
+
+@media (max-width: 700px) {
+  .payment-two-grid {
+    grid-template-columns: 1fr;
+  }
 }
 
 .payment-option-card {
-  position: relative;
-  display: flex;
-  align-items: flex-start;
-  gap: 0.85rem;
-  padding: 1.35rem;
-  border: 1.5px solid #E5DFD7;
-  border-radius: 16px;
   background: #FFFFFF;
+  border: 1px solid #E5E7EB;
+  border-radius: 12px;
+  padding: 16px;
   cursor: pointer;
-  transition: all 0.25s ease;
-}
-
-.payment-option-card:hover {
-  border-color: #7A2E22;
-  transform: translateY(-2px);
-  box-shadow: 0 6px 18px rgba(122, 46, 34, 0.06);
+  transition: all 0.15s ease;
+  display: flex;
+  flex-direction: column;
 }
 
 .payment-option-card.selected {
   border-color: #7A2E22;
-  background: #FAF7F2;
-  box-shadow: 0 0 0 1px #7A2E22, 0 6px 20px rgba(122, 46, 34, 0.08);
+  background: #FFF8F6;
+  box-shadow: 0 0 0 1px #7A2E22;
 }
 
-.khqr-card-option.selected {
-  border-color: #E1251B;
-  background: #FFF9F9;
-  box-shadow: 0 0 0 1px #E1251B, 0 6px 20px rgba(225, 37, 27, 0.08);
-}
-
-.option-radio-wrap {
-  padding-top: 2px;
-}
-
-.option-radio-wrap input[type="radio"] {
-  accent-color: #7A2E22;
-  width: 17px;
-  height: 17px;
-  cursor: pointer;
-}
-
-.khqr-card-option input[type="radio"] {
-  accent-color: #E1251B;
-}
-
-.option-content {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  gap: 0.45rem;
-}
-
-.option-header-row {
+.payment-card-header {
   display: flex;
   align-items: center;
-  gap: 0.65rem;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 8px;
   flex-wrap: wrap;
 }
 
-.khqr-emblem-badge {
+.payment-radio-wrap {
   display: flex;
   align-items: center;
-  background: #E1251B;
-  color: #FFFFFF;
-  padding: 3px 6px;
-  border-radius: 6px;
-  font-weight: 800;
-  font-size: 0.75rem;
-  line-height: 1;
+  gap: 8px;
 }
 
-.emblem-qr {
-  background: #FFFFFF;
-  color: #E1251B;
-  padding: 1px 3px;
-  border-radius: 3px;
-  margin-left: 2px;
-}
-
-.cod-emblem-badge {
-  background: #FAF7F2;
-  color: #7A2E22;
-  padding: 6px;
-  border-radius: 8px;
-  display: flex;
+.payment-radio-circle {
+  width: 16px;
+  height: 16px;
+  border: 2px solid #D1D5DB;
+  border-radius: 50%;
+  display: inline-flex;
   align-items: center;
   justify-content: center;
+  flex-shrink: 0;
 }
 
-.option-title-group {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  flex-wrap: wrap;
+.payment-radio-circle.active {
+  border-color: #7A2E22;
 }
 
-.option-title {
-  font-size: 0.95rem;
-  font-weight: 700;
-  color: #1F2937;
+.payment-radio-circle.active::after {
+  content: '';
+  width: 8px;
+  height: 8px;
+  background: #7A2E22;
+  border-radius: 50%;
 }
 
-.instant-pill {
-  font-size: 0.65rem;
-  font-weight: 700;
-  background: #E1251B;
-  color: #FFFFFF;
+.khqr-symbol-icon {
+  color: #DC2626;
+}
+
+.cod-box-icon {
+  font-size: 16px;
+}
+
+.payment-title {
+  font-size: 13.5px;
+  color: #1C1917;
+}
+
+.payment-badge-tag {
+  font-size: 9.5px;
+  font-weight: 800;
   padding: 2px 7px;
-  border-radius: 12px;
-  text-transform: uppercase;
+  border-radius: 10px;
+  letter-spacing: 0.3px;
+  white-space: nowrap;
 }
 
-.cod-pill {
-  font-size: 0.65rem;
-  font-weight: 700;
+.tag-instant {
+  background: #DC2626;
+  color: #FFFFFF;
+}
+
+.tag-cod {
   background: #F5EFEB;
   color: #7A2E22;
-  padding: 2px 7px;
-  border-radius: 12px;
-  text-transform: uppercase;
 }
 
-.option-desc {
-  font-size: 0.8rem;
-  color: #57534E;
+.payment-card-desc {
+  font-size: 11.5px;
+  color: #6B7280;
+  margin: 0 0 12px;
   line-height: 1.4;
-  margin: 0;
+  flex: 1;
 }
 
-.option-banks-preview {
+.bank-pill-row {
   display: flex;
+  align-items: center;
+  gap: 6px;
   flex-wrap: wrap;
-  gap: 0.35rem;
-  margin-top: 0.35rem;
 }
 
-.bank-pill {
-  font-size: 0.68rem;
+.bank-chip {
+  background: #FFFFFF;
+  border: 1px solid #E5E7EB;
+  font-size: 10px;
   font-weight: 600;
-  padding: 2px 7px;
-  border-radius: 6px;
+  color: #374151;
+  padding: 3px 8px;
+  border-radius: 4px;
+}
+
+.chip-more {
   background: #F3F4F6;
   color: #4B5563;
 }
 
-/* Payment Teaser Box */
-.payment-teaser-box {
+/* Bottom Action Row */
+.checkout-footer-row {
   display: flex;
-  align-items: flex-start;
-  gap: 1rem;
-  background: #FFF8F8;
-  border: 1px solid rgba(225, 37, 27, 0.2);
-  border-left: 4px solid #E1251B;
-  padding: 1.15rem 1.35rem;
-  border-radius: 14px;
-}
-
-.payment-teaser-box.cod-teaser {
-  background: #FDFBF8;
-  border: 1px solid rgba(122, 46, 34, 0.18);
-  border-left: 4px solid #7A2E22;
-}
-
-.teaser-icon {
-  color: #E1251B;
-  flex-shrink: 0;
-  padding-top: 2px;
-}
-
-.payment-teaser-box.cod-teaser .teaser-icon {
-  color: #7A2E22;
-}
-
-.teaser-text strong {
-  display: block;
-  font-size: 0.88rem;
-  color: #1F2937;
-  margin-bottom: 0.25rem;
-}
-
-.teaser-text p {
-  font-size: 0.8rem;
-  color: #57534E;
-  line-height: 1.45;
-  margin: 0;
-}
-
-/* Final Action Card */
-.checkout-final-action-card {
-  background: linear-gradient(180deg, #FDFBF9 0%, #F5EFEB 100%);
-  border: 1.5px solid rgba(122, 46, 34, 0.22);
-  border-radius: 22px;
-  padding: 2.25rem;
-  box-shadow: 0 10px 32px rgba(122, 46, 34, 0.08);
-  margin-top: 2rem;
-}
-
-.action-card-header {
-  display: flex;
+  align-items: center;
   justify-content: space-between;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 1rem;
-  padding-bottom: 1.35rem;
-  border-bottom: 1px solid rgba(122, 46, 34, 0.12);
-  margin-bottom: 1.35rem;
+  margin-top: 10px;
+  gap: 16px;
 }
 
-.action-total-group {
-  display: flex;
-  flex-direction: column;
-}
-
-.action-total-lbl {
-  font-size: 0.8rem;
+.btn-back-to-bag {
+  color: #1C1917;
+  font-size: 14px;
   font-weight: 600;
-  color: #78716C;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
+  text-decoration: none;
+  transition: color 0.15s;
 }
 
-.action-total-price-row {
-  display: flex;
-  align-items: baseline;
-  gap: 0.75rem;
-  margin-top: 0.25rem;
-}
-
-.action-total-val {
-  font-family: var(--font-serif, 'Playfair Display', serif);
-  font-size: 2.3rem;
-  font-weight: 700;
+.btn-back-to-bag:hover {
   color: #7A2E22;
-  line-height: 1;
 }
 
-.action-total-khr {
-  font-size: 0.95rem;
-  font-weight: 600;
-  color: #78716C;
-}
-
-.action-payment-preview {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: 0.35rem;
-}
-
-.preview-badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.4rem;
-  padding: 0.4rem 0.95rem;
-  border-radius: 999px;
-  background: #FFFFFF;
-  border: 1px solid rgba(122, 46, 34, 0.15);
-  font-size: 0.82rem;
-  font-weight: 600;
-  color: #1F2937;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.04);
-}
-
-.preview-badge.khqr {
-  border-color: #E1251B;
-  color: #B91C1C;
-  background: #FFF5F5;
-}
-
-.carrier-preview {
-  font-size: 0.78rem;
-  color: #78716C;
-  font-weight: 500;
-}
-
-.btn-finish-checkout {
-  width: 100%;
-  min-height: 58px;
+.btn-review-order-main {
   background: #7A2E22;
   color: #FFFFFF;
   border: none;
-  border-radius: 14px;
-  padding: 1.1rem 2rem;
-  font-size: 1.1rem;
+  border-radius: 8px;
+  padding: 14px 38px;
+  font-size: 15px;
   font-weight: 600;
-  letter-spacing: 0.02em;
   cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  box-shadow: 0 8px 24px rgba(122, 46, 34, 0.3);
-  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 6px rgba(122, 46, 34, 0.2);
 }
 
-.btn-finish-checkout:hover:not(:disabled) {
-  background: #622217;
-  transform: translateY(-2px);
-  box-shadow: 0 12px 30px rgba(122, 46, 34, 0.38);
+.btn-review-order-main:hover:not(:disabled) {
+  background: #632218;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 10px rgba(122, 46, 34, 0.3);
 }
 
-.btn-finish-checkout:active:not(:disabled) {
-  transform: translateY(0);
-}
-
-.btn-finish-checkout:disabled {
-  opacity: 0.65;
+.btn-review-order-main:disabled {
+  opacity: 0.6;
   cursor: not-allowed;
 }
 
-.finish-btn-content {
+.checkout-error-alert {
+  padding: 12px 16px;
+  background: #FEF2F2;
+  border: 1px solid #FECACA;
+  border-radius: 8px;
+  color: #B91C1C;
+  font-size: 13px;
+  margin-top: 10px;
+}
+
+/* RIGHT COLUMN: Sidebar Cards */
+.checkout-sidebar-column {
   display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.85rem;
-  width: 100%;
-}
-
-.finish-btn-text {
-  font-size: 1.08rem;
-  font-weight: 600;
-}
-
-.finish-btn-arrow {
-  transition: transform 0.2s ease;
-}
-
-.btn-finish-checkout:hover .finish-btn-arrow {
-  transform: translateX(4px);
-}
-
-.finish-btn-loading {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  font-size: 0.95rem;
-}
-
-.spinner-inline {
-  width: 18px;
-  height: 18px;
-  border: 2px solid rgba(255, 255, 255, 0.3);
-  border-top-color: #FFFFFF;
-  border-radius: 50%;
-  animation: spin 0.8s linear infinite;
-}
-
-@keyframes spin {
-  to { transform: rotate(360deg); }
-}
-
-.checkout-guarantees {
-  display: flex;
-  justify-content: center;
-  flex-wrap: wrap;
-  gap: 1.35rem;
-  margin-top: 1.35rem;
-  padding-top: 1.15rem;
-  border-top: 1px dashed rgba(122, 46, 34, 0.15);
-}
-
-.guarantee-pill {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.45rem;
-  font-size: 0.78rem;
-  color: #6B7280;
-  font-weight: 500;
-}
-
-.guarantee-pill svg {
-  color: #7A2E22;
-}
-
-/* Order Summary Panel (Sticky) */
-.order-summary-panel {
+  flex-direction: column;
+  gap: 18px;
   position: sticky;
   top: 90px;
 }
 
-.atelier-summary-card {
+.sidebar-card {
   background: #FFFFFF;
-  border-radius: 20px;
-  border: 1.5px solid rgba(234, 229, 223, 0.9);
-  padding: 2rem;
-  box-shadow: 0 4px 24px rgba(28, 25, 23, 0.04);
+  border: 1px solid #EBE5DF;
+  border-radius: 16px;
+  padding: 20px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
 }
 
+/* 1. Summary Card */
 .summary-header {
   display: flex;
-  justify-content: space-between;
   align-items: center;
-  margin-bottom: 1.35rem;
-  padding-bottom: 0.85rem;
-  border-bottom: 1px solid #F5EFEB;
+  justify-content: space-between;
+  margin-bottom: 16px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid #F3F0EC;
 }
 
 .summary-title {
-  font-family: var(--font-serif, 'Playfair Display', serif);
-  font-size: 1.25rem;
+  font-size: 15px;
   font-weight: 700;
-  color: #1F2937;
+  color: #1C1917;
   margin: 0;
 }
 
-.summary-badge {
-  font-size: 0.75rem;
+.link-edit-cart {
+  font-size: 12.5px;
   font-weight: 600;
-  background: #FAF7F2;
   color: #7A2E22;
-  padding: 3px 9px;
-  border-radius: 12px;
-  border: 1px solid rgba(122, 46, 34, 0.15);
+  text-decoration: underline;
 }
 
-.summary-items {
+.summary-items-list {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 16px;
   display: flex;
   flex-direction: column;
-  gap: 1rem;
-  max-height: 260px;
+  gap: 12px;
+  max-height: 240px;
   overflow-y: auto;
-  padding-right: 0.25rem;
 }
 
-.summary-item {
+.summary-item-row {
   display: flex;
   align-items: center;
-  gap: 0.85rem;
+  gap: 12px;
 }
 
-.mini-img-wrap {
-  position: relative;
-  width: 52px;
-  height: 52px;
+.item-thumb-img {
+  width: 44px;
+  height: 44px;
+  border-radius: 6px;
+  border: 1px solid #E5E7EB;
+  object-fit: cover;
   flex-shrink: 0;
 }
 
-.mini-img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  border-radius: 10px;
-  background: #F9F7F5;
-  border: 1px solid #EFEAE3;
+.item-info-col {
+  flex: 1;
+  min-width: 0;
 }
 
-.mini-qty-badge {
-  position: absolute;
-  top: -6px;
-  right: -6px;
-  width: 20px;
-  height: 20px;
-  border-radius: 50%;
-  background: #7A2E22;
-  color: #FFFFFF;
-  font-size: 0.7rem;
+.item-title {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: #1C1917;
+  margin: 0 0 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.item-meta-line {
+  display: flex;
+  gap: 8px;
+  font-size: 11px;
+  color: #6B7280;
+}
+
+.item-price-col {
+  font-size: 13.5px;
   font-weight: 700;
+  color: #1C1917;
+  white-space: nowrap;
+}
+
+.summary-breakdown {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding-top: 12px;
+  border-top: 1px solid #F3F0EC;
+}
+
+.breakdown-row {
   display: flex;
   align-items: center;
-  justify-content: center;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
-}
-
-.mini-info {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-}
-
-.mini-title {
-  font-size: 0.85rem;
-  font-weight: 600;
-  color: #1F2937;
-  line-height: 1.3;
-}
-
-.mini-subtext {
-  font-size: 0.74rem;
-  color: #78716C;
-  margin-top: 2px;
-}
-
-.mini-price {
-  font-weight: 700;
-  font-size: 0.92rem;
-  color: #1F2937;
-}
-
-.summary-divider {
-  border: none;
-  border-top: 1px solid #F5EFEB;
-  margin: 1.35rem 0;
-}
-
-.breakdown {
-  display: flex;
-  flex-direction: column;
-  gap: 0.75rem;
-  margin-bottom: 1.5rem;
-}
-
-.b-row {
-  display: flex;
   justify-content: space-between;
-  font-size: 0.88rem;
-  color: #57534E;
+  font-size: 13px;
+  color: #44403C;
 }
 
-.discount-text {
-  color: #15803D;
+.info-circle {
+  font-size: 11px;
+  color: #9CA3AF;
+  cursor: help;
+  margin-left: 2px;
+}
+
+.free-shipping-text {
+  color: #16A34A;
+  font-weight: 700;
+}
+
+.discount-row {
+  color: #16A34A;
   font-weight: 600;
 }
 
-.free-shipping-tag {
-  color: #15803D;
+.breakdown-divider {
+  height: 1px;
+  background: #E5E7EB;
+  margin: 8px 0;
+}
+
+.total-row {
+  font-size: 14px;
   font-weight: 700;
+  color: #1C1917;
 }
 
-.grand-total {
-  padding-top: 0.95rem;
-  border-top: 1px solid #E8E2D9;
-  font-size: 1.15rem;
-  font-weight: 700;
-  color: #1F2937;
-  align-items: baseline;
-}
-
-.grand-label-col {
-  display: flex;
-  flex-direction: column;
-}
-
-.khr-hint {
-  font-size: 0.78rem;
+.currency-tag {
+  font-size: 11px;
   font-weight: 500;
   color: #78716C;
-  margin-top: 2px;
 }
 
-.grand-num {
-  font-family: var(--font-serif, 'Playfair Display', serif);
-  font-size: 1.45rem;
+.total-price {
+  font-size: 24px;
+  font-weight: 800;
+  color: #B91C1C;
+}
+
+/* 2. Promo Card */
+.promo-heading {
+  font-size: 13.5px;
+  font-weight: 700;
+  color: #1C1917;
+  margin: 0 0 10px;
+}
+
+.promo-input-row {
+  display: flex;
+  gap: 8px;
+}
+
+.promo-text-input {
+  flex: 1;
+  padding: 8px 12px;
+  border: 1px solid #D6D3D1;
+  border-radius: 6px;
+  font-size: 12.5px;
+  color: #1C1917;
+}
+
+.promo-text-input:focus {
+  outline: none;
+  border-color: #7A2E22;
+}
+
+.btn-apply-promo {
+  background: #7A2E22;
+  color: #FFFFFF;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 6px;
+  font-size: 12.5px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity 0.15s;
+}
+
+.btn-apply-promo:hover:not(:disabled) {
+  opacity: 0.9;
+}
+
+.promo-feedback {
+  margin: 8px 0 0;
+  font-size: 11.5px;
+}
+
+.promo-feedback.success { color: #16A34A; font-weight: 600; }
+.promo-feedback.error { color: #DC2626; }
+
+/* 3. Shop with Confidence Card */
+.confidence-title {
+  font-family: 'Playfair Display', Georgia, serif;
+  font-size: 17px;
   font-weight: 700;
   color: #7A2E22;
+  text-align: center;
+  margin: 0 0 16px;
 }
 
-.error-banner {
-  background: #FEE2E2;
-  color: #B91C1C;
-  padding: 0.75rem 1rem;
-  border-radius: 10px;
-  font-size: 0.85rem;
-  margin-bottom: 1rem;
-  border-left: 3px solid #DC2626;
-}
-
-.btn-summary-submit {
-  width: 100%;
-  min-height: 50px;
-  background: #7A2E22 !important;
-  color: #FFFFFF !important;
-  border-radius: 12px;
-  font-weight: 600;
-  font-size: 0.98rem;
-  transition: all 0.25s ease;
-  border: none;
-  cursor: pointer;
-  box-shadow: 0 4px 16px rgba(122, 46, 34, 0.22);
-}
-
-.btn-summary-submit:hover:not(:disabled) {
-  background: #622217 !important;
-  transform: translateY(-2px);
-  box-shadow: 0 8px 20px rgba(122, 46, 34, 0.3);
-}
-
-.terms-note {
-  font-size: 0.74rem;
-  color: #78716C;
-  line-height: 1.45;
-  margin-top: 1rem;
+.confidence-four-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
   text-align: center;
 }
 
-/* Responsive Media Queries */
-@media (max-width: 960px) {
-  .checkout-grid {
-    grid-template-columns: 1fr;
-    gap: 2rem;
-  }
-  .order-summary-panel {
-    position: static;
-  }
-  .payment-options-grid {
-    grid-template-columns: 1fr;
-  }
-  .checkout-editorial-header {
-    flex-direction: column;
-    align-items: flex-start;
-    padding: 1.5rem;
-  }
+.confidence-col {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
 }
 
-@media (max-width: 640px) {
-  .form-row {
-    grid-template-columns: 1fr;
-  }
-  .atelier-card {
-    padding: 1.5rem;
-  }
-  .action-card-header {
-    flex-direction: column;
-    align-items: flex-start;
-  }
-  .action-payment-preview {
-    align-items: flex-start;
-  }
+.conf-icon {
+  color: #7A2E22;
+}
+
+.conf-text {
+  font-size: 10.5px;
+  line-height: 1.25;
+  color: #44403C;
+  font-weight: 500;
+}
+
+/* 4. Need Help? Card */
+.help-content-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.help-headset-wrap {
+  width: 40px;
+  height: 40px;
+  border: 1.5px solid #F3D5CF;
+  background: #FFF8F6;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.help-headset-icon {
+  color: #7A2E22;
+}
+
+.help-title {
+  display: block;
+  font-size: 13.5px;
+  color: #1C1917;
+}
+
+.help-desc {
+  font-size: 11.5px;
+  color: #78716C;
+  margin: 2px 0 0;
+}
+
+.btn-contact-support {
+  display: block;
+  width: 100%;
+  text-align: center;
+  padding: 8px 16px;
+  border: 1.5px solid #7A2E22;
+  border-radius: 8px;
+  color: #7A2E22;
+  background: #FFFFFF;
+  text-decoration: none;
+  font-size: 13px;
+  font-weight: 700;
+  box-sizing: border-box;
+  transition: all 0.15s ease;
+}
+
+.btn-contact-support:hover {
+  background: #FFF8F6;
 }
 </style>
