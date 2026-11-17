@@ -28,13 +28,29 @@ const { chromium } = require('playwright');
   await page.fill('#cEmail', 'sreynich.chan@example.com');
   await page.fill('#cPhone', '+855 12 345 678');
   await page.fill('#sAddress', '123 Norodom Boulevard, Sangkat Tonle Bassac');
-  await page.fill('#sCity', 'Phnom Penh');
+  await page.selectOption('#sCity', 'Phnom Penh');
+
+  page.on('console', msg => console.log('PAGE LOG:', msg.text()));
+  page.on('pageerror', err => console.log('PAGE ERROR:', err.message));
 
   console.log('Clicking #btn-authorize-order...');
   await page.click('#btn-authorize-order');
+  await page.waitForTimeout(1000);
 
-  console.log('Waiting for .khqr-canvas-img...');
-  await page.waitForSelector('.khqr-canvas-img', { timeout: 25000 });
+  const errorBanner = await page.$('.error-banner');
+  if (errorBanner) {
+    console.log('Server quote updated, clicking #btn-authorize-order again...');
+    await page.click('#btn-authorize-order');
+  }
+
+  console.log('Waiting for .khqr-canvas...');
+  try {
+    await page.waitForSelector('.khqr-canvas', { timeout: 10000 });
+    console.log('SUCCESS: .khqr-canvas found!');
+  } catch (e) {
+    console.log('Timeout waiting for .khqr-canvas. Current URL:', page.url());
+    await page.screenshot({ path: 'checkout_debug.png' });
+  }
   await page.waitForTimeout(1000);
 
   await page.screenshot({ path: 'khqr_new_design.png' });
