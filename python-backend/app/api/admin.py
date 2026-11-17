@@ -137,6 +137,11 @@ def format_order(order: Order) -> dict:
         "payment_method": order.payment_method,
         "payment_status": order.payment_status,
         "transaction_ref": order.transaction_ref,
+        "shipping_carrier": order.shipping_carrier,
+        "delivery_lat": order.delivery_lat,
+        "delivery_lng": order.delivery_lng,
+        "delivery_notes": order.delivery_notes,
+        "map_url": order.map_url,
         "events": order.events or [],
         "created_at": order.created_at.isoformat() if order.created_at else None,
         "items": [

@@ -297,6 +297,23 @@ const canCancelOrder = computed(() =>
 
 const orderEvents = computed(() => activeOrder.value?.events || [])
 
+function formatOrderDateTime(dtStr) {
+  if (!dtStr) return 'Recently Placed'
+  try {
+    const d = new Date(dtStr)
+    return d.toLocaleString('en-US', {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric',
+      hour: 'numeric',
+      minute: '2-digit',
+      hour12: true
+    })
+  } catch (e) {
+    return dtStr
+  }
+}
+
 function getStageTimestamp(index) {
   const event = orderEvents.value.find(event => event.status === orderStages[index].key)
   return event ? new Date(event.at).toLocaleString() : ''
@@ -793,11 +810,11 @@ const exportOrders = () => {
                 </div>
                 <div class="info-group">
                   <span class="info-lbl">Order Date</span>
-                  <span class="info-val">Aug 31, 2025, 10:24 AM</span>
+                  <span class="info-val">{{ formatOrderDateTime(activeOrder.created_at) }}</span>
                 </div>
                 <div class="info-group">
                   <span class="info-lbl">Delivery Method</span>
-                  <span class="info-val">Standard Delivery (J&T Express)</span>
+                  <span class="info-val">{{ formatCarrierName(activeOrder.shipping_carrier) }}</span>
                 </div>
                 <div class="info-group">
                   <span class="info-lbl">Order Status</span>
@@ -809,7 +826,7 @@ const exportOrders = () => {
                 </div>
                 <div class="info-group">
                   <span class="info-lbl">Tracking Number</span>
-                  <span class="info-val text-muted">JT892401928</span>
+                  <span class="info-val text-muted">{{ activeOrder.transaction_ref || ('LUM-TRK-' + activeOrder.id) }}</span>
                 </div>
                 <div class="info-group">
                   <span class="info-lbl">Payment Status</span>
@@ -819,7 +836,7 @@ const exportOrders = () => {
                 </div>
                 <div class="info-group">
                   <span class="info-lbl">Estimated Delivery</span>
-                  <span class="info-val">Sep 2, 2025 - Sep 4, 2025</span>
+                  <span class="info-val">{{ activeOrder.shipping_carrier === 'grab_express' ? 'Same Day (2–4h Express)' : '1–2 business days' }}</span>
                 </div>
                 <div class="info-group">
                   <span class="info-lbl">Sales Channel</span>
@@ -827,7 +844,7 @@ const exportOrders = () => {
                 </div>
                 <div class="info-group">
                   <span class="info-lbl">Last Updated</span>
-                  <span class="info-val text-muted">Aug 31, 2025, 02:30 PM</span>
+                  <span class="info-val text-muted">{{ formatOrderDateTime(activeOrder.updated_at || activeOrder.created_at) }}</span>
                 </div>
               </div>
             </div>

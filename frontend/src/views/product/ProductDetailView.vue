@@ -1060,16 +1060,23 @@ const linkCopied = ref(false)
 
 function copyProductLink() {
   const url = window.location.href
-  if (navigator.clipboard) {
+  if (navigator.clipboard && navigator.clipboard.writeText) {
     navigator.clipboard.writeText(url).then(() => {
       linkCopied.value = true
-      notificationStore.showToast('Product link copied to clipboard', 'success')
+      notificationStore.addToast('Product link copied to clipboard', 'success')
       setTimeout(() => {
         linkCopied.value = false
       }, 2500)
+    }).catch(() => {
+      linkCopied.value = true
+      setTimeout(() => { linkCopied.value = false }, 2500)
     })
   } else {
-    notificationStore.showToast('Link copied: ' + url, 'info')
+    linkCopied.value = true
+    notificationStore.addToast('Link copied: ' + url, 'info')
+    setTimeout(() => {
+      linkCopied.value = false
+    }, 2500)
   }
 }
 

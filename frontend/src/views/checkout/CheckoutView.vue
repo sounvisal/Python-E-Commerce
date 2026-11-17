@@ -271,6 +271,60 @@
               </div>
             </div>
           </div>
+
+          <!-- 4. Final Review & Confirm Order Action Card -->
+          <div class="form-card checkout-final-action-card">
+            <div class="action-card-header">
+              <div class="action-total-group">
+                <span class="action-total-lbl">Total Payable (with Delivery)</span>
+                <span class="action-total-val">${{ cartStore.grandTotal.toFixed(2) }}</span>
+              </div>
+              <div class="action-payment-preview">
+                <span class="preview-badge" :class="form.payment_method">
+                  <span v-if="form.payment_method === 'khqr'">🇰HM Bakong KHQR · ABA Mobile</span>
+                  <span v-else-if="form.payment_method === 'cod'">💵 Cash on Delivery</span>
+                  <span v-else>💳 Credit / Debit Card</span>
+                </span>
+                <span class="carrier-preview">via {{ selectedCarrierName }}</span>
+              </div>
+            </div>
+
+            <!-- Error Banner in main form -->
+            <div v-if="submitError" class="error-banner">
+              {{ submitError }}
+            </div>
+
+            <button
+              id="btn-confirm-checkout-main"
+              type="submit"
+              class="btn-finish-checkout"
+              :disabled="submitting"
+            >
+              <span v-if="!submitting" class="finish-btn-content">
+                <span class="finish-btn-text">{{ submitButtonText }}</span>
+                <ArrowRight :size="18" class="finish-btn-arrow" />
+              </span>
+              <span v-else class="finish-btn-loading">
+                <span class="spinner-inline"></span>
+                Processing order with Luméa atelier…
+              </span>
+            </button>
+
+            <div class="checkout-guarantees">
+              <div class="guarantee-pill">
+                <ShieldCheck :size="14" />
+                <span>100% Genuine Formulations</span>
+              </div>
+              <div class="guarantee-pill">
+                <Truck :size="14" />
+                <span>Cambodian Doorstep Courier</span>
+              </div>
+              <div class="guarantee-pill">
+                <Lock :size="14" />
+                <span>Bank-Grade Encryption</span>
+              </div>
+            </div>
+          </div>
         </div>
 
         <!-- Order Summary Side Panel -->
@@ -327,10 +381,10 @@
             <button
               id="btn-authorize-order"
               type="submit"
-              class="btn btn-primary btn-lg btn-block"
+              class="btn btn-primary btn-lg btn-block btn-summary-submit"
               :disabled="submitting"
             >
-              <span v-if="!submitting">Authorize Order &middot; ${{ cartStore.grandTotal.toFixed(2) }}</span>
+              <span v-if="!submitting">{{ submitButtonText }}</span>
               <span v-else>Processing with Atelier...</span>
             </button>
 
@@ -356,14 +410,14 @@
 </template>
 
 <script setup>
-import { reactive, ref, onMounted } from 'vue'
+import { reactive, ref, onMounted, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import axios from 'axios'
 import { useCartStore } from '@/stores/cart'
 import { useOrdersStore } from '@/stores/orders'
 import { useAuthStore } from '@/stores/auth'
 import { useNotificationStore } from '@/stores/notification'
-import { CreditCard, Smartphone, Truck, QrCode } from 'lucide-vue-next'
+import { CreditCard, Smartphone, Truck, QrCode, ShieldCheck, Lock, ArrowRight } from 'lucide-vue-next'
 import { rememberOrderAccess } from '@/utils/orderAccess'
 import KHQRModal from '@/components/checkout/KHQRModal.vue'
 import DeliveryCarrierSelector from '@/components/checkout/DeliveryCarrierSelector.vue'
@@ -424,6 +478,27 @@ function handleLocationUpdate({ lat, lng, notes }) {
   form.delivery_lng = lng
   form.delivery_notes = notes
 }
+
+const selectedCarrierName = computed(() => {
+  const map = {
+    vet_express: 'VET Logistics',
+    jt_express: 'J&T Express',
+    grab_express: 'GrabExpress',
+    lumea_concierge: 'Luméa Concierge'
+  }
+  return map[form.shipping_carrier] || 'Domestic Courier'
+})
+
+const submitButtonText = computed(() => {
+  const total = cartStore.grandTotal.toFixed(2)
+  if (form.payment_method === 'khqr') {
+    return `Place Order & Pay with KHQR · $${total}`
+  }
+  if (form.payment_method === 'cod') {
+    return `Confirm Order (Cash on Delivery) · $${total}`
+  }
+  return `Complete Card Order · $${total}`
+})
 
 const handleSubmitOrder = async () => {
   if (cartStore.items.length === 0 || submitting.value || showKHQRModal.value) return
@@ -948,6 +1023,197 @@ const handleKHQRCancelled = (result) => {
 
 .btn-block {
   width: 100%;
+}
+
+.order-summary-panel {
+  position: sticky;
+  top: 90px;
+}
+
+.checkout-final-action-card {
+  background: linear-gradient(180deg, #FBF8F5 0%, #F5EFEB 100%);
+  border: 1.5px solid rgba(122, 46, 34, 0.22);
+  border-radius: 20px;
+  padding: 2rem;
+  box-shadow: 0 10px 30px rgba(122, 46, 34, 0.08);
+  margin-top: 1.5rem;
+}
+
+.action-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 1rem;
+  padding-bottom: 1.25rem;
+  border-bottom: 1px solid rgba(122, 46, 34, 0.12);
+  margin-bottom: 1.25rem;
+}
+
+.action-total-group {
+  display: flex;
+  flex-direction: column;
+}
+
+.action-total-lbl {
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: #78716C;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.action-total-val {
+  font-family: var(--font-serif, 'Playfair Display', serif);
+  font-size: 2.1rem;
+  font-weight: 700;
+  color: #7A2E22;
+  line-height: 1.1;
+  margin-top: 0.2rem;
+}
+
+.action-payment-preview {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.35rem;
+}
+
+.preview-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.35rem 0.85rem;
+  border-radius: 999px;
+  background: #FFFFFF;
+  border: 1px solid rgba(122, 46, 34, 0.15);
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: #1F2937;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.04);
+}
+
+.preview-badge.khqr {
+  border-color: #E1251B;
+  color: #B91C1C;
+  background: #FFF5F5;
+}
+
+.carrier-preview {
+  font-size: 0.78rem;
+  color: #78716C;
+  font-weight: 500;
+}
+
+.btn-finish-checkout {
+  width: 100%;
+  min-height: 56px;
+  background: #7A2E22;
+  color: #FFFFFF;
+  border: none;
+  border-radius: 14px;
+  padding: 1rem 1.75rem;
+  font-size: 1.08rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 6px 20px rgba(122, 46, 34, 0.28);
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.btn-finish-checkout:hover:not(:disabled) {
+  background: #622217;
+  transform: translateY(-2px);
+  box-shadow: 0 10px 26px rgba(122, 46, 34, 0.35);
+}
+
+.btn-finish-checkout:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.btn-finish-checkout:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+}
+
+.finish-btn-content {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  width: 100%;
+}
+
+.finish-btn-text {
+  font-size: 1.05rem;
+  font-weight: 600;
+}
+
+.finish-btn-arrow {
+  transition: transform 0.2s ease;
+}
+
+.btn-finish-checkout:hover .finish-btn-arrow {
+  transform: translateX(4px);
+}
+
+.finish-btn-loading {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  font-size: 0.95rem;
+}
+
+.spinner-inline {
+  width: 18px;
+  height: 18px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-top-color: #FFFFFF;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.checkout-guarantees {
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 1.25rem;
+  margin-top: 1.25rem;
+  padding-top: 1rem;
+  border-top: 1px dashed rgba(122, 46, 34, 0.15);
+}
+
+.guarantee-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.78rem;
+  color: #6B7280;
+  font-weight: 500;
+}
+
+.guarantee-pill svg {
+  color: #7A2E22;
+}
+
+.btn-summary-submit {
+  background: #7A2E22 !important;
+  color: #FFFFFF !important;
+  border-radius: 12px;
+  font-weight: 600;
+  transition: all 0.2s ease;
+}
+
+.btn-summary-submit:hover:not(:disabled) {
+  background: #622217 !important;
+  transform: translateY(-1px);
 }
 
 .terms-note {
