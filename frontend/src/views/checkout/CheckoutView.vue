@@ -512,10 +512,16 @@ function handleCarrierChange({ carrier, fee }) {
   cartStore.setCarrier(carrier.id)
 }
 
-function handleLocationUpdate({ lat, lng, notes }) {
+function handleLocationUpdate({ lat, lng, notes, auto_address, auto_city }) {
   form.delivery_lat = lat
   form.delivery_lng = lng
   form.delivery_notes = notes
+  if (auto_address) {
+    form.shipping_address = auto_address
+  }
+  if (auto_city) {
+    form.shipping_city = auto_city
+  }
 }
 
 const selectedCarrierName = computed(() => {

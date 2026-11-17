@@ -3,18 +3,66 @@
     <div class="map-picker-header">
       <div class="header-left">
         <span class="map-title">📍 Pinpoint Exact Delivery Location</span>
-        <span class="map-subtitle">Click map or drag the pin so our delivery courier finds your door accurately</span>
+        <span class="map-subtitle">Click map, search landmark, or paste Google Maps link to auto-fill your delivery address</span>
       </div>
-      <button
-        type="button"
-        class="locate-btn"
-        :disabled="isLocating"
-        @click="locateUser"
-        title="Detect your current location via device GPS"
-      >
-        <span v-if="isLocating" class="locate-spinner"></span>
-        <span v-else>📍 Locate Me</span>
-      </button>
+      <div class="header-actions">
+        <button
+          type="button"
+          class="locate-btn"
+          :disabled="isLocating"
+          @click="locateUser"
+          title="Detect your current location via device GPS"
+        >
+          <span v-if="isLocating" class="locate-spinner"></span>
+          <span v-else>📍 Locate Me</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Search & Google Maps Paste Toolbar -->
+    <div class="map-toolbar">
+      <!-- Live Place Search -->
+      <div class="search-box-wrapper">
+        <div class="input-with-icon">
+          <span class="input-icon">🔍</span>
+          <input
+            type="text"
+            v-model="searchQuery"
+            class="map-search-input"
+            placeholder="Search landmark, Borey, mall, or street in Cambodia (e.g. Aeon 2, Toul Kork)..."
+            @input="handleSearchInput"
+            @keydown.enter.prevent="triggerSearch"
+          />
+          <button v-if="searchQuery" type="button" class="btn-clear-search" @click="clearSearch">&times;</button>
+        </div>
+        <!-- Search Results Dropdown -->
+        <ul v-if="searchResults.length > 0" class="search-results-dropdown">
+          <li
+            v-for="(res, idx) in searchResults"
+            :key="idx"
+            class="search-result-item"
+            @click="selectSearchResult(res)"
+          >
+            <span class="res-pin">📍</span>
+            <span class="res-name">{{ res.display_name }}</span>
+          </li>
+        </ul>
+      </div>
+
+      <!-- Paste Google Maps Link or GPS -->
+      <div class="gmaps-paste-wrapper">
+        <div class="input-with-icon">
+          <span class="input-icon">🗺️</span>
+          <input
+            type="text"
+            v-model="pasteGmapsInput"
+            class="gmaps-paste-input"
+            placeholder="Paste Google Maps link or GPS (e.g. 11.5564, 104.9282)"
+            @keydown.enter.prevent="applyPastedGmaps"
+          />
+          <button type="button" class="btn-apply-paste" @click="applyPastedGmaps">Pin</button>
+        </div>
+      </div>
     </div>
 
     <!-- Quick Location Presets -->
@@ -43,20 +91,43 @@
       </div>
     </div>
 
-    <!-- Landmark Notes & Google Maps Link -->
+    <!-- Auto-Filled Address Confirmation Banner -->
+    <div v-if="reverseGeoAddress" class="geocoded-address-banner">
+      <div class="geo-banner-left">
+        <span class="geo-icon">✨</span>
+        <div class="geo-text">
+          <span class="geo-label">Auto-detected Address from Pin:</span>
+          <strong class="geo-value">{{ reverseGeoAddress }}</strong>
+          <span v-if="reverseGeoCity" class="geo-city"> · {{ reverseGeoCity }}</span>
+        </div>
+      </div>
+      <button
+        type="button"
+        class="btn-apply-to-form"
+        @click="forceApplyToForm"
+        title="Fill this address into the checkout form"
+      >
+        <span>{{ appliedToForm ? '✓ Auto-Filled to Form' : 'Apply to Address Form' }}</span>
+      </button>
+    </div>
+
+    <!-- Landmark Notes & Google Maps Verification Link -->
     <div class="landmark-section">
-      <label class="landmark-label" for="driverNotes">
-        <span>Delivery Landmark & Driver Instructions (Optional)</span>
-        <a
-          v-if="selectedLat && selectedLng"
-          :href="googleMapsUrl"
-          target="_blank"
-          rel="noopener noreferrer"
-          class="gmaps-preview-link"
-        >
-          🗺️ Verify in Google Maps ↗
-        </a>
-      </label>
+      <div class="landmark-label-row">
+        <label class="landmark-label" for="driverNotes">
+          Delivery Landmark & Driver Instructions (Optional)
+        </label>
+        <div class="gmaps-external-links">
+          <a
+            :href="googleMapsUrl"
+            target="_blank"
+            rel="noopener noreferrer"
+            class="gmaps-preview-link"
+          >
+            🗺️ Open Google Maps in New Tab ↗
+          </a>
+        </div>
+      </div>
       <input
         id="driverNotes"
         type="text"
@@ -101,6 +172,20 @@ const landmarkNotes = ref(props.initialNotes || '')
 const isLocating = ref(false)
 const currentPreset = ref('BKK1 / Chamkarmon')
 
+// Reverse geocode states
+const reverseGeoAddress = ref('')
+const reverseGeoCity = ref('')
+const appliedToForm = ref(false)
+let reverseGeoTimeout = null
+
+// Search states
+const searchQuery = ref('')
+const searchResults = ref([])
+let searchDebounceTimeout = null
+
+// Paste Google Maps input
+const pasteGmapsInput = ref('')
+
 const presets = [
   { name: 'BKK1 / Chamkarmon', lat: 11.5524, lng: 104.9282, zoom: 15 },
   { name: 'Daun Penh / Wat Phnom', lat: 11.5714, lng: 104.9282, zoom: 15 },
@@ -121,29 +206,75 @@ const googleMapsUrl = computed(() => {
   return `https://www.google.com/maps?q=${selectedLat.value.toFixed(6)},${selectedLng.value.toFixed(6)}`
 })
 
-function emitChanges() {
+function emitChanges(autoAddress = null, autoCity = null) {
   emit('update:location', {
     lat: selectedLat.value,
     lng: selectedLng.value,
     notes: landmarkNotes.value,
-    map_url: googleMapsUrl.value
+    map_url: googleMapsUrl.value,
+    auto_address: autoAddress || reverseGeoAddress.value,
+    auto_city: autoCity || reverseGeoCity.value
   })
 }
 
-function updatePin(lat, lng) {
+function updatePin(lat, lng, shouldReverseGeocode = true) {
   selectedLat.value = lat
   selectedLng.value = lng
   if (markerInstance) {
     markerInstance.setLatLng([lat, lng])
   }
   emitChanges()
+  if (shouldReverseGeocode) {
+    triggerReverseGeocode(lat, lng)
+  }
+}
+
+function triggerReverseGeocode(lat, lng) {
+  if (reverseGeoTimeout) clearTimeout(reverseGeoTimeout)
+  reverseGeoTimeout = setTimeout(async () => {
+    try {
+      const url = `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lng}&accept-language=en`
+      const res = await fetch(url, {
+        headers: { 'Accept': 'application/json' }
+      })
+      if (!res.ok) return
+      const data = await res.json()
+      if (data && data.address) {
+        const a = data.address
+        const parts = []
+        if (a.amenity || a.building) parts.push(a.amenity || a.building)
+        if (a.road) parts.push(a.road)
+        if (a.suburb || a.neighbourhood || a.quarter) parts.push(a.suburb || a.neighbourhood || a.quarter)
+        if (a.city_district || a.county) parts.push(a.city_district || a.county)
+        
+        const cleanAddress = parts.filter(Boolean).join(', ') || data.display_name.split(',').slice(0, 3).join(', ')
+        const detectedCity = a.city || a.town || a.province || a.state || 'Phnom Penh'
+
+        reverseGeoAddress.value = cleanAddress
+        reverseGeoCity.value = detectedCity
+        appliedToForm.value = true
+        emitChanges(cleanAddress, detectedCity)
+        setTimeout(() => { appliedToForm.value = false }, 3500)
+      }
+    } catch (e) {
+      console.warn('Reverse geocode failed:', e)
+    }
+  }, 400)
+}
+
+function forceApplyToForm() {
+  if (reverseGeoAddress.value) {
+    appliedToForm.value = true
+    emitChanges(reverseGeoAddress.value, reverseGeoCity.value)
+    setTimeout(() => { appliedToForm.value = false }, 2500)
+  }
 }
 
 function jumpToPreset(preset) {
   currentPreset.value = preset.name
   if (mapInstance) {
     mapInstance.setView([preset.lat, preset.lng], preset.zoom)
-    updatePin(preset.lat, preset.lng)
+    updatePin(preset.lat, preset.lng, true)
   }
 }
 
@@ -161,7 +292,7 @@ function locateUser() {
       currentPreset.value = 'GPS Detected'
       if (mapInstance) {
         mapInstance.setView([lat, lng], 16)
-        updatePin(lat, lng)
+        updatePin(lat, lng, true)
       }
     },
     (err) => {
@@ -171,6 +302,79 @@ function locateUser() {
     },
     { enableHighAccuracy: true, timeout: 8000 }
   )
+}
+
+// Live Place Search
+function handleSearchInput() {
+  if (searchDebounceTimeout) clearTimeout(searchDebounceTimeout)
+  if (!searchQuery.value || searchQuery.value.trim().length < 2) {
+    searchResults.value = []
+    return
+  }
+  searchDebounceTimeout = setTimeout(() => {
+    triggerSearch()
+  }, 350)
+}
+
+async function triggerSearch() {
+  const q = searchQuery.value.trim()
+  if (!q) return
+  try {
+    const url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(q)}&countrycodes=kh&format=json&limit=5&accept-language=en`
+    const res = await fetch(url, { headers: { 'Accept': 'application/json' } })
+    if (res.ok) {
+      const data = await res.json()
+      searchResults.value = data || []
+    }
+  } catch (e) {
+    console.warn('Place search error:', e)
+  }
+}
+
+function selectSearchResult(res) {
+  const lat = parseFloat(res.lat)
+  const lng = parseFloat(res.lon)
+  searchQuery.value = res.display_name.split(',')[0]
+  searchResults.value = []
+  currentPreset.value = res.display_name.split(',')[0]
+  if (mapInstance) {
+    mapInstance.setView([lat, lng], 16)
+    updatePin(lat, lng, true)
+  }
+}
+
+function clearSearch() {
+  searchQuery.value = ''
+  searchResults.value = []
+}
+
+// Parse Pasted Google Maps URL or GPS coordinates
+function applyPastedGmaps() {
+  const raw = pasteGmapsInput.value.trim()
+  if (!raw) return
+
+  // Format 1: Direct coordinates e.g. "11.5564, 104.9282" or "11.5564 104.9282"
+  const coordRegex = /(-?\d+\.\d+)[,\s]+(-?\d+\.\d+)/
+  // Format 2: Google Maps @lat,lng e.g. /@11.5564,104.9282,15z
+  const gmapsAtRegex = /@(-?\d+\.\d+),(-?\d+\.\d+)/
+  // Format 3: Google Maps ?q=lat,lng
+  const gmapsQRegex = /[?&]q=(-?\d+\.\d+),(-?\d+\.\d+)/
+
+  let match = raw.match(gmapsAtRegex) || raw.match(gmapsQRegex) || raw.match(coordRegex)
+  if (match) {
+    const lat = parseFloat(match[1])
+    const lng = parseFloat(match[2])
+    if (lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180) {
+      currentPreset.value = 'Pasted Location'
+      pasteGmapsInput.value = ''
+      if (mapInstance) {
+        mapInstance.setView([lat, lng], 16)
+        updatePin(lat, lng, true)
+      }
+      return
+    }
+  }
+  alert('Could not parse valid coordinates from the input. Please enter GPS (e.g. 11.5564, 104.9282) or paste a Google Maps link.')
 }
 
 onMounted(async () => {
@@ -210,15 +414,17 @@ onMounted(async () => {
 
   markerInstance.on('dragend', (e) => {
     const latlng = e.target.getLatLng()
-    updatePin(latlng.lat, latlng.lng)
+    updatePin(latlng.lat, latlng.lng, true)
     currentPreset.value = 'Custom Pin'
   })
 
   mapInstance.on('click', (e) => {
-    updatePin(e.latlng.lat, e.latlng.lng)
+    updatePin(e.latlng.lat, e.latlng.lng, true)
     currentPreset.value = 'Custom Pin'
   })
 
+  // Perform initial reverse-geocoding
+  triggerReverseGeocode(selectedLat.value, selectedLng.value)
   emitChanges()
 })
 
@@ -227,6 +433,8 @@ onBeforeUnmount(() => {
     mapInstance.remove()
     mapInstance = null
   }
+  if (reverseGeoTimeout) clearTimeout(reverseGeoTimeout)
+  if (searchDebounceTimeout) clearTimeout(searchDebounceTimeout)
 })
 </script>
 
@@ -288,6 +496,7 @@ onBeforeUnmount(() => {
   justify-content: space-between;
   gap: 1rem;
   margin-bottom: 0.75rem;
+  flex-wrap: wrap;
 }
 
 .map-title {
@@ -300,102 +509,233 @@ onBeforeUnmount(() => {
 
 .map-subtitle {
   display: block;
-  font-size: 0.78rem;
+  font-size: 0.76rem;
   color: #78716C;
-  margin-top: 0.15rem;
+  margin-top: 2px;
 }
 
 .locate-btn {
   display: inline-flex;
   align-items: center;
-  gap: 0.35rem;
-  padding: 0.4rem 0.85rem;
+  gap: 6px;
+  background: #FFFFFF;
+  border: 1.5px solid #7A2E22;
+  color: #7A2E22;
+  font-size: 0.76rem;
+  font-weight: 700;
+  padding: 6px 14px;
+  border-radius: 20px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.locate-btn:hover:not(:disabled) {
+  background: #7A2E22;
+  color: #FFFFFF;
+}
+
+.locate-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.locate-spinner {
+  width: 12px;
+  height: 12px;
+  border: 2px solid #7A2E22;
+  border-top-color: transparent;
+  border-radius: 50%;
+  animation: spin 0.6s linear infinite;
+}
+
+/* Map Toolbar (Search + Paste Gmaps) */
+.map-toolbar {
+  display: grid;
+  grid-template-columns: 1.3fr 1fr;
+  gap: 8px;
+  margin-bottom: 0.75rem;
+}
+
+@media (max-width: 768px) {
+  .map-toolbar {
+    grid-template-columns: 1fr;
+  }
+}
+
+.search-box-wrapper, .gmaps-paste-wrapper {
+  position: relative;
+}
+
+.input-with-icon {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.input-icon {
+  position: absolute;
+  left: 10px;
+  font-size: 0.85rem;
+  pointer-events: none;
+  opacity: 0.75;
+}
+
+.map-search-input, .gmaps-paste-input {
+  width: 100%;
+  padding: 8px 30px 8px 32px;
   background: #FFFFFF;
   border: 1px solid #D6D3D1;
   border-radius: 8px;
   font-size: 0.78rem;
-  font-weight: 700;
   color: #1C1917;
-  cursor: pointer;
-  white-space: nowrap;
-  transition: all 0.2s ease;
+  transition: border-color 0.2s;
 }
 
-.locate-btn:hover:not(:disabled) {
-  background: #FAF6F3;
+.map-search-input:focus, .gmaps-paste-input:focus {
+  outline: none;
   border-color: #7A2E22;
+  box-shadow: 0 0 0 2px rgba(122, 46, 34, 0.1);
+}
+
+.btn-clear-search {
+  position: absolute;
+  right: 8px;
+  background: none;
+  border: none;
+  font-size: 1.1rem;
+  color: #A8A29E;
+  cursor: pointer;
+  line-height: 1;
+}
+
+.btn-apply-paste {
+  position: absolute;
+  right: 4px;
+  background: #7A2E22;
+  color: #FFFFFF;
+  border: none;
+  padding: 4px 10px;
+  border-radius: 5px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: opacity 0.2s;
+}
+
+.btn-apply-paste:hover {
+  opacity: 0.9;
+}
+
+/* Search Dropdown */
+.search-results-dropdown {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  margin-top: 4px;
+  background: #FFFFFF;
+  border: 1px solid #E7E5E4;
+  border-radius: 8px;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.12);
+  z-index: 1000;
+  max-height: 220px;
+  overflow-y: auto;
+  list-style: none;
+  padding: 4px 0;
+}
+
+.search-result-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  font-size: 0.75rem;
+  color: #1F2937;
+  cursor: pointer;
+  transition: background 0.15s;
+  border-bottom: 1px solid #F3F4F6;
+}
+
+.search-result-item:last-child {
+  border-bottom: none;
+}
+
+.search-result-item:hover {
+  background: #F5EFEB;
   color: #7A2E22;
 }
 
-.locate-spinner {
-  width: 14px;
-  height: 14px;
-  border: 2px solid #E5E0D8;
-  border-top-color: #7A2E22;
-  border-radius: 50%;
-  animation: spin 0.7s linear infinite;
+.res-pin {
+  font-size: 0.85rem;
+  flex-shrink: 0;
 }
 
-@keyframes spin {
-  to { transform: rotate(360deg); }
+.res-name {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
+/* Preset Pills */
 .preset-pills-row {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
-  margin-bottom: 0.75rem;
+  gap: 6px;
+  margin-bottom: 0.65rem;
   overflow: hidden;
 }
 
 .preset-label {
-  font-size: 0.72rem;
+  font-size: 0.7rem;
   font-weight: 700;
+  color: #78716C;
   text-transform: uppercase;
-  letter-spacing: 0.04em;
-  color: #8C827A;
+  letter-spacing: 0.5px;
   white-space: nowrap;
 }
 
 .preset-pills-scroll {
   display: flex;
-  gap: 0.4rem;
+  gap: 6px;
   overflow-x: auto;
   padding-bottom: 2px;
   scrollbar-width: thin;
 }
 
 .preset-pill {
-  padding: 0.25rem 0.65rem;
   background: #FFFFFF;
-  border: 1px solid #E5E0D8;
-  border-radius: 999px;
+  border: 1px solid #E7E5E4;
+  color: #44403C;
   font-size: 0.72rem;
   font-weight: 600;
-  color: #57534E;
+  padding: 4px 10px;
+  border-radius: 14px;
   cursor: pointer;
   white-space: nowrap;
-  transition: all 0.18s ease;
+  transition: all 0.2s ease;
 }
 
 .preset-pill:hover {
-  border-color: #CBB4A0;
-  color: #1C1917;
+  border-color: #7A2E22;
+  color: #7A2E22;
 }
 
 .preset-pill.active {
   background: #7A2E22;
-  border-color: #7A2E22;
   color: #FFFFFF;
+  border-color: #7A2E22;
 }
 
+/* Map Canvas */
 .map-viewport-wrapper {
   position: relative;
   width: 100%;
-  height: 220px;
+  height: 250px;
   border-radius: 10px;
   overflow: hidden;
-  border: 1px solid #E2DCD5;
+  border: 1px solid #D6D3D1;
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.04);
 }
 
 .leaflet-map-canvas {
@@ -408,62 +748,149 @@ onBeforeUnmount(() => {
   position: absolute;
   bottom: 8px;
   right: 8px;
-  z-index: 999;
-  background: rgba(255, 255, 255, 0.92);
+  background: rgba(255, 255, 255, 0.95);
   backdrop-filter: blur(4px);
-  padding: 0.2rem 0.5rem;
+  border: 1px solid #E7E5E4;
+  padding: 3px 8px;
   border-radius: 6px;
-  border: 1px solid rgba(0, 0, 0, 0.08);
-  font-size: 0.7rem;
-  font-family: monospace;
-  color: #44403C;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+  font-size: 0.68rem;
+  z-index: 500;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+  display: flex;
+  gap: 4px;
+  align-items: center;
 }
 
 .coords-label {
   font-weight: 700;
-  color: #7A2E22;
-  margin-right: 0.25rem;
+  color: #78716C;
 }
 
-.landmark-section {
-  margin-top: 0.85rem;
+.coords-val {
+  font-family: monospace;
+  color: #1C1917;
 }
 
-.landmark-label {
+/* Geocoded Address Banner */
+.geocoded-address-banner {
+  margin-top: 0.65rem;
+  padding: 0.65rem 0.85rem;
+  background: #F5EFEB;
+  border: 1px solid #DECFC4;
+  border-radius: 8px;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 0.5rem;
-  font-size: 0.78rem;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.geo-banner-left {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  flex: 1;
+}
+
+.geo-icon {
+  font-size: 0.95rem;
+  line-height: 1.2;
+}
+
+.geo-text {
+  font-size: 0.74rem;
+  color: #44403C;
+}
+
+.geo-label {
+  display: block;
+  font-size: 0.66rem;
+  color: #78716C;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 1px;
+}
+
+.geo-value {
+  color: #7A2E22;
+  font-weight: 700;
+}
+
+.geo-city {
+  color: #57534E;
+  font-weight: 600;
+}
+
+.btn-apply-to-form {
+  background: #7A2E22;
+  color: #FFFFFF;
+  border: none;
+  font-size: 0.7rem;
+  font-weight: 700;
+  padding: 5px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: opacity 0.2s;
+}
+
+.btn-apply-to-form:hover {
+  opacity: 0.9;
+}
+
+/* Landmark Notes */
+.landmark-section {
+  margin-top: 0.75rem;
+}
+
+.landmark-label-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 4px;
+  flex-wrap: wrap;
+}
+
+.landmark-label {
+  display: block;
+  font-size: 0.75rem;
   font-weight: 600;
   color: #44403C;
-  margin-bottom: 0.35rem;
 }
 
 .gmaps-preview-link {
   font-size: 0.72rem;
-  font-weight: 700;
+  font-weight: 600;
   color: #7A2E22;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.gmaps-preview-link:hover {
   text-decoration: underline;
-  cursor: pointer;
 }
 
 .landmark-input {
   width: 100%;
-  padding: 0.6rem 0.85rem;
+  padding: 8px 12px;
   background: #FFFFFF;
   border: 1px solid #D6D3D1;
   border-radius: 8px;
-  font-size: 0.82rem;
+  font-size: 0.78rem;
   color: #1C1917;
-  outline: none;
   transition: border-color 0.2s;
-  box-sizing: border-box;
 }
 
 .landmark-input:focus {
+  outline: none;
   border-color: #7A2E22;
-  box-shadow: 0 0 0 3px rgba(122, 46, 34, 0.08);
+  box-shadow: 0 0 0 2px rgba(122, 46, 34, 0.1);
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
 }
 </style>
