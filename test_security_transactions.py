@@ -11,7 +11,8 @@ from datetime import timedelta
 from sqlalchemy import create_engine, inspect, text
 from fastapi import HTTPException
 import test_flow_regressions as regression
-from app.models import Order, Product, User, Article
+from sqlalchemy.pool import StaticPool
+from app.models import Order, OrderItem, Product, User, Article, ReturnRequest
 from app.models.promotion import Promotion
 from app.api import admin, articles, banners, pages, settings as settings_api, upload, returns
 from app.api.orders import quote_order, place_order, get_order_by_number, list_all_orders, cancel_customer_order, claim_guest_order
@@ -62,6 +63,12 @@ class AdditionalFlows(regression.CommerceFlows):
         with self.assertRaises(HTTPException): claim_guest_order(number,self.db,self.other_user(),token)
         claim_guest_order(number,self.db,self.user,token)
         self.assertEqual(list_all_orders(None,50,self.db,self.user)[0].order_number,number)
+    def test_unrelated_account_cannot_read_or_cancel_guest_order(self):
+        data=place_order(self.payload(checkout_key=secrets.token_urlsafe(24)),self.db,None)['data']
+        number=data['order_number']
+        other=self.other_user()
+        with self.assertRaises(HTTPException): get_order_by_number(number,self.db,other,None)
+        with self.assertRaises(HTTPException): cancel_customer_order(number,self.db,other,None)
     def test_checkout_retry_is_idempotent_and_reserves_stock_once(self):
         payload=self.payload(checkout_key=secrets.token_urlsafe(24))
         first=place_order(payload,self.db,self.user)['data']
@@ -186,6 +193,304 @@ class AdditionalFlows(regression.CommerceFlows):
         self.assertEqual(request.current_step,7)
         self.assertEqual(request.timeline[-1]['title'],'Refund Completed')
         self.assertEqual(request.refund_reference,'manual-refund-123')
+    def test_concurrent_or_duplicate_returns_cannot_over_reserve_quantity(self):
+        order=self.delivered()
+        payload=self.return_payload(order)
+        returns.submit_return_request(payload,self.db,self.user)
+        with self.assertRaises(HTTPException):
+            returns.submit_return_request(payload,self.db,self.user)
+    def test_concurrent_threads_cannot_over_reserve_returns(self):
+        import shutil
+        directory = tempfile.mkdtemp(prefix='lumea-ret-')
+        db_path = str(Path(directory) / 'ret_race.db')
+        try:
+            engine = create_engine('sqlite:///' + db_path, connect_args={'check_same_thread': False, 'timeout': 15})
+            Base.metadata.create_all(engine)
+            migrate_schema(engine)
+            with Session(engine) as db:
+                user = User(name='Ret User', email='ret@example.com', hashed_password='hash', role='customer')
+                db.add(user)
+                db.commit()
+                order = Order(
+                    order_number='LUM-RET-123',
+                    user_id=user.id,
+                    customer_name='Ret User',
+                    customer_email='ret@example.com',
+                    shipping_address='Phnom Penh',
+                    shipping_city='Phnom Penh',
+                    status='Delivered',
+                    payment_status='Paid',
+                    payment_method='cod',
+                    subtotal=100.0,
+                    total=100.0,
+                    delivered_at=utcnow()
+                )
+                db.add(order)
+                db.commit()
+                item = OrderItem(order_id=order.id, product_id=201, product_name='Serum', price=100.0, quantity=1, total=100.0)
+                db.add(item)
+                db.commit()
+                user_id = user.id
+                item_id = item.id
+
+            from concurrent.futures import ThreadPoolExecutor
+            def req():
+                sess = Session(engine)
+                try:
+                    u = sess.get(User, user_id)
+                    from app.schemas.return_request import ReturnRequestCreate
+                    payload = ReturnRequestCreate(
+                        order_number='LUM-RET-123',
+                        order_item_id=item_id,
+                        product_name='Serum',
+                        price=100.0,
+                        reason='Defective',
+                        resolution='Refund to original payment method',
+                        quantity=1
+                    )
+                    returns.submit_return_request(payload, sess, u)
+                    return 'created'
+                except HTTPException as err:
+                    return err.status_code
+                except Exception:
+                    return 400
+                finally:
+                    sess.close()
+
+            with ThreadPoolExecutor(max_workers=2) as pool:
+                results = list(pool.map(lambda _: req(), range(2)))
+
+            self.assertIn('created', results)
+            self.assertIn(400, results)
+            with Session(engine) as db:
+                self.assertEqual(db.query(ReturnRequest).filter(ReturnRequest.order_number == 'LUM-RET-123').count(), 1)
+            engine.dispose()
+        finally:
+            shutil.rmtree(directory, ignore_errors=True)
+    def test_staff_reconciliation_transition_from_payment_review(self):
+        order = self.place(self.payload(payment_method='khqr'))
+        order.expires_at = utcnow() - timedelta(minutes=1)
+        self.db.commit()
+        settle_payment(self.db, order, "BAKONG-LATE-123")
+        self.db.refresh(order)
+        self.assertEqual(order.status, "Payment Review")
+        self.assertEqual(order.payment_status, "Paid")
+        self.assertFalse(order.stock_reserved)
+
+        prod = self.db.get(Product, 1)
+        prev_stock = prod.stock
+        transition_order(self.db, order, "Confirmed")
+        self.db.commit()
+        self.db.refresh(order)
+        self.db.refresh(prod)
+        self.assertEqual(order.status, "Confirmed")
+        self.assertTrue(order.stock_reserved)
+        self.assertEqual(prod.stock, prev_stock - 1)
+        self.assertEqual(order.events[-1]["status"], "Reconciled to Confirmed by Staff")
+    def test_out_of_stock_payment_review_order_cannot_be_confirmed(self):
+        order = self.place(self.payload(payment_method='khqr'))
+        order.expires_at = utcnow() - timedelta(minutes=1)
+        self.db.commit()
+        settle_payment(self.db, order, "BAKONG-LATE-124")
+        self.db.refresh(order)
+        prod = self.db.get(Product, 1)
+        prod.stock = 0
+        self.db.commit()
+        with self.assertRaises(HTTPException) as ctx:
+            transition_order(self.db, order, "Confirmed")
+        self.assertEqual(ctx.exception.status_code, 409)
+
+        transition_order(self.db, order, "Cancelled")
+        self.db.commit()
+        self.db.refresh(order)
+        self.assertEqual(order.status, "Cancelled")
+        self.assertEqual(order.payment_status, "Refund Pending")
+
+    def test_reconciliation_is_idempotent_with_repeated_products_and_concurrent_snapshots(self):
+        # Create an order in Payment Review with two separate lines of product #1 (1 unit each)
+        prod = self.db.get(Product, 1)
+        prod.stock = 5
+        self.db.commit()
+
+        order = Order(
+            order_number="LUM-REV-RACE-1",
+            user_id=1,
+            customer_name="Race Customer",
+            customer_email="race@example.com",
+            shipping_address="Phnom Penh",
+            shipping_city="Phnom Penh",
+            status="Payment Review",
+            payment_status="Paid",
+            payment_method="khqr",
+            stock_reserved=False,
+            subtotal=100.0,
+            total=100.0,
+            expires_at=utcnow() - timedelta(minutes=5)
+        )
+        self.db.add(order)
+        self.db.commit()
+        line1 = OrderItem(order_id=order.id, product_id=1, product_name="Essence", price=50.0, quantity=1, total=50.0)
+        line2 = OrderItem(order_id=order.id, product_id=1, product_name="Essence", price=50.0, quantity=1, total=50.0)
+        self.db.add_all([line1, line2])
+        self.db.commit()
+
+        # Simulate two staff requests holding the same initial Payment Review snapshot
+        order_snapshot1 = self.db.get(Order, order.id)
+        order_snapshot2 = self.db.get(Order, order.id)
+
+        res1 = transition_order(self.db, order_snapshot1, "Confirmed")
+        self.db.commit()
+        self.db.refresh(prod)
+        self.assertEqual(res1.status, "Confirmed")
+        # 5 initial stock - (1 + 1) aggregated order quantity = 3
+        self.assertEqual(prod.stock, 3)
+
+        # Second staff request calls transition on stale snapshot: must be idempotent and NOT deduct stock again
+        res2 = transition_order(self.db, order_snapshot2, "Confirmed")
+        self.db.commit()
+        self.db.refresh(prod)
+        self.assertEqual(res2.status, "Confirmed")
+        # Stock must remain exactly 3, not 1!
+        self.assertEqual(prod.stock, 3)
+
+    def test_reconciliation_insufficient_stock_rollback(self):
+        prod = self.db.get(Product, 1)
+        prod.stock = 1
+        self.db.commit()
+
+        order = Order(
+            order_number="LUM-REV-OOS-1",
+            user_id=1,
+            customer_name="OOS Customer",
+            customer_email="oos@example.com",
+            shipping_address="Phnom Penh",
+            shipping_city="Phnom Penh",
+            status="Payment Review",
+            payment_status="Paid",
+            payment_method="khqr",
+            stock_reserved=False,
+            subtotal=100.0,
+            total=100.0,
+            expires_at=utcnow() - timedelta(minutes=5)
+        )
+        self.db.add(order)
+        self.db.commit()
+        # Order requires 2 units, but only 1 is in stock
+        line = OrderItem(order_id=order.id, product_id=1, product_name="Essence", price=50.0, quantity=2, total=100.0)
+        self.db.add(line)
+        self.db.commit()
+
+        with self.assertRaises(HTTPException) as ctx:
+            transition_order(self.db, order, "Confirmed")
+        self.assertEqual(ctx.exception.status_code, 409)
+
+        self.db.refresh(order)
+        self.db.refresh(prod)
+        # Verify rollback: stock remains 1, stock_reserved remains False
+        self.assertEqual(prod.stock, 1)
+        self.assertFalse(order.stock_reserved)
+
+    def test_admin_session_invalidation_on_same_email_recovery(self):
+        from app.seed.seed_data import seed_database
+        from app.api.deps import get_current_user, require_admin
+        from app.core.security import create_access_token, get_password_hash, verify_password
+
+        # Create known-password seeded admin account
+        seeded_admin = User(
+            name="Seeded Admin",
+            email="admin@lumea.com",
+            hashed_password=get_password_hash("password123"),
+            role="admin",
+            tier="Luméa Radiant Gold",
+            token_version=1
+        )
+        self.db.add(seeded_admin)
+        self.db.commit()
+
+        # Issue pre-remediation JWT
+        pre_token = create_access_token(seeded_admin.id, token_version=1)
+        current_u = get_current_user(pre_token, self.db)
+        self.assertEqual(current_u.role, "admin")
+        self.assertEqual(require_admin(current_u).email, "admin@lumea.com")
+
+        # Create legitimate rotated admin to verify it is kept intact
+        rotated_admin = User(
+            name="Rotated Admin",
+            email="rotated.admin@lumea.com",
+            hashed_password=get_password_hash("CustomStrongPassword999!"),
+            role="admin",
+            tier="Luméa Radiant Gold",
+            token_version=1
+        )
+        self.db.add(rotated_admin)
+        self.db.commit()
+        rotated_token = create_access_token(rotated_admin.id, token_version=1)
+
+        # Run production bootstrapping with the SAME admin email and strong password
+        with patch.object(settings, 'PRODUCTION', True):
+            with patch.dict('os.environ', {'ADMIN_EMAIL': 'admin@lumea.com', 'ADMIN_PASSWORD': 'NewStrongPassword123!'}):
+                seed_database(self.db)
+
+        # Pre-remediation token must now be REJECTED (session invalidated on same-email recovery)
+        with self.assertRaises(HTTPException) as ctx:
+            get_current_user(pre_token, self.db)
+        self.assertEqual(ctx.exception.status_code, 401)
+
+        # Pre-remediation password must fail
+        self.db.refresh(seeded_admin)
+        self.assertFalse(verify_password("password123", seeded_admin.hashed_password))
+
+        # New credentials must succeed
+        self.assertTrue(verify_password("NewStrongPassword123!", seeded_admin.hashed_password))
+        self.assertEqual(seeded_admin.role, "admin")
+
+        # Newly issued token with new credentials must succeed
+        new_token = create_access_token(seeded_admin.id, token_version=seeded_admin.token_version)
+        new_user = get_current_user(new_token, self.db)
+        self.assertEqual(require_admin(new_user).email, "admin@lumea.com")
+
+        # Legitimate rotated admin must remain valid and intact
+        rotated_user = get_current_user(rotated_token, self.db)
+        self.assertEqual(require_admin(rotated_user).email, "rotated.admin@lumea.com")
+
+    def test_category_deletion_blocks_with_assigned_products_and_reassigns_safely(self):
+        from app.models.category import Category
+        from app.api.admin import admin_delete_category
+
+        cat_a = Category(name="Category A", slug="category-a")
+        cat_b = Category(name="Category B", slug="category-b")
+        self.db.add_all([cat_a, cat_b])
+        self.db.commit()
+
+        prod = Product(
+            category_id=cat_a.id,
+            name="Assigned Product",
+            brand="Luméa",
+            slug="assigned-product",
+            category=cat_a.slug,
+            category_name=cat_a.name,
+            price=45.0,
+            stock=10,
+            image_url="/images/prod.jpg"
+        )
+        self.db.add(prod)
+        self.db.commit()
+
+        # Deleting category without reassign_to_category_id must fail with 409
+        with self.assertRaises(HTTPException) as ctx:
+            admin_delete_category(cat_a.id, db=self.db)
+        self.assertEqual(ctx.exception.status_code, 409)
+
+        # Deleting category with explicit reassignment must reassign product slug and name, delete cat_a, and keep product
+        admin_delete_category(cat_a.id, reassign_to_category_id=cat_b.id, db=self.db)
+        self.db.commit()
+
+        self.assertIsNone(self.db.get(Category, cat_a.id))
+        self.db.refresh(prod)
+        self.assertEqual(prod.category_id, cat_b.id)
+        self.assertEqual(prod.category, "category-b")
+        self.assertEqual(prod.category_name, "Category B")
+        self.assertEqual(prod.stock, 10)
     def test_contact_form_creates_durable_reference(self):
         result=create_inquiry(ContactPayload(firstName='Test',lastName='User',email='test@example.com',subject='Order help',message='Need assistance with delivery',consent=True),self.db)
         self.db.expire_all()

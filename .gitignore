@@ -56,11 +56,29 @@ Thumbs.db
 /python-backend/lumea.db
 *test_upload*
 *sample_reel*
+*atelier_asset_*
 *.jsonl
 e2e_results.json
 master_qa_results.json
 test_*.js
-*.png
+test_*.png
+test_courier_*.png
+test_courier_pricing.js
+crop_*.png
+checkout_timeout_debug.png
+final_*.png
+khqr_*_preview.png
+khqr_new_design.png
+screenshot_*.png
+verified_*.png
+my-deck/
+presentation-output/
+GrabExpress Logo*
+J&T_Express_logo.svg
+/admin/public/images/uploads/
+/frontend/public/images/uploads/
+!/frontend/public/images/couriers/**
+!/admin/public/images/couriers/**
 
 
 # Environment & Secrets
