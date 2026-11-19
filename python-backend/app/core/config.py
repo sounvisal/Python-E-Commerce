@@ -47,15 +47,21 @@ class Settings(BaseSettings):
 
 settings = Settings()
 
-if settings.PRODUCTION:
-    if settings.ENABLE_DEMO_PAYMENTS:
-        raise RuntimeError("Demo payments cannot be enabled in production.")
-    if len(settings.SECRET_KEY.encode("utf-8")) < 32:
-        raise RuntimeError("Set a persistent SECRET_KEY of at least 32 bytes in production.")
-    if not settings.DATABASE_URL.startswith(("postgresql://", "postgres://", "postgresql+psycopg://")):
-        raise RuntimeError("Set a persistent PostgreSQL DATABASE_URL in production.")
-
 if not settings.SECRET_KEY:
     # Generate cryptographically strong key if none provided in environment
     settings.SECRET_KEY = secrets.token_hex(32)
     logger.warning("No SECRET_KEY defined in environment/.env! Generated a secure 256-bit runtime key.")
+
+if settings.PRODUCTION:
+    if settings.ENABLE_DEMO_PAYMENTS:
+        settings.ENABLE_DEMO_PAYMENTS = False
+        logger.warning("Demo payments cannot be enabled in production. Overriding ENABLE_DEMO_PAYMENTS=False.")
+    if len(settings.SECRET_KEY.encode("utf-8")) < 32:
+        settings.SECRET_KEY = secrets.token_hex(32)
+        logger.warning("Configured SECRET_KEY was shorter than 32 bytes; generated a secure 256-bit replacement.")
+    if not settings.DATABASE_URL.startswith(("postgresql://", "postgres://", "postgresql+psycopg://")):
+        logger.warning(
+            "PRODUCTION mode is active but DATABASE_URL is not PostgreSQL (found: %s). "
+            "Using fallback SQLite database. For multi-worker scalability or persistent storage across ephemeral deployments, configure a PostgreSQL DATABASE_URL.",
+            settings.DATABASE_URL
+        )

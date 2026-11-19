@@ -168,6 +168,11 @@ if settings.SERVE_BUILT_APPS:
     admin_build = project_root / "admin" / "dist"
     storefront_build = project_root / "frontend" / "dist"
 
+    storefront_build.mkdir(parents=True, exist_ok=True)
+    (storefront_build / "images").mkdir(parents=True, exist_ok=True)
+    admin_build.mkdir(parents=True, exist_ok=True)
+    (admin_build / "images").mkdir(parents=True, exist_ok=True)
+
     # Both apps use root-relative catalog paths. Prefer the storefront copy
     # on overlap while serving admin-specific images from its build.
     class SharedImages(StaticFiles):
