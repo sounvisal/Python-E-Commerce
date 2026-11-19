@@ -21,7 +21,8 @@ import {
   LogOut,
   ExternalLink,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  X
 } from 'lucide-vue-next'
 
 const props = defineProps({
@@ -29,9 +30,13 @@ const props = defineProps({
     type: Boolean,
     default: false,
   },
+  mobileOpen: {
+    type: Boolean,
+    default: false,
+  }
 })
 
-const emit = defineEmits(['toggleCollapse'])
+const emit = defineEmits(['toggleCollapse', 'closeMobile'])
 
 const route = useRoute()
 const router = useRouter()
@@ -109,15 +114,25 @@ async function handleLogout() {
 </script>
 
 <template>
-  <aside class="atelier-sidebar" :class="{ 'sidebar-collapsed': collapsed }">
+  <aside class="atelier-sidebar" :class="{ 'sidebar-collapsed': collapsed, 'mobile-open': mobileOpen }">
     <!-- Brand Header -->
     <div class="sidebar-brand">
-      <router-link to="/dashboard" class="brand-link">
+      <router-link to="/dashboard" class="brand-link" @click="emit('closeMobile')">
         <h2 class="brand-wordmark">Luméa</h2>
         <span class="brand-sub">ADMIN</span>
       </router-link>
 
       <button
+        v-if="mobileOpen"
+        type="button"
+        class="mobile-close-btn"
+        aria-label="Close sidebar"
+        @click="emit('closeMobile')"
+      >
+        <X :size="16" />
+      </button>
+      <button
+        v-else
         type="button"
         class="collapse-toggle-btn"
         :title="collapsed ? 'Expand sidebar' : 'Collapse sidebar'"
@@ -141,6 +156,7 @@ async function handleLogout() {
             class="nav-link"
             :class="{ active: route.path === item.path || (item.path !== '/dashboard' && route.path.startsWith(item.path)) }"
             :title="collapsed ? item.name : ''"
+            @click="emit('closeMobile')"
           >
             <component :is="item.icon" :size="18" class="nav-icon" />
             <span v-if="!collapsed" class="nav-text">{{ item.name }}</span>
@@ -378,5 +394,46 @@ async function handleLogout() {
 .store-link-row:hover {
   background-color: #F8F1EB;
   color: var(--crimson);
+}
+
+.mobile-close-btn {
+  display: none;
+}
+
+@media (max-width: 768px) {
+  .atelier-sidebar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    z-index: 1100;
+    width: 260px !important;
+    max-width: 85vw;
+    box-shadow: 4px 0 24px rgba(0, 0, 0, 0.15);
+    transform: translateX(-100%);
+    transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  .atelier-sidebar.mobile-open {
+    transform: translateX(0);
+  }
+  .collapse-toggle-btn {
+    display: none;
+  }
+  .mobile-close-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    border-radius: var(--radius-sm);
+    background: #FFFFFF;
+    border: 1px solid #EADFD7;
+    color: var(--text-muted);
+    cursor: pointer;
+  }
+  .mobile-close-btn:hover {
+    color: var(--crimson);
+    border-color: var(--crimson-border);
+  }
 }
 </style>

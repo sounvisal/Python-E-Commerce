@@ -949,6 +949,11 @@ function openReviewModal(order) {
 }
 
 /* Responsive */
+.my-orders-page {
+  max-width: 100%;
+  overflow-x: clip;
+}
+
 @media (max-width: 1024px) {
   .orders-hero-banner {
     grid-template-columns: 1fr;
@@ -965,6 +970,78 @@ function openReviewModal(order) {
   }
   .card-actions-col {
     align-items: flex-start;
+  }
+}
+
+@media (max-width: 640px) {
+  .orders-container {
+    padding: 0 0.85rem;
+  }
+  .orders-hero-banner {
+    padding: 1.5rem 1rem;
+    min-height: auto;
+  }
+  .hero-title {
+    font-size: 2rem;
+  }
+  .hero-right-stage {
+    display: none;
+  }
+  .orders-nav-toolbar {
+    padding: 1rem 0.85rem;
+  }
+  .orders-search-filter-row {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.75rem;
+  }
+  .filter-dropdown-wrap {
+    width: 100%;
+  }
+  .btn-filter-toggle {
+    width: 100%;
+    justify-content: space-between;
+  }
+  .order-record-card {
+    padding: 1rem;
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 1rem;
+  }
+  .card-actions-col {
+    align-items: stretch;
+    width: 100%;
+  }
+  .button-row {
+    flex-direction: column;
+    width: 100%;
+    gap: 0.5rem;
+  }
+  .btn-order-outline,
+  .btn-order-solid {
+    width: 100%;
+    text-align: center;
+    padding: 10px;
+  }
+}
+
+@media (max-width: 360px) {
+  .orders-container {
+    padding: 0 0.5rem;
+  }
+  .orders-nav-toolbar {
+    padding: 0.85rem 0.6rem;
+  }
+  .order-record-card {
+    padding: 0.85rem 0.6rem;
+  }
+  .order-tab-btn {
+    padding: 0.4rem 0.55rem;
+    font-size: 0.8rem;
+  }
+  .card-thumbs-stack {
+    flex-wrap: wrap;
   }
 }
 </style>

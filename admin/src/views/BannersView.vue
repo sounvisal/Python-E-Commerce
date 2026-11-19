@@ -9,6 +9,7 @@ import {
   Plus,
   GripVertical,
   CheckCircle2,
+  AlertCircle,
   Upload,
   Trash2,
   Eye,
@@ -24,6 +25,7 @@ import {
 
 const adminStore = useAdminStore()
 const hostedDeployment = import.meta.env.VITE_HOSTED_DEPLOYMENT === 'true'
+const canUploadMedia = computed(() => !hostedDeployment && adminStore.uploadStatus?.enabled === true)
 
 // State
 const banners = ref([])
@@ -77,6 +79,10 @@ const bannerFileInput = ref(null)
 const isUploadingBanner = ref(false)
 
 function triggerBannerUpload() {
+  if (!canUploadMedia.value) {
+    adminStore.addToast('Hosted media upload is disabled on this server. Provide an image URL directly.', 'warning')
+    return
+  }
   if (bannerFileInput.value) {
     bannerFileInput.value.click()
   }
@@ -396,10 +402,14 @@ function openLiveSite() {
 
           <div class="form-group-clean">
             <label class="form-lbl">Image URL or Asset Path</label>
+            <div v-if="!canUploadMedia" class="media-disabled-notice mb-2">
+              <AlertCircle :size="13" class="text-taupe" />
+              <span>Hosted media upload is disabled on this server. Provide an image URL directly.</span>
+            </div>
             <div class="input-with-upload-action">
-              <input v-model="bannerForm.image_url" type="text" class="atelier-input" />
+              <input v-model="bannerForm.image_url" type="text" class="atelier-input" placeholder="/images/... or https://..." />
               <input
-                v-if="!hostedDeployment"
+                v-if="canUploadMedia"
                 type="file"
                 ref="bannerFileInput"
                 @change="handleBannerUpload"
@@ -407,7 +417,7 @@ function openLiveSite() {
                 style="display: none"
               />
               <button
-                v-if="!hostedDeployment"
+                v-if="canUploadMedia"
                 type="button"
                 class="btn-upload-trigger"
                 @click="triggerBannerUpload"

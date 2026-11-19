@@ -345,7 +345,7 @@ function exportReviewsCSV() {
                 <label class="filter-label">Media</label>
                 <select v-model="selectedMedia" class="filter-select" @change="handleFilterChange">
                   <option value="all">All Media</option>
-                  <option value="video">📹 With Video</option>
+                  <option value="video">With Video Reel</option>
                   <option value="text">Text Only</option>
                 </select>
               </div>

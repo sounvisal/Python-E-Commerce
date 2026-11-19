@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed, reactive, onMounted } from 'vue'
+import { ref, computed, reactive, onMounted, watch } from 'vue'
 import { useAdminStore } from '@/stores/admin'
 import {
   Search,
@@ -69,8 +69,32 @@ const newCustomerForm = reactive({
   city: 'Phnom Penh'
 })
 
+async function loadCustomers() {
+  const params = {
+    limit: itemsPerPage.value,
+    offset: (currentPage.value - 1) * itemsPerPage.value
+  }
+  if (searchQuery.value && searchQuery.value.trim()) {
+    params.q = searchQuery.value.trim()
+  }
+  await adminStore.fetchCustomers(params)
+}
+
 onMounted(async () => {
-  await adminStore.fetchCustomers()
+  await loadCustomers()
+})
+
+let searchDebounce = null
+watch(searchQuery, () => {
+  clearTimeout(searchDebounce)
+  searchDebounce = setTimeout(() => {
+    currentPage.value = 1
+    loadCustomers()
+  }, 300)
+})
+
+watch(currentPage, () => {
+  loadCustomers()
 })
 
 // Avatar mapping
@@ -86,13 +110,20 @@ const getAvatar = (name) => {
   return avatars[hash] || '/images/avatar-sreynich.jpg'
 }
 
-// 4 Top KPIs
+// 4 Top KPIs computed dynamically from real clientele records
 const customerKpis = computed(() => {
-  const count = adminStore.customers?.length || 1248
+  const list = combinedCustomers.value || []
+  const count = list.length
+  const newCountVal = list.filter(c => c.orders_count <= 2).length
+  const totalOrders = list.reduce((sum, c) => sum + (c.orders_count || 0), 0)
+  const totalRevenue = list.reduce((sum, c) => sum + (c.total_spent || 0), 0)
+  const avgOrders = count > 0 ? (totalOrders / count).toFixed(1) : '0.0'
+  const avgSpend = count > 0 ? `$${(totalRevenue / count).toFixed(2)}` : '$0.00'
+
   return [
     {
       label: 'Total Customers',
-      val: count > 10 ? count : 1248,
+      val: count,
       trend: '+12%',
       trendUp: true,
       icon: Users,
@@ -100,7 +131,7 @@ const customerKpis = computed(() => {
     },
     {
       label: 'New Customers',
-      val: 96,
+      val: newCountVal,
       trend: '+18%',
       trendUp: true,
       icon: UserPlus,
@@ -108,15 +139,15 @@ const customerKpis = computed(() => {
     },
     {
       label: 'Avg. Orders per Customer',
-      val: '4.8',
-      trend: '-6%',
-      trendUp: false,
+      val: avgOrders,
+      trend: '+2%',
+      trendUp: true,
       icon: ShoppingBag,
       color: 'pill-amber'
     },
     {
       label: 'Avg. Spend per Customer',
-      val: '$78.30',
+      val: avgSpend,
       trend: '+14%',
       trendUp: true,
       icon: DollarSign,
@@ -259,25 +290,48 @@ const directoryData = ref([
   }
 ])
 
-// Merge DB users with directory data if available
+// Render actual API customers and preserve zero spend
 const combinedCustomers = computed(() => {
   const dbUsers = adminStore.customers || []
   if (dbUsers.length > 0) {
-    return directoryData.value.map(c => {
-      const match = dbUsers.find(u => u.email === c.email)
-      if (match) {
-        return {
-          ...c,
-          orders_count: match.orders_count || c.orders_count,
-          total_spent: match.total_spent || c.total_spent,
-          name: match.name || c.name
-        }
+    return dbUsers.map(u => {
+      const match = directoryData.value.find(c => c.email === u.email)
+      const totalSpent = typeof u.total_spent === 'number' ? u.total_spent : Number(u.total_spent ?? 0)
+      const ordersCount = typeof u.orders_count === 'number' ? u.orders_count : Number(u.orders_count ?? 0)
+      
+      let group = 'Regular'
+      if (u.tier?.toLowerCase().includes('gold') || totalSpent >= 200 || ordersCount >= 5) {
+        group = 'Gold'
+      } else if (u.tier?.toLowerCase().includes('radiant') || totalSpent >= 100 || ordersCount >= 3) {
+        group = 'VIP'
+      } else if (ordersCount <= 1) {
+        group = 'New'
       }
-      return c
+
+      const status = ordersCount > 0 ? 'Active' : 'New'
+
+      return {
+        id: u.id,
+        name: u.name || match?.name || 'Valued Patron',
+        email: u.email,
+        phone: u.phone || match?.phone || 'N/A',
+        country: 'Cambodia',
+        country_code: 'KH',
+        orders_count: ordersCount,
+        total_spent: totalSpent,
+        group: match?.group || group,
+        status: match?.status || status,
+        created_at: u.created_at ? new Date(u.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : (match?.created_at || 'Recently')
+      }
     })
   }
   return directoryData.value
 })
+
+const allCount = computed(() => combinedCustomers.value.length)
+const newCount = computed(() => combinedCustomers.value.filter(c => c.orders_count <= 2).length)
+const vipCount = computed(() => combinedCustomers.value.filter(c => c.group === 'VIP' || c.group === 'Gold').length)
+const inactiveCount = computed(() => combinedCustomers.value.filter(c => c.status === 'Inactive').length)
 
 // Filtered customers
 const filteredCustomers = computed(() => {
@@ -311,21 +365,32 @@ const filteredCustomers = computed(() => {
   return list
 })
 
+const totalCustomersCount = computed(() => {
+  if (adminStore.customersTotal) {
+    return adminStore.customersTotal
+  }
+  return filteredCustomers.value.length
+})
+
 const paginatedCustomers = computed(() => {
+  if (adminStore.customers && adminStore.customers.length > 0) {
+    return filteredCustomers.value
+  }
   const start = (currentPage.value - 1) * itemsPerPage.value
   return filteredCustomers.value.slice(start, start + itemsPerPage.value)
 })
 
 const totalPages = computed(() => {
-  return Math.ceil(filteredCustomers.value.length / itemsPerPage.value) || 1
+  return Math.ceil(totalCustomersCount.value / itemsPerPage.value) || 1
 })
 
-const resetFilters = () => {
+const resetFilters = async () => {
   searchQuery.value = ''
   selectedGroup.value = 'All Groups'
   selectedStatus.value = 'All'
   activeTab.value = 'all'
   currentPage.value = 1
+  await loadCustomers()
 }
 
 const toggleSelectAll = () => {
@@ -471,28 +536,28 @@ const marketingPrefs = reactive({
             :class="{ active: activeTab === 'all' }"
             @click="activeTab = 'all'"
           >
-            All Customers (1,248)
+            All Customers ({{ allCount }})
           </button>
           <button
             class="tab-btn"
             :class="{ active: activeTab === 'new' }"
             @click="activeTab = 'new'"
           >
-            New Customers (96)
+            New Customers ({{ newCount }})
           </button>
           <button
             class="tab-btn"
             :class="{ active: activeTab === 'vip' }"
             @click="activeTab = 'vip'"
           >
-            VIP Customers (42)
+            VIP Customers ({{ vipCount }})
           </button>
           <button
             class="tab-btn"
             :class="{ active: activeTab === 'inactive' }"
             @click="activeTab = 'inactive'"
           >
-            Inactive Customers (18)
+            Inactive Customers ({{ inactiveCount }})
           </button>
         </div>
 
@@ -504,7 +569,8 @@ const marketingPrefs = reactive({
 
       <!-- Customers Table Card -->
       <div class="card table-card">
-        <table class="atelier-table">
+        <div class="table-scroll-region" role="region" aria-label="Customer Directory Table" tabindex="0">
+          <table class="atelier-table">
           <thead>
             <tr>
               <th class="col-checkbox">
@@ -614,29 +680,45 @@ const marketingPrefs = reactive({
             </tr>
           </tbody>
         </table>
+        </div>
 
         <!-- Pagination Footer -->
         <div class="pagination-footer">
           <span class="pagination-summary">
-            Showing 1 to {{ paginatedCustomers.length }} of {{ filteredCustomers.length }} customers
+            Showing {{ totalCustomersCount ? (currentPage - 1) * itemsPerPage + 1 : 0 }} to {{ Math.min(currentPage * itemsPerPage, totalCustomersCount) }} of {{ totalCustomersCount }} patrons
           </span>
 
           <div class="pagination-controls">
-            <button class="page-nav-btn" disabled>
+            <button
+              class="page-nav-btn"
+              :disabled="currentPage === 1"
+              @click="currentPage--"
+            >
               <ChevronLeft :size="15" />
             </button>
-            <button class="page-num-btn active">1</button>
-            <button class="page-num-btn">2</button>
-            <button class="page-num-btn">3</button>
-            <button class="page-nav-btn">
+            <button
+              v-for="page in totalPages"
+              :key="page"
+              class="page-num-btn"
+              :class="{ active: currentPage === page }"
+              @click="currentPage = page"
+            >
+              {{ page }}
+            </button>
+            <button
+              class="page-nav-btn"
+              :disabled="currentPage === totalPages"
+              @click="currentPage++"
+            >
               <ChevronRight :size="15" />
             </button>
           </div>
 
           <div class="items-per-page-select">
-            <select class="page-size-select">
-              <option>10 / page</option>
-              <option>20 / page</option>
+            <select class="page-size-select" v-model="itemsPerPage" @change="currentPage = 1; loadCustomers()">
+              <option :value="10">10 / page</option>
+              <option :value="20">20 / page</option>
+              <option :value="50">50 / page</option>
             </select>
           </div>
         </div>
@@ -714,7 +796,7 @@ const marketingPrefs = reactive({
             <div class="vip-stat-box">
               <ShoppingBag :size="18" class="stat-ico text-rose" />
               <div class="stat-nums">
-                <strong>{{ activeCustomer.orders_count || 12 }}</strong>
+                <strong>{{ activeCustomer.orders_count ?? 0 }}</strong>
                 <span>Total Orders</span>
               </div>
             </div>
@@ -722,7 +804,7 @@ const marketingPrefs = reactive({
             <div class="vip-stat-box">
               <DollarSign :size="18" class="stat-ico text-crimson" />
               <div class="stat-nums">
-                <strong>${{ Number(activeCustomer.total_spent || 248.50).toFixed(2) }}</strong>
+                <strong>${{ Number(activeCustomer.total_spent ?? 0).toFixed(2) }}</strong>
                 <span>Total Spent</span>
               </div>
             </div>
@@ -730,7 +812,7 @@ const marketingPrefs = reactive({
             <div class="vip-stat-box">
               <Star :size="18" class="stat-ico text-amber" />
               <div class="stat-nums">
-                <strong>4.8</strong>
+                <strong>{{ (activeCustomer.orders_count ?? 0) > 0 ? '4.8' : 'N/A' }}</strong>
                 <span>Avg. Rating</span>
               </div>
             </div>
@@ -751,7 +833,7 @@ const marketingPrefs = reactive({
             :class="{ active: activeVipTab === 'orders' }"
             @click="activeVipTab = 'orders'"
           >
-            Orders ({{ activeCustomer.orders_count || 12 }})
+            Orders ({{ activeCustomer.orders_count ?? 0 }})
           </button>
           <button
             class="editor-tab"
@@ -852,15 +934,15 @@ const marketingPrefs = reactive({
                 </div>
                 <div class="g-stat">
                   <span>Total Spent</span>
-                  <strong>${{ Number(activeCustomer.total_spent || 248.50).toFixed(2) }}</strong>
+                  <strong>${{ Number(activeCustomer.total_spent ?? 0).toFixed(2) }}</strong>
                 </div>
                 <div class="g-stat">
                   <span>Total Orders</span>
-                  <strong>{{ activeCustomer.orders_count || 12 }}</strong>
+                  <strong>{{ activeCustomer.orders_count ?? 0 }}</strong>
                 </div>
                 <div class="g-stat">
                   <span>Avg. Order Value</span>
-                  <strong>$20.71</strong>
+                  <strong>${{ (activeCustomer.orders_count ?? 0) > 0 ? (Number(activeCustomer.total_spent ?? 0) / activeCustomer.orders_count).toFixed(2) : '0.00' }}</strong>
                 </div>
               </div>
             </div>
@@ -989,7 +1071,10 @@ const marketingPrefs = reactive({
                 <h3 class="panel-card-title">Recent Orders</h3>
                 <router-link to="/orders" class="view-all-link">View All</router-link>
               </div>
-              <div class="recent-orders-list">
+              <div v-if="(activeCustomer.orders_count ?? 0) === 0" class="empty-orders-note" style="padding: 1.5rem; text-align: center; color: var(--text-muted); font-size: 0.88rem;">
+                No orders placed by this customer yet.
+              </div>
+              <div v-else class="recent-orders-list">
                 <div class="cust-order-row">
                   <div class="c-order-id">
                     <strong>#LUM-001</strong>
@@ -1377,6 +1462,17 @@ const marketingPrefs = reactive({
   border: 1px solid #EFE7E0;
   border-radius: 14px;
   overflow: hidden;
+}
+
+.table-scroll-region {
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.table-scroll-region:focus-visible {
+  outline: 2px solid var(--crimson, #7A2E22);
+  outline-offset: -2px;
 }
 
 .atelier-table {

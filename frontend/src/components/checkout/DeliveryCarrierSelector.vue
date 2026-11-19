@@ -35,7 +35,7 @@
           </div>
           <p class="carrier-desc">{{ carrier.description }}</p>
           <div class="carrier-transit-row">
-            <span class="transit-icon">⏱️</span>
+            <Clock :size="13" class="transit-icon-clean" />
             <span class="transit-time">{{ carrier.transit }}</span>
           </div>
         </div>
@@ -46,6 +46,7 @@
 
 <script setup>
 import { computed } from 'vue'
+import { Clock } from 'lucide-vue-next'
 
 const props = defineProps({
   modelValue: {
@@ -278,7 +279,8 @@ function selectCarrier(carrier) {
   font-weight: 600;
 }
 
-.transit-icon {
-  font-size: 0.75rem;
+.transit-icon-clean {
+  color: #8C7E72;
+  flex-shrink: 0;
 }
 </style>

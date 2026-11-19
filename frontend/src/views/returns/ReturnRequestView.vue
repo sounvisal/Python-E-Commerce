@@ -1219,12 +1219,85 @@ async function handleNextOrSubmit() {
 }
 
 /* Responsive */
+.return-request-page {
+  max-width: 100%;
+  overflow-x: clip;
+}
+
 @media (max-width: 992px) {
   .wizard-layout-grid {
     grid-template-columns: 1fr;
   }
   .reasons-radio-grid {
     grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 768px) {
+  .wizard-header-row {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 1rem;
+  }
+  .quote-box-frame {
+    display: none;
+  }
+  .wizard-stepper-bar {
+    padding: 0.75rem 0.5rem;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    gap: 0.35rem;
+  }
+  .stepper-node {
+    flex: 0 0 auto;
+    gap: 0.35rem;
+  }
+  .stepper-node .step-label {
+    display: none;
+  }
+  .stepper-node.is-active .step-label {
+    display: inline;
+    font-size: 0.78rem;
+    white-space: nowrap;
+  }
+  .step-connector {
+    flex: 0 0 12px;
+    margin: 0 2px;
+  }
+  .step-circle {
+    width: 26px;
+    height: 26px;
+    font-size: 0.72rem;
+  }
+  .wizard-form-card {
+    padding: 1.25rem 1rem;
+  }
+  .step-footer-actions {
+    flex-direction: column-reverse;
+    gap: 0.75rem;
+    width: 100%;
+  }
+  .step-footer-actions.dual {
+    flex-direction: column-reverse;
+  }
+  .btn-step-next,
+  .btn-step-back {
+    width: 100%;
+    text-align: center;
+  }
+}
+
+@media (max-width: 360px) {
+  .wizard-form-card {
+    padding: 1rem 0.6rem;
+  }
+  .step-title {
+    font-size: 1.25rem;
+  }
+  .step-circle {
+    width: 24px;
+    height: 24px;
+    font-size: 0.68rem;
   }
 }
 </style>

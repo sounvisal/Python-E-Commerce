@@ -44,10 +44,10 @@
         <!-- Cart Items Table -->
         <div class="cart-items-section">
           <div class="cart-table-header">
-            <span class="col-product">Formulation</span>
-            <span class="col-price">Price</span>
-            <span class="col-qty">Quantity</span>
-            <span class="col-total">Total</span>
+            <span class="col-product">{{ localeStore.t('cart.formulation') || 'Formulation' }}</span>
+            <span class="col-price">{{ localeStore.t('common.price') || 'Price' }}</span>
+            <span class="col-qty">{{ localeStore.t('common.quantity') || 'Quantity' }}</span>
+            <span class="col-total">{{ localeStore.t('common.total') || 'Total' }}</span>
           </div>
 
           <div v-for="item in cartStore.items" :key="item.id" class="cart-row">
@@ -63,37 +63,42 @@
                 <router-link :to="`/product/${item.slug}`" class="cell-title">
                   {{ item.name }}
                 </router-link>
+                <div class="mobile-price-line">
+                  {{ localeStore.formatPrice(item.price) }}
+                </div>
                 <button class="cell-remove" @click="cartStore.removeItem(item.id)">
-                  <Trash2 :size="14" /> Remove
+                  <Trash2 :size="14" /> {{ localeStore.t('common.delete') || 'Remove' }}
                 </button>
               </div>
             </div>
 
-            <div class="price-cell">
-              ${{ Number(item.price).toFixed(2) }}
+            <div class="price-cell desktop-only">
+              {{ localeStore.formatPrice(item.price) }}
             </div>
 
-            <div class="qty-cell">
-              <div class="qty-control">
-                <button @click="cartStore.updateQuantity(item.id, item.quantity - 1)" class="qty-btn">
-                  <Minus :size="12" />
-                </button>
-                <span class="qty-val">{{ item.quantity }}</span>
-                <button @click="cartStore.updateQuantity(item.id, item.quantity + 1)" class="qty-btn">
-                  <Plus :size="12" />
-                </button>
+            <div class="cart-row-controls">
+              <div class="qty-cell">
+                <div class="qty-control">
+                  <button @click="cartStore.updateQuantity(item.id, item.quantity - 1)" class="qty-btn" aria-label="Decrease quantity">
+                    <Minus :size="12" />
+                  </button>
+                  <span class="qty-val">{{ item.quantity }}</span>
+                  <button @click="cartStore.updateQuantity(item.id, item.quantity + 1)" class="qty-btn" aria-label="Increase quantity">
+                    <Plus :size="12" />
+                  </button>
+                </div>
               </div>
-            </div>
 
-            <div class="total-cell">
-              ${{ (item.price * item.quantity).toFixed(2) }}
+              <div class="total-cell">
+                {{ localeStore.formatPrice(item.price * item.quantity) }}
+              </div>
             </div>
           </div>
         </div>
 
         <!-- Order Summary Side Card -->
         <aside class="cart-summary-card">
-          <h3>Summary</h3>
+          <h3>{{ localeStore.t('checkout.order_summary') || 'Summary' }}</h3>
 
           <!-- Promo Input -->
           <div class="promo-box">
@@ -105,10 +110,10 @@
                 class="promo-input"
                 @keyup.enter="applyPromo"
               />
-              <button class="btn btn-outline btn-sm" @click="applyPromo">Apply</button>
+              <button class="btn btn-outline btn-sm" @click="applyPromo">{{ localeStore.t('common.apply') || 'Apply' }}</button>
             </div>
             <div v-else class="promo-badge">
-              <span>Code <strong>{{ cartStore.discountCode }}</strong> (−${{ cartStore.discountAmount.toFixed(2) }})</span>
+              <span>Code <strong>{{ cartStore.discountCode }}</strong> (−{{ localeStore.formatPrice(cartStore.discountAmount) }})</span>
               <button @click="cartStore.removePromoCode" class="remove-btn">Remove</button>
             </div>
           </div>
@@ -116,29 +121,32 @@
           <!-- Totals Breakdown -->
           <div class="summary-lines">
             <div class="summary-line">
-              <span>Subtotal</span>
-              <span>${{ cartStore.subtotal.toFixed(2) }}</span>
+              <span>{{ localeStore.t('common.subtotal') || 'Subtotal' }}</span>
+              <span>{{ localeStore.formatPrice(cartStore.subtotal) }}</span>
             </div>
             <div v-if="cartStore.discountAmount > 0" class="summary-line discount-line">
-              <span>Promo Discount</span>
-              <span>-${{ cartStore.discountAmount.toFixed(2) }}</span>
+              <span>{{ localeStore.t('common.discount') || 'Promo Discount' }}</span>
+              <span>-{{ localeStore.formatPrice(cartStore.discountAmount) }}</span>
             </div>
             <div class="summary-line">
-              <span>Complimentary Shipping</span>
-              <span>{{ cartStore.shippingFee === 0 ? 'Free' : `$${cartStore.shippingFee.toFixed(2)}` }}</span>
+              <span>{{ localeStore.t('common.shipping') || 'Complimentary Shipping' }}</span>
+              <span>{{ cartStore.shippingFee === 0 ? localeStore.t('common.free') : localeStore.formatPrice(cartStore.shippingFee) }}</span>
             </div>
             <div class="summary-line total-line">
-              <span>Total</span>
-              <span class="total-num">${{ cartStore.grandTotal.toFixed(2) }}</span>
+              <span>{{ localeStore.t('common.total') || 'Total' }}</span>
+              <div class="cart-total-wrap">
+                <span class="total-num">{{ localeStore.formatPrice(cartStore.grandTotal) }}</span>
+                <span v-if="localeStore.currentCurrency !== 'USD'" class="total-usd-hint">({{ localeStore.formatPrice(cartStore.grandTotal, 'USD') }} USD)</span>
+              </div>
             </div>
           </div>
 
           <router-link to="/checkout" class="btn btn-primary btn-lg btn-block">
-            Proceed to Checkout
+            {{ localeStore.t('cart.checkout_btn') || 'Proceed to Checkout' }}
           </router-link>
 
           <router-link to="/shop" class="btn btn-ghost btn-block continue-link">
-            &larr; Continue Exploring
+            &larr; {{ localeStore.t('cart.return_to_catalog') || 'Continue Exploring' }}
           </router-link>
         </aside>
       </div>
@@ -150,10 +158,12 @@
 import { ref } from 'vue'
 import { useCartStore } from '@/stores/cart'
 import { useNotificationStore } from '@/stores/notification'
+import { useLocaleStore } from '@/stores/locale'
 import { ShoppingBag, Trash2, Plus, Minus } from 'lucide-vue-next'
 
 const cartStore = useCartStore()
 const notificationStore = useNotificationStore()
+const localeStore = useLocaleStore()
 const promoInput = ref('')
 
 const applyPromo = async () => {
@@ -513,8 +523,21 @@ const applyPromo = async () => {
   color: var(--text-primary);
 }
 
+.cart-total-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+}
+
 .total-num {
   font-size: 1.35rem;
+}
+
+.total-usd-hint {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  font-weight: 500;
+  margin-top: 2px;
 }
 
 .btn-block {
@@ -526,9 +549,99 @@ const applyPromo = async () => {
   font-size: 0.85rem;
 }
 
+.cart-row-controls {
+  display: contents;
+}
+
+.mobile-price-line {
+  display: none;
+  font-size: 0.85rem;
+  color: #78716C;
+  margin: 3px 0 6px;
+}
+
 @media (max-width: 960px) {
   .cart-layout {
     grid-template-columns: 1fr;
+    gap: 2rem;
+  }
+  .cart-hero-banner {
+    grid-template-columns: 1fr;
+  }
+  .hero-right-stage {
+    min-height: 160px;
+  }
+  .hero-left-content {
+    padding: 1.5rem;
+  }
+}
+
+@media (max-width: 640px) {
+  .cart-items-section {
+    padding: 1rem;
+  }
+  .cart-table-header {
+    display: none;
+  }
+  .cart-row {
+    display: flex;
+    flex-direction: column;
+    gap: 0.85rem;
+    padding: 1.15rem 0;
+  }
+  .product-cell {
+    display: flex;
+    gap: 0.85rem;
+    align-items: flex-start;
+  }
+  .table-img {
+    width: 64px;
+    height: 64px;
+    flex-shrink: 0;
+  }
+  .mobile-price-line {
+    display: block;
+  }
+  .desktop-only {
+    display: none !important;
+  }
+  .cart-row-controls {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    padding-top: 0.65rem;
+    border-top: 1px dashed var(--border-subtle);
+  }
+  .total-cell {
+    font-size: 1.05rem;
+    font-weight: 700;
+  }
+  .script-row {
+    font-size: 1.15rem;
+  }
+  .banner-script-overlay {
+    top: 1rem;
+    right: 1rem;
+  }
+  .hero-title {
+    font-size: 2rem;
+  }
+  .hero-desc {
+    font-size: 0.95rem;
+  }
+}
+
+@media (max-width: 360px) {
+  .cart-items-section,
+  .cart-summary-card {
+    padding: 0.85rem;
+  }
+  .hero-left-content {
+    padding: 1.25rem 0.85rem;
+  }
+  .hero-title {
+    font-size: 1.7rem;
   }
 }
 </style>

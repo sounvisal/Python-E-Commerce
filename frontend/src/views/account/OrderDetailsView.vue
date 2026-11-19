@@ -109,7 +109,10 @@
                   <strong class="delivery-method-name">{{ order.deliveryMethod }}</strong>
                   <span class="delivery-status-note">{{ order.statusText }}</span>
                   <div v-if="order.deliveryNotes" class="delivery-landmark-note">
-                    <strong>📍 Driver Note:</strong> {{ order.deliveryNotes }}
+                    <strong class="driver-note-label">
+                      <MapPin :size="13" class="driver-pin-icon" />
+                      <span>Driver Note:</span>
+                    </strong> {{ order.deliveryNotes }}
                   </div>
                   <div v-if="order.mapUrl" class="delivery-map-action">
                     <a
@@ -118,7 +121,9 @@
                       rel="noopener noreferrer"
                       class="btn-driver-maps"
                     >
-                      🗺️ Open in Google Maps (Driver Navigation) ↗
+                      <Compass :size="13" class="btn-icon-clean" />
+                      <span>Open in Google Maps (Driver Navigation)</span>
+                      <ExternalLink :size="12" class="btn-icon-clean" />
                     </a>
                   </div>
                 </div>
@@ -403,7 +408,9 @@ import {
   Headphones,
   X,
   Sparkles,
-  Package
+  Package,
+  Compass,
+  ExternalLink
 } from 'lucide-vue-next'
 
 const route = useRoute()

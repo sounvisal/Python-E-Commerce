@@ -38,6 +38,21 @@ def get_current_user(
     if not user:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
     
+    token_v = payload.get("v")
+    user_v = getattr(user, "token_version", 1) or 1
+    if token_v is not None and token_v < user_v:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Session expired or credentials updated",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    if token_v is None and user_v > 1:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Session expired or credentials updated",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    
     return user
 
 def require_admin(current_user: User = Depends(get_current_user)) -> User:

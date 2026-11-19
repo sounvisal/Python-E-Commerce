@@ -1,6 +1,8 @@
 import json
 import os
+import secrets
 from sqlalchemy.orm import Session
+from app.core.config import settings
 from app.models.category import Category
 from app.models.product import Product
 from app.models.user import User
@@ -114,98 +116,154 @@ def seed_database(db: Session):
                 _sync_sequence(db, "products")
                 print(f"[Seed] Added {len(products)} products.")
 
-    # 3. Seed Default User (Sreynich Chan)
-    if db.query(User).count() == 0:
-        demo_user = User(
-            id=1,
-            name="Sreynich Chan",
-            first_name="Sreynich",
-            last_name="Chan",
-            email="sreynich.chan@example.com",
-            hashed_password=get_password_hash("password123"),
-            phone="+855 12 345 678",
-            avatar="/images/avatar-sreynich.jpg",
-            role="customer",
-            tier="Luméa Radiant Gold",
-            reward_points=320
-        )
-        db.add(demo_user)
-        db.commit()
-        _sync_sequence(db, "users")
-        print("[Seed] Created default user: sreynich.chan@example.com (password: password123)")
+    # 3. Seed Users & Accounts
+    if not settings.PRODUCTION:
+        # Development mode: Seed default demo customer (Sreynich Chan) and default admin
+        if db.query(User).count() == 0:
+            demo_user = User(
+                id=1,
+                name="Sreynich Chan",
+                first_name="Sreynich",
+                last_name="Chan",
+                email="sreynich.chan@example.com",
+                hashed_password=get_password_hash("password123"),
+                phone="+855 12 345 678",
+                avatar="/images/avatar-sreynich.jpg",
+                role="customer",
+                tier="Luméa Radiant Gold",
+                reward_points=320
+            )
+            db.add(demo_user)
+            db.commit()
+            _sync_sequence(db, "users")
+            print("[Seed] Created default user: sreynich.chan@example.com (password: password123)")
 
-    # 3b. Seed Default Admin User (Luméa Administrator)
-    admin_user = db.query(User).filter(User.email == "admin@lumea.com").first()
-    if not admin_user:
-        admin_user = User(
-            id=2,
-            name="Luméa Administrator",
-            first_name="Luméa",
-            last_name="Admin",
-            email="admin@lumea.com",
-            hashed_password=get_password_hash("password123"),
-            phone="+855 12 000 001",
-            avatar="/images/avatar-sreynich.jpg",
-            role="admin",
-            tier="Atelier Administrator",
-            reward_points=9999
-        )
-        db.add(admin_user)
-        db.commit()
-        _sync_sequence(db, "users")
-        print("[Seed] Created default admin user: admin@lumea.com (password: password123)")
-    elif admin_user.role != "admin":
-        admin_user.role = "admin"
-        admin_user.hashed_password = get_password_hash("password123")
-        db.commit()
-        _sync_sequence(db, "users")
+        admin_user = db.query(User).filter(User.email == "admin@lumea.com").first()
+        if not admin_user:
+            admin_user = User(
+                id=2,
+                name="Luméa Administrator",
+                first_name="Luméa",
+                last_name="Admin",
+                email="admin@lumea.com",
+                hashed_password=get_password_hash("password123"),
+                phone="+855 12 000 001",
+                avatar="/images/avatar-sreynich.jpg",
+                role="admin",
+                tier="Atelier Administrator",
+                reward_points=9999
+            )
+            db.add(admin_user)
+            db.commit()
+            _sync_sequence(db, "users")
+            print("[Seed] Created default admin user: admin@lumea.com (password: password123)")
+        elif admin_user.role != "admin":
+            admin_user.role = "admin"
+            admin_user.hashed_password = get_password_hash("password123")
+            db.commit()
+            _sync_sequence(db, "users")
 
-    # 4. Seed Sample Order
-    if db.query(Order).count() == 0:
-        sample_order = Order(
-            id=1,
-            order_number="LUM-849201",
-            user_id=1,
-            customer_name="Sreynich Chan",
-            customer_email="sreynich.chan@example.com",
-            customer_phone="+855 12 345 678",
-            shipping_address="#123, Street 271, Sangkat Boeung Tumpun",
-            shipping_city="Phnom Penh",
-            shipping_postal_code="12000",
-            subtotal=107.90,
-            discount=10.79,
-            shipping_fee=0.0,
-            total=97.11,
-            status="Confirmed",
-            payment_method="card"
-        )
-        db.add(sample_order)
-        db.commit()
+        # 4. Seed Sample Order (Development only)
+        if db.query(Order).count() == 0:
+            sample_order = Order(
+                id=1,
+                order_number="LUM-849201",
+                user_id=1,
+                customer_name="Sreynich Chan",
+                customer_email="sreynich.chan@example.com",
+                customer_phone="+855 12 345 678",
+                shipping_address="#123, Street 271, Sangkat Boeung Tumpun",
+                shipping_city="Phnom Penh",
+                shipping_postal_code="12000",
+                subtotal=107.90,
+                discount=10.79,
+                shipping_fee=0.0,
+                total=97.11,
+                status="Confirmed",
+                payment_method="card"
+            )
+            db.add(sample_order)
+            db.commit()
 
-        sample_item1 = OrderItem(
-            order_id=sample_order.id,
-            product_id=201,
-            product_name="Facial Treatment Essence",
-            image_url="/images/prod-sk2.jpg",
-            price=99.00,
-            quantity=1,
-            total=99.00
-        )
-        sample_item2 = OrderItem(
-            order_id=sample_order.id,
-            product_id=202,
-            product_name="Niacinamide 10% + Zinc 1%",
-            image_url="/images/prod-ordinary.jpg",
-            price=8.90,
-            quantity=1,
-            total=8.90
-        )
-        db.add(sample_item1)
-        db.add(sample_item2)
-        db.commit()
-        _sync_sequence(db, "orders")
-        _sync_sequence(db, "order_items")
-        print("[Seed] Created sample order: LUM-849201")
+            sample_item1 = OrderItem(
+                order_id=sample_order.id,
+                product_id=201,
+                product_name="Facial Treatment Essence",
+                image_url="/images/prod-sk2.jpg",
+                price=99.00,
+                quantity=1,
+                total=99.00
+            )
+            sample_item2 = OrderItem(
+                order_id=sample_order.id,
+                product_id=202,
+                product_name="Niacinamide 10% + Zinc 1%",
+                image_url="/images/prod-ordinary.jpg",
+                price=8.90,
+                quantity=1,
+                total=8.90
+            )
+            db.add(sample_item1)
+            db.add(sample_item2)
+            db.commit()
+            _sync_sequence(db, "orders")
+            _sync_sequence(db, "order_items")
+            print("[Seed] Created sample order: LUM-849201")
+    else:
+        # PRODUCTION MODE:
+        # A. One-time legacy remediation: retire known-bad seeded credentials and revoke privileged sessions
+        # while strictly preserving legitimate rotated accounts.
+        from app.core.security import verify_password
+        
+        legacy_candidates = db.query(User).filter(User.email.in_(["sreynich.chan@example.com", "admin@lumea.com"])).all()
+        for demo in legacy_candidates:
+            # Only remediate if the account still uses the known seeded password
+            if verify_password("password123", demo.hashed_password):
+                demo.hashed_password = get_password_hash(secrets.token_urlsafe(32))
+                demo.token_version = (getattr(demo, "token_version", 1) or 1) + 1
+                if demo.role == "admin":
+                    demo.role = "retired_seed_admin"
+                    demo.tier = "Deactivated Seed Admin"
+                else:
+                    demo.role = "retired_seed_customer"
+                    demo.tier = "Deactivated Seed Account"
+                db.commit()
+                print(f"[SECURITY] Retired known-bad seeded account: {demo.email}")
+
+        # B. Explicit administrator provisioning
+        admin_count = db.query(User).filter(User.role == "admin").count()
+        admin_email = (getattr(settings, "ADMIN_EMAIL", "") or os.getenv("ADMIN_EMAIL", "")).strip()
+        admin_password = (getattr(settings, "ADMIN_PASSWORD", "") or os.getenv("ADMIN_PASSWORD", "")).strip()
+
+        if admin_email and admin_password:
+            existing_target = db.query(User).filter(User.email == admin_email).first()
+            if not existing_target:
+                prod_admin = User(
+                    name="Atelier Administrator",
+                    first_name="Atelier",
+                    last_name="Admin",
+                    email=admin_email,
+                    hashed_password=get_password_hash(admin_password),
+                    phone="+855 12 000 001",
+                    avatar="/images/avatar-sreynich.jpg",
+                    role="admin",
+                    tier="Atelier Administrator",
+                    reward_points=9999
+                )
+                db.add(prod_admin)
+                db.commit()
+                _sync_sequence(db, "users")
+                print(f"[SECURITY] Successfully provisioned configured production administrator: {admin_email}")
+            elif existing_target.role != "admin" or verify_password("password123", existing_target.hashed_password):
+                existing_target.role = "admin"
+                existing_target.hashed_password = get_password_hash(admin_password)
+                existing_target.tier = "Atelier Administrator"
+                existing_target.token_version = (getattr(existing_target, "token_version", 1) or 1) + 1
+                db.commit()
+                print(f"[SECURITY] Updated configured production administrator: {admin_email}")
+        elif admin_count == 0:
+            # Actionable instructions; NEVER generate or log credentials
+            print("[SECURITY NOTICE] Production database has no provisioned administrator. Set ADMIN_EMAIL and ADMIN_PASSWORD in environment to provision securely.")
 
     # 5. Seed Dynamic Banners
     if db.query(Banner).count() == 0:

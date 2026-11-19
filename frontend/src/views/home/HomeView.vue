@@ -380,14 +380,24 @@
                   type="email"
                   v-model="newsletterEmail"
                   placeholder="Your email address"
+                  :disabled="newsletterLoading"
                   required
                 />
-                <button type="submit" class="newsletter-submit-btn" aria-label="Subscribe">
-                  <ArrowRight :size="17" />
+                <button
+                  type="submit"
+                  class="newsletter-submit-btn"
+                  :disabled="newsletterLoading"
+                  aria-label="Subscribe"
+                >
+                  <ArrowRight v-if="!newsletterLoading" :size="17" />
+                  <Loader2 v-else :size="17" class="animate-spin" />
                 </button>
               </div>
               <div v-if="newsletterSubscribed" class="newsletter-success">
-                <Sparkles :size="15" class="newsletter-sparkle" /> Thank you for subscribing! Check your inbox for your 10% welcome gift.
+                <Sparkles :size="15" class="newsletter-sparkle" /> {{ newsletterMessage || 'Thank you for subscribing! Check your inbox for your welcome gift.' }}
+              </div>
+              <div v-if="newsletterError" class="newsletter-error" style="color: #C62828; font-size: 0.85rem; font-weight: 500; margin-top: 0.25rem;">
+                {{ newsletterError }}
               </div>
             </form>
           </div>
@@ -450,6 +460,7 @@
 </template>
 
 <script setup>
+import axios from 'axios'
 import BrandLogo from '@/components/BrandLogo.vue'
 import ProductCard from '@/components/ProductCard.vue'
 import { useProductStore } from '@/stores/products'
@@ -463,6 +474,7 @@ import {
   Clock,
   FlaskConical,
   Heart,
+  Loader2,
   Play,
   RotateCcw,
   ShieldCheck,
@@ -492,6 +504,9 @@ const wishlist = ref([101, 103])
 const addedProductId = ref(null)
 const newsletterEmail = ref('')
 const newsletterSubscribed = ref(false)
+const newsletterLoading = ref(false)
+const newsletterError = ref('')
+const newsletterMessage = ref('')
 
 // Modals
 const showStoryModal = ref(false)
@@ -687,13 +702,27 @@ function scrollBrands() {
 
 
 // Newsletter
-function handleSubscribe() {
-  if (newsletterEmail.value) {
-    newsletterSubscribed.value = true
-    setTimeout(() => {
+async function handleSubscribe() {
+  if (!newsletterEmail.value) return
+  newsletterLoading.value = true
+  newsletterError.value = ''
+  newsletterSubscribed.value = false
+  try {
+    const res = await axios.post('/api/newsletter', { email: newsletterEmail.value })
+    if (res.data?.status === 'success') {
+      newsletterSubscribed.value = true
+      newsletterMessage.value = res.data.message || 'Thank you for subscribing! Check your inbox for your welcome gift.'
       newsletterEmail.value = ''
-      newsletterSubscribed.value = false
-    }, 4000)
+      setTimeout(() => {
+        newsletterSubscribed.value = false
+      }, 6000)
+    } else {
+      newsletterError.value = res.data?.message || 'Subscription could not be completed.'
+    }
+  } catch (err) {
+    newsletterError.value = err.response?.data?.detail || 'Subscription failed. Please check your email address and try again.'
+  } finally {
+    newsletterLoading.value = false
   }
 }
 </script>
@@ -2234,6 +2263,36 @@ function handleSubscribe() {
 
   .newsletter-script-overlay {
     display: none;
+  }
+}
+
+/* Reduced Motion: honor browser preference by stopping continuous transforms */
+@media (prefers-reduced-motion: reduce) {
+  .floating-script-callout {
+    animation: none !important;
+    transform: none !important;
+  }
+
+  .horizon-marquee {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .marquee-group {
+    animation: none !important;
+    min-width: auto;
+    gap: 3rem;
+    padding-right: 2rem;
+  }
+
+  .marquee-group[aria-hidden="true"] {
+    display: none !important;
+  }
+
+  .reveal-on-scroll {
+    opacity: 1 !important;
+    transform: none !important;
+    transition: none !important;
   }
 }
 </style>

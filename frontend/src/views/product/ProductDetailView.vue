@@ -103,7 +103,10 @@
 
           <!-- Price -->
           <div class="pdp-price-row">
-            <span class="pdp-main-price">${{ selectedSize.price.toFixed(2) }}</span>
+            <span class="pdp-main-price">{{ localeStore.formatPrice(selectedSize.price) }}</span>
+            <span v-if="localeStore.currentCurrency !== 'USD'" class="pdp-usd-equiv">
+              (${{ selectedSize.price.toFixed(2) }} USD)
+            </span>
           </div>
 
           <!-- Bio -->
@@ -123,7 +126,7 @@
                 @click="selectedSizeIdx = sIdx"
               >
                 <span class="size-name">{{ size.label }}</span>
-                <span class="size-cost">${{ size.price.toFixed(2) }}</span>
+                <span class="size-cost">{{ localeStore.formatPrice(size.price) }}</span>
               </button>
             </div>
           </div>
@@ -212,7 +215,8 @@
                 @click="shareTelegram"
                 title="Share directly via Telegram"
               >
-                <span>✈️ Telegram</span>
+                <Send :size="13" class="share-icon-svg" />
+                <span>Telegram</span>
               </button>
               <button
                 type="button"
@@ -220,7 +224,8 @@
                 @click="shareFacebook"
                 title="Share to Facebook"
               >
-                <span>📘 Facebook</span>
+                <Share2 :size="13" class="share-icon-svg" />
+                <span>Facebook</span>
               </button>
             </div>
           </div>
@@ -962,7 +967,7 @@
                 <img :src="product.image_url || '/images/prod-sk2.jpg'" class="quick-buy-thumb" />
                 <div class="quick-buy-meta">
                   <span class="quick-buy-name">{{ product.name }}</span>
-                  <span class="quick-buy-price">${{ selectedSize.price.toFixed(2) }}</span>
+                  <span class="quick-buy-price">{{ localeStore.formatPrice(selectedSize.price) }}</span>
                 </div>
               </div>
               <button
@@ -1034,6 +1039,7 @@ import {
   Video,
   Film,
   Share2,
+  Send,
   Copy,
 } from 'lucide-vue-next'
 import BrandLogo from '@/components/BrandLogo.vue'
@@ -1042,6 +1048,7 @@ import { useProductStore } from '@/stores/products'
 import { useCartStore } from '@/stores/cart'
 import { useAuthStore } from '@/stores/auth'
 import { useNotificationStore } from '@/stores/notification'
+import { useLocaleStore } from '@/stores/locale'
 
 const route = useRoute()
 const hostedDeployment = import.meta.env.VITE_HOSTED_DEPLOYMENT === 'true'
@@ -1049,6 +1056,7 @@ const productStore = useProductStore()
 const cartStore = useCartStore()
 const authStore = useAuthStore()
 const notificationStore = useNotificationStore()
+const localeStore = useLocaleStore()
 
 const qty = ref(1)
 const isAdded = ref(false)
@@ -1718,6 +1726,14 @@ function toggleItemWishlist(id) {
   font-size: 2.2rem;
   font-weight: 700;
   color: #1C1917;
+}
+
+.pdp-usd-equiv {
+  font-size: 1rem;
+  font-family: var(--font-sans);
+  color: #8C877F;
+  font-weight: 500;
+  margin-left: 0.5rem;
 }
 
 .pdp-bio-paragraph {

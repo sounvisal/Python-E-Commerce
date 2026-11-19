@@ -11,12 +11,13 @@ from app.services.order_lifecycle import (utcnow, guest_token, check_order_acces
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
-from typing import List, Optional
+from typing import List, Optional, Union, Any
 from app.core.database import get_db
 from app.models.order import Order, OrderItem
 from app.models.product import Product
 from app.api.settings import load_settings
 from app.core.config import settings
+from app.services.payway_api import merchant_gateway
 from app.api.promotions import active_promotion
 from app.models.promotion import Promotion
 from decimal import Decimal, ROUND_HALF_UP
@@ -38,11 +39,158 @@ def checkout_fingerprint(payload, user):
     data["user_id"] = user.id if user else None
     return hashlib.sha256(json.dumps(data, sort_keys=True).encode()).hexdigest()
 
+import math
+
+ATELIER_LAT = 11.5564
+ATELIER_LNG = 104.9282
+
+def calculate_haversine_km(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
+    """Calculates distance between two GPS coordinates using Haversine formula in kilometers."""
+    R = 6371.0
+    dlat = math.radians(lat2 - lat1)
+    dlon = math.radians(lon2 - lon1)
+    a = math.sin(dlat / 2)**2 + math.cos(math.radians(lat1)) * math.cos(math.radians(lat2)) * math.sin(dlon / 2)**2
+    c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
+    return round(R * c, 1)
+
+def calculate_carrier_shipping_fee(
+    carrier_key: str,
+    city: str,
+    subtotal: float,
+    free_threshold: Union[float, dict] = 50.0,
+    lat: Optional[float] = None,
+    lng: Optional[float] = None
+) -> dict:
+    """
+    Authentic Cambodian Delivery Pricing & Admin-Configurable Free Delivery System:
+    - Admin can toggle free delivery ON/OFF, switch modes ('threshold', 'all_orders', 'disabled'),
+      and customize threshold amounts ($0, $25, $50, etc.) whenever they want.
+    1. VET Logistics (Vireak Buntham): Flat $1.50 Nationwide. Free when qualified.
+    2. J&T Express Cambodia: Flat $1.75 Nationwide. Free when qualified.
+    3. GrabExpress (Grab): Phnom Penh Only. GPS distance-based fare ($2.00 base + $0.40/km).
+       Receives $1.50 delivery credit when free shipping is earned.
+    4. Luméa Atelier Concierge: Flat $3.00. Free when qualified.
+    """
+    carrier_key = (carrier_key or "vet_express").lower()
+    c = (city or "Phnom Penh").strip().lower()
+    is_phnom_penh = ("phnom penh" in c) or ("khan" in c) or ("bkk" in c) or ("chamkarmon" in c) or ("daun penh" in c) or ("toul kork" in c)
+
+    # Resolve settings configuration
+    if isinstance(free_threshold, dict):
+        cfg = free_threshold
+    else:
+        cfg = load_settings()
+        if isinstance(free_threshold, (int, float)):
+            cfg["free_shipping_threshold"] = float(free_threshold)
+
+    free_enabled = cfg.get("free_shipping_enabled", True)
+    free_mode = cfg.get("free_shipping_mode", "threshold")  # "threshold" | "all_orders" | "disabled"
+    threshold = float(cfg.get("free_shipping_threshold", 50.0))
+    eligible_carriers = cfg.get("free_shipping_carriers", ["vet_express", "jt_express", "lumea_concierge"])
+    grab_subsidy = cfg.get("grab_subsidy_enabled", True)
+
+    is_free_qualified = False
+    if free_enabled and free_mode != "disabled":
+        if free_mode == "all_orders":
+            is_free_qualified = True
+        elif free_mode == "threshold":
+            is_free_qualified = (subtotal >= threshold)
+
+    # 1. Vireak Buntham (VET Logistics) - Flat $1.50 Nationwide
+    if carrier_key == "vet_express":
+        base_fee = 1.50
+        is_free = is_free_qualified and ("vet_express" in eligible_carriers)
+        fee = 0.0 if is_free else base_fee
+        return {
+            "fee": fee,
+            "base_fee": base_fee,
+            "transit": "1–2 Business Days",
+            "is_free": is_free,
+            "available": True,
+            "policy": "Flat nationwide courier: $1.50 to all 25 provinces and Phnom Penh"
+        }
+
+    # 2. J&T Express Cambodia - Flat $1.75 Nationwide
+    elif carrier_key == "jt_express":
+        base_fee = 1.75
+        is_free = is_free_qualified and ("jt_express" in eligible_carriers)
+        fee = 0.0 if is_free else base_fee
+        return {
+            "fee": fee,
+            "base_fee": base_fee,
+            "transit": "Next-Day Delivery",
+            "is_free": is_free,
+            "available": True,
+            "policy": "Flat domestic parcel network: $1.75 nationwide"
+        }
+
+    # 3. GrabExpress (Grab) - Special distance & Phnom Penh only policy
+    elif carrier_key == "grab_express":
+        if not is_phnom_penh:
+            return {
+                "fee": 0.0,
+                "base_fee": 0.0,
+                "transit": "Phnom Penh Only",
+                "is_free": False,
+                "available": False,
+                "policy": "GrabExpress on-demand motorbike dispatch is available within Phnom Penh only"
+            }
+
+        # Dynamic GPS Distance Calculation
+        if lat is not None and lng is not None and abs(lat) > 0.001 and abs(lng) > 0.001:
+            distance_km = calculate_haversine_km(ATELIER_LAT, ATELIER_LNG, lat, lng)
+        else:
+            distance_km = 6.5  # Typical Phnom Penh metropolitan radius
+
+        # Base $2.00 up to 3 km, then $0.40 per additional km
+        raw_fee = 2.00 + max(0.0, distance_km - 3.0) * 0.40
+        base_fee = round(raw_fee, 2)
+
+        # On-demand rush delivery subsidy on qualified orders
+        if is_free_qualified and grab_subsidy:
+            fee = max(1.50, round(base_fee - 1.50, 2))
+            is_free = False
+            note = f"Distance: {distance_km} km ($1.50 Free Delivery credit applied)"
+        else:
+            fee = base_fee
+            is_free = False
+            note = f"Distance: {distance_km} km (Base $2.00 + $0.40/km)"
+
+        return {
+            "fee": fee,
+            "base_fee": base_fee,
+            "transit": f"60–90 Mins ({distance_km} km)",
+            "is_free": is_free,
+            "available": True,
+            "distance_km": distance_km,
+            "policy": note
+        }
+
+    # 4. Luméa Atelier Concierge - Flat $3.00
+    elif carrier_key == "lumea_concierge":
+        base_fee = 3.00
+        is_free = is_free_qualified and ("lumea_concierge" in eligible_carriers)
+        fee = 0.0 if is_free else base_fee
+        return {
+            "fee": fee,
+            "base_fee": base_fee,
+            "transit": "White-Glove Scheduled",
+            "is_free": is_free,
+            "available": True,
+            "policy": "Signature silk-ribbon presentation"
+        }
+
+    else:
+        base_fee = 1.50
+        is_free = is_free_qualified
+        fee = 0.0 if is_free else base_fee
+        return {"fee": fee, "base_fee": base_fee, "transit": "1–2 Business Days", "is_free": is_free, "available": True}
+
 CARRIER_RATES = {
-    "vet_express": {"name": "Vireak Buntham (VET Logistics)", "fee": 1.50, "transit": "1–2 Business Days", "free_over_threshold": True},
-    "jt_express": {"name": "J&T Express Cambodia", "fee": 1.75, "transit": "Next-Day Delivery", "free_over_threshold": True},
-    "grab_express": {"name": "GrabExpress On-Demand", "fee": 3.50, "transit": "60–90 Mins (Phnom Penh)", "free_over_threshold": False},
-    "lumea_concierge": {"name": "Luméa Atelier Concierge", "fee": 3.00, "transit": "White-Glove Scheduled", "free_over_threshold": True},
+    "vet_express": {"name": "Vireak Buntham (VET Logistics)", "fee": 1.50, "transit": "1–2 Business Days", "free_over_threshold": True, "logo": "/images/couriers/vet_express.png"},
+    "jt_express": {"name": "J&T Express Cambodia", "fee": 1.75, "transit": "Next-Day Delivery", "free_over_threshold": True, "logo": "/images/couriers/jt_express.png"},
+    "grab_express": {"name": "GrabExpress On-Demand", "fee": 3.50, "transit": "60–90 Mins (Phnom Penh)", "free_over_threshold": False, "logo": "/images/couriers/grab_express.png"},
+    "lumea_concierge": {"name": "Luméa Atelier Concierge", "fee": 3.00, "transit": "White-Glove Scheduled", "free_over_threshold": True, "logo": None},
 }
 
 def money(value):
@@ -67,62 +215,67 @@ def calculate_quote(order_in: OrderCreate, db: Session):
     code = (order_in.discount_code or "").strip().upper()
     promotion = active_promotion(db, code) if code else None
     discount = money(subtotal * (promotion.percent / 100 if promotion else 0))
-    settings = load_settings()
-    free_threshold = float(settings.get("free_shipping_threshold", 50.0))
+    settings_data = load_settings()
     
     carrier_key = (getattr(order_in, "shipping_carrier", None) or "vet_express").lower()
-    carrier = CARRIER_RATES.get(carrier_key, CARRIER_RATES["vet_express"])
-    if subtotal >= free_threshold and carrier["free_over_threshold"]:
-        shipping = 0.0
-    else:
-        shipping = carrier["fee"]
+    city = getattr(order_in, "shipping_city", "Phnom Penh") or "Phnom Penh"
+    lat = getattr(order_in, "delivery_lat", None)
+    lng = getattr(order_in, "delivery_lng", None)
+
+    carrier_calc = calculate_carrier_shipping_fee(
+        carrier_key=carrier_key,
+        city=city,
+        subtotal=subtotal,
+        free_threshold=settings_data,
+        lat=lat,
+        lng=lng
+    )
+    if carrier_key not in CARRIER_RATES or not carrier_calc["available"]:
+        raise HTTPException(400, "This courier is unavailable for your delivery address.")
+    shipping = money(carrier_calc["fee"])
         
     return dict(subtotal=subtotal, discount=discount, shipping_fee=shipping,
-                total=money(subtotal - discount + shipping)), lines
+                total=money(subtotal - discount + shipping),
+                carrier_info=carrier_calc), lines
 
 @router.get("/carriers")
-def list_carriers():
-    """Returns available Cambodian delivery carriers and current tariffs."""
+def list_carriers(
+    city: Optional[str] = "Phnom Penh",
+    subtotal: Optional[float] = 0.0,
+    lat: Optional[float] = None,
+    lng: Optional[float] = None
+):
+    """Returns available Cambodian delivery carriers and dynamic tariffs based on destination and policy."""
+    settings_data = load_settings()
+
+    carriers_list = []
+    configs = [
+        ("vet_express", "Vireak Buntham (VET Logistics)", "Cambodia's #1 nationwide courier service. Direct delivery to all 25 provinces.", "NATIONWIDE #1", "/images/couriers/vet_express.png"),
+        ("jt_express", "J&T Express Cambodia", "High-speed door-to-door express parcel courier with real-time automated tracking.", "FAST DOMESTIC", "/images/couriers/jt_express.png"),
+        ("grab_express", "GrabExpress On-Demand", "Dedicated instant motorbike courier. 60–90 min direct dispatch from atelier.", "INSTANT EXPRESS", "/images/couriers/grab_express.png"),
+        ("lumea_concierge", "Luméa Atelier Concierge", "White-glove luxury delivery in signature silk-ribbon boxes with complimentary samples.", "ATELIER SIGNATURE", None),
+    ]
+
+    for cid, name, desc, badge, logo in configs:
+        calc = calculate_carrier_shipping_fee(cid, city, subtotal, settings_data, lat, lng)
+        carriers_list.append({
+            "id": cid,
+            "name": name,
+            "description": desc,
+            "badge": badge,
+            "logo": logo,
+            "fee": calc["fee"],
+            "base_fee": calc["base_fee"],
+            "transit": calc["transit"],
+            "is_free": calc.get("is_free", False),
+            "available": calc.get("available", True),
+            "distance_km": calc.get("distance_km"),
+            "policy": calc.get("policy", "")
+        })
+
     return {
         "status": "success",
-        "data": [
-            {
-                "id": "vet_express",
-                "name": "Vireak Buntham (VET Logistics)",
-                "description": "Cambodia's #1 nationwide courier service. Direct delivery to all 25 provinces.",
-                "fee": 1.50,
-                "transit": "1–2 Business Days",
-                "badge": "Nationwide",
-                "icon": "truck"
-            },
-            {
-                "id": "jt_express",
-                "name": "J&T Express Cambodia",
-                "description": "High-speed door-to-door express parcel courier with real-time van tracking.",
-                "fee": 1.75,
-                "transit": "Next-Day Delivery",
-                "badge": "Popular",
-                "icon": "package"
-            },
-            {
-                "id": "grab_express",
-                "name": "GrabExpress On-Demand",
-                "description": "Dedicated motorbike courier. Immediate dispatch for urgent beauty orders.",
-                "fee": 3.50,
-                "transit": "60–90 Mins (Phnom Penh)",
-                "badge": "Instant Express",
-                "icon": "zap"
-            },
-            {
-                "id": "lumea_concierge",
-                "name": "Luméa Atelier Concierge",
-                "description": "Hand-delivered luxury package with signature ribbon, tissue, and samples.",
-                "fee": 3.00,
-                "transit": "White-Glove Scheduled",
-                "badge": "Luxury Signature",
-                "icon": "sparkles"
-            }
-        ]
+        "data": carriers_list
     }
 
 @router.post("/quote")
@@ -166,9 +319,11 @@ def place_order(order_in: OrderCreate, db: Session = Depends(get_db), current_us
 
     if order_in.payment_method not in ("khqr", "cod"):
         raise HTTPException(400, "This payment method is not available. Choose KHQR or cash on delivery.")
+    if settings.PRODUCTION and order_in.payment_method == "khqr" and not merchant_gateway():
+        raise HTTPException(503, "KHQR is temporarily unavailable. Choose cash on delivery.")
     quote, order_items_to_create = calculate_quote(order_in, db)
     subtotal, discount, shipping_fee, total = (quote[k] for k in ("subtotal", "discount", "shipping_fee", "total"))
-    if order_in.expected_total is not None and abs(order_in.expected_total - total) > 0.009:
+    if order_in.expected_total is None or abs(order_in.expected_total - total) > 0.009:
         raise HTTPException(409, detail={"message": "Your bag total changed. Review the updated total before placing the order.", "quote": quote})
 
     # Delivery carrier & Map coordinates
@@ -294,8 +449,7 @@ def list_all_orders(email: Optional[str] = None, limit: int = 50, db: Session = 
     expire_pending_orders(db)
     db.commit()
     if current_user.role != 'admin':
-        query = query.filter(or_(Order.user_id == current_user.id,
-            (Order.user_id.is_(None) & Order.checkout_key.is_(None) & (Order.customer_email == current_user.email))))
+        query = query.filter(Order.user_id == current_user.id)
     elif email:
         query = query.filter(Order.customer_email == email.strip())
     return query.order_by(Order.id.desc()).limit(limit).all()

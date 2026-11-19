@@ -1,14 +1,15 @@
 import os
-import sys
 import json
 import asyncio
 import subprocess
 import logging
 from typing import Optional, Dict, Any
+from decimal import Decimal, InvalidOperation
 from dotenv import load_dotenv
 from app.core.database import SessionLocal
 from app.models.order import Order
 from app.services.order_lifecycle import settle_payment
+from app.core.config import settings
 
 logger = logging.getLogger("lumea.khqr")
 
@@ -17,10 +18,10 @@ load_dotenv()
 
 DEFAULT_MERCHANT_NAME = os.getenv("BAKONG_MERCHANT_NAME", "LUMEA ATELIER")
 DEFAULT_MERCHANT_ID = os.getenv("BAKONG_ACCOUNT_ID", "000000000000000")
-DEFAULT_PAYWAY_URL = os.getenv("ABA_PAYWAY_URL", "")
 
 # Registry for active live background monitoring processes: order_number -> subprocess.Popen
 ACTIVE_PAYMENT_PROCS: Dict[str, subprocess.Popen] = {}
+LOCAL_PAYMENT_QRS: Dict[str, Dict[str, Any]] = {}
 
 def crc16_emvco(data: str) -> str:
     """
@@ -36,6 +37,30 @@ def crc16_emvco(data: str) -> str:
             else:
                 crc = (crc << 1) & 0xFFFF
     return f"{crc:04X}"
+
+def matches_order_qr(qr, amount):
+    if not isinstance(qr, str) or not qr.startswith("000201") or len(qr) > 4096:
+        return False
+    if not qr.endswith(crc16_emvco(qr[:-4])):
+        return False
+    fields = {}
+    offset = 0
+    while offset + 4 <= len(qr):
+        tag, size = qr[offset:offset + 2], qr[offset + 2:offset + 4]
+        if not tag.isascii() or not tag.isdigit() or not size.isascii() or not size.isdigit() or tag in fields:
+            return False
+        end = offset + 4 + int(size)
+        if end > len(qr):
+            return False
+        fields[tag] = qr[offset + 4:end]
+        offset = end
+    try:
+        return (
+            offset == len(qr) and tag == "63" and size == "04" and fields.get("53") == "840"
+            and Decimal(fields.get("54", "")) == Decimal(str(amount))
+        )
+    except InvalidOperation:
+        return False
 
 def build_instant_bakong_khqr(
     amount: float,
@@ -90,13 +115,13 @@ def build_instant_bakong_khqr(
     crc = crc16_emvco(raw_payload)
     return f"{raw_payload}{crc}"
 
-def _sync_watch_approval(proc: subprocess.Popen, order_number: str):
+def _sync_watch_approval(proc: subprocess.Popen, order_number: str, client_id: str):
     """
     Synchronous worker executed in background thread to monitor PayWay approval.
     """
     logger.info(f"Started live PayWay background monitoring thread for order {order_number}...")
     try:
-        while proc.poll() is None:
+        while True:
             line = proc.stdout.readline()
             if not line:
                 break
@@ -106,15 +131,11 @@ def _sync_watch_approval(proc: subprocess.Popen, order_number: str):
             try:
                 data = json.loads(text)
                 event = data.get("event")
-                if event == "paid" or data.get("action") == "approved":
-                    client_id = data.get("client_id") or "LIVE"
-                    logger.info(f"Payment APPROVED for {order_number}! Client ID: {client_id}")
-
-                    # Mark order as Paid in database
+                if event == "paid" and data.get("order_number") == order_number and data.get("client_id") == client_id:
                     db = SessionLocal()
                     try:
                         order = db.query(Order).filter(Order.order_number == order_number).first()
-                        if order:
+                        if order and order.payment_method == 'khqr' and not order.payway_gateway:
                             settle_payment(db, order, f"ABA-LIVE-{client_id}")
                             db.commit()
                     finally:
@@ -128,16 +149,20 @@ def _sync_watch_approval(proc: subprocess.Popen, order_number: str):
     except Exception as e:
         logger.warning(f"PayWay monitor thread exception for {order_number}: {e}")
     finally:
-        ACTIVE_PAYMENT_PROCS.pop(order_number, None)
+        if ACTIVE_PAYMENT_PROCS.get(order_number) is proc:
+            ACTIVE_PAYMENT_PROCS.pop(order_number, None)
+            LOCAL_PAYMENT_QRS.pop(order_number, None)
         try:
             if proc.poll() is None:
                 proc.kill()
+            proc.wait()
         except Exception:
             pass
 
 def cancel_payment_session(order_number: str):
     """Cancels and terminates any running background browser session for this order."""
     proc = ACTIVE_PAYMENT_PROCS.pop(order_number, None)
+    LOCAL_PAYMENT_QRS.pop(order_number, None)
     if proc:
         try:
             if proc.poll() is None:
@@ -146,92 +171,62 @@ def cancel_payment_session(order_number: str):
             pass
 
 async def get_bakong_khqr_data(amount: float, order_number: str = "LUM-000000", try_live: bool = True) -> Dict[str, Any]:
-    """
-    Obtains KHQR payment data.
-    If ABA_PAYWAY_URL is configured in environment, extracts authentic live ABA PayWay QR
-    via the Playwright bridge in a non-blocking worker thread.
-    Otherwise, returns compliant Dynamic Bakong KHQR.
-    """
-    merchant_name = os.getenv("BAKONG_MERCHANT_NAME", DEFAULT_MERCHANT_NAME)
-    payway_url = os.getenv("ABA_PAYWAY_URL", DEFAULT_PAYWAY_URL)
-    instant_qr = build_instant_bakong_khqr(amount, order_number, merchant_name)
-    
-    if not try_live or not payway_url:
-        return {
+    """Local PayWay link integration. Hosted checkout uses the merchant API."""
+    payway_url = os.getenv("ABA_PAYWAY_URL", "")
+    if settings.PRODUCTION or not try_live or not payway_url:
+        return {"success": False, "source": "unavailable"}
+    if order_number in LOCAL_PAYMENT_QRS:
+        return LOCAL_PAYMENT_QRS[order_number]
+    for num, p in list(ACTIVE_PAYMENT_PROCS.items()):
+        if p.poll() is not None:
+            ACTIVE_PAYMENT_PROCS.pop(num, None)
+    if order_number in ACTIVE_PAYMENT_PROCS or len(ACTIVE_PAYMENT_PROCS) >= 3:
+        return {"success": False, "source": "unavailable"}
+
+    root_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", ".."))
+    bridge_script = os.path.join(root_dir, "scripts", "khqr", "payway-bridge.cjs")
+    proc = None
+    watching = False
+    try:
+        proc = subprocess.Popen(
+            ["node", bridge_script, f"{amount:.2f}", order_number],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.DEVNULL,
+            text=True,
+            encoding="utf-8",
+            errors="replace",
+            bufsize=1,
+        )
+        ACTIVE_PAYMENT_PROCS[order_number] = proc
+        line = await asyncio.wait_for(asyncio.to_thread(proc.stdout.readline), timeout=35)
+        data = json.loads(line)
+        client_id = data.get("client_id")
+        if (
+            data.get("event") != "qr_ready" or data.get("order_number") != order_number
+            or not isinstance(client_id, str) or not client_id or not matches_order_qr(data.get("qr_string"), amount)
+        ):
+            return {"success": False, "source": "unavailable"}
+        qr_data = {
             "success": True,
-            "qr_string": instant_qr,
+            "qr_string": data["qr_string"],
             "amount": amount,
             "currency": "USD",
-            "merchant_name": merchant_name,
+            "merchant_name": data.get("merchant_name") or DEFAULT_MERCHANT_NAME,
             "order_number": order_number,
-            "client_id": None,
-            "source": "instant_emvco",
-            "payway_url": payway_url or ""
+            "client_id": client_id,
+            "source": "live_aba_payway",
         }
-
-    # Locate bridge script (prefers extract_full_data.js, falls back to payway_bridge.js)
-    root_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
-    bridge_script = os.path.join(root_dir, "extract_full_data.js")
-    if not os.path.exists(bridge_script):
-        bridge_script = os.path.join(root_dir, "payway_bridge.js")
-
-    if os.path.exists(bridge_script):
-        cancel_payment_session(order_number)
-
-        try:
-            logger.info(f"Extracting live ABA PayWay KHQR for {order_number} (${amount:.2f}) via {bridge_script}...")
-
-            # Use subprocess.Popen with thread execution to guarantee 100% Windows asyncio compatibility
-            proc = subprocess.Popen(
-                ["node", bridge_script, "session", str(amount), order_number, payway_url],
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
-                text=True,
-                encoding="utf-8",
-                errors="replace",
-                bufsize=1
-            )
-
-            # Read line 1 asynchronously in a worker thread
-            def _read_first_line():
-                return proc.stdout.readline()
-
-            line = await asyncio.wait_for(asyncio.to_thread(_read_first_line), timeout=25.0)
-
-            if line:
-                res = json.loads(line.strip())
-                if (res.get("event") == "qr_ready" or res.get("success")) and res.get("qr_string"):
-                    ACTIVE_PAYMENT_PROCS[order_number] = proc
-
-                    # Spawn background monitoring thread to detect customer payment approval
-                    asyncio.create_task(asyncio.to_thread(_sync_watch_approval, proc, order_number))
-
-                    return {
-                        "success": True,
-                        "qr_string": res["qr_string"],
-                        "amount": amount,
-                        "currency": "USD",
-                        "merchant_name": res.get("merchant_name") or merchant_name,
-                        "order_number": order_number,
-                        "client_id": res.get("client_id"),
-                        "source": "live_aba_payway",
-                        "payway_url": payway_url
-                    }
-                else:
-                    logger.warning(f"Bridge returned non-ready response: {res}")
-            else:
-                logger.warning("Bridge returned empty stdout.")
-        except Exception as ex:
-            logger.exception(f"Live PayWay extraction exception: {ex}")
-
-    return {
-        "success": True,
-        "qr_string": instant_qr,
-        "amount": amount,
-        "currency": "USD",
-        "merchant_name": merchant_name,
-        "order_number": order_number,
-        "client_id": None,
-        "source": "instant_emvco",
-        "payway_url": payway_url or ""
-    }
+        LOCAL_PAYMENT_QRS[order_number] = qr_data
+        asyncio.create_task(asyncio.to_thread(_sync_watch_approval, proc, order_number, client_id))
+        watching = True
+        return qr_data
+    except (OSError, ValueError, TimeoutError):
+        logger.warning("Could not open a local PayWay payment session for %s.", order_number)
+        return {"success": False, "source": "unavailable"}
+    finally:
+        if proc is not None and not watching:
+            if ACTIVE_PAYMENT_PROCS.get(order_number) is proc:
+                ACTIVE_PAYMENT_PROCS.pop(order_number, None)
+            if proc.poll() is None:
+                proc.kill()
+            proc.wait()

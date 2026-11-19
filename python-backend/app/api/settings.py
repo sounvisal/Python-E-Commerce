@@ -26,7 +26,12 @@ DEFAULT_SETTINGS = {
     "time_zone": "(UTC+07:00) Phnom Penh",
     "currency": "USD ($)",
     "currency_symbol": "$",
+    "free_shipping_enabled": True,
+    "free_shipping_mode": "threshold",  # "threshold" | "all_orders" | "disabled"
     "free_shipping_threshold": 50.0,
+    "free_shipping_promo_text": "Complimentary nationwide shipping on orders over $50",
+    "free_shipping_carriers": ["vet_express", "jt_express", "lumea_concierge"],
+    "grab_subsidy_enabled": True,
     "tax_rate": 10.0,
     "online_status": "Online",
     "maintenance_mode": False,
@@ -75,7 +80,12 @@ class SettingsUpdatePayload(BaseModel):
     business_address: Optional[str] = None
     time_zone: Optional[str] = None
     currency: Optional[str] = None
+    free_shipping_enabled: Optional[bool] = None
+    free_shipping_mode: Optional[str] = None  # "threshold", "all_orders", "disabled"
     free_shipping_threshold: Optional[float] = None
+    free_shipping_promo_text: Optional[str] = None
+    free_shipping_carriers: Optional[list] = None
+    grab_subsidy_enabled: Optional[bool] = None
     tax_rate: Optional[float] = None
     online_status: Optional[str] = None
 
@@ -94,7 +104,12 @@ def get_public_settings():
             "store_phone": s.get("store_phone"),
             "currency": s.get("currency"),
             "currency_symbol": s.get("currency_symbol", "$"),
-            "free_shipping_threshold": s.get("free_shipping_threshold", 50.0),
+            "free_shipping_enabled": s.get("free_shipping_enabled", True),
+            "free_shipping_mode": s.get("free_shipping_mode", "threshold"),
+            "free_shipping_threshold": float(s.get("free_shipping_threshold", 50.0)),
+            "free_shipping_promo_text": s.get("free_shipping_promo_text", "Complimentary nationwide shipping on orders over $50"),
+            "free_shipping_carriers": s.get("free_shipping_carriers", ["vet_express", "jt_express", "lumea_concierge"]),
+            "grab_subsidy_enabled": s.get("grab_subsidy_enabled", True),
             "tax_rate": s.get("tax_rate", 10.0),
             "online_status": s.get("online_status", "Online")
         }

@@ -99,7 +99,9 @@
             rel="noopener noreferrer"
             class="btn-maps-link"
           >
-            🗺️ View Delivery Pin on Google Maps ↗
+            <MapPin :size="13" class="btn-icon-clean" />
+            <span>View Delivery Pin on Google Maps</span>
+            <ExternalLink :size="12" class="btn-icon-clean" />
           </a>
         </div>
 
@@ -144,7 +146,7 @@ import { computed, onMounted, ref } from 'vue'
 import { useRoute } from 'vue-router'
 import axios from 'axios'
 import { orderRequest } from '@/utils/orderAccess'
-import { CheckCircle2, Check } from 'lucide-vue-next'
+import { CheckCircle2, Check, MapPin, ExternalLink } from 'lucide-vue-next'
 
 const route = useRoute()
 const order = ref(null)

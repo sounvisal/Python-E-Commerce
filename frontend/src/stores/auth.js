@@ -94,6 +94,8 @@ export const useAuthStore = defineStore('auth', {
     logout(notify = true) {
       this.token = null; this.user = null; this.isAuthenticated = false; this.validated = false; this.persist(); clearPrivateState()
       for (const key of Object.keys(sessionStorage)) if (key.startsWith('lumea_order_access_')) sessionStorage.removeItem(key)
+      sessionStorage.removeItem('lumea_pending_khqr')
+      sessionStorage.removeItem('lumea_checkout_attempt')
       if (notify) useNotificationStore().addToast('You have been signed out.', 'info')
     },
     async updateProfile(updates) {

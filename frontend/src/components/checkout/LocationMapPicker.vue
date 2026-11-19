@@ -3,17 +3,20 @@
     <!-- Header (only shown if not in compact mode) -->
     <div v-if="!compact" class="map-picker-header">
       <div class="header-left">
-        <span class="map-title">📍 Pinpoint Exact Delivery Location</span>
+        <span class="map-title">
+          <MapPin :size="15" class="map-title-icon" />
+          <span>Pinpoint Exact Delivery Location</span>
+        </span>
         <span class="map-subtitle">Click map, search landmark, or paste Google Maps link to auto-fill your delivery address</span>
       </div>
     </div>
 
-    <!-- Search & Google Maps Paste Toolbar -->
-    <div class="map-toolbar">
+    <!-- Search & Google Maps Paste Toolbar (only shown if not in compact mode) -->
+    <div v-if="!compact" class="map-toolbar">
       <!-- Live Place Search -->
       <div class="search-box-wrapper">
         <div class="input-with-icon">
-          <span class="input-icon">🔍</span>
+          <Search :size="14" class="input-icon-svg" />
           <input
             type="text"
             v-model="searchQuery"
@@ -32,7 +35,7 @@
             class="search-result-item"
             @click="selectSearchResult(res)"
           >
-            <span class="res-pin">📍</span>
+            <MapPin :size="13" class="res-pin-icon" />
             <span class="res-name">{{ res.display_name }}</span>
           </li>
         </ul>
@@ -41,7 +44,7 @@
       <!-- Paste Google Maps Link or GPS -->
       <div class="gmaps-paste-wrapper">
         <div class="input-with-icon">
-          <span class="input-icon">🗺️</span>
+          <Compass :size="14" class="input-icon-svg" />
           <input
             type="text"
             v-model="pasteGmapsInput"
@@ -54,8 +57,8 @@
       </div>
     </div>
 
-    <!-- Quick Location Presets -->
-    <div class="preset-pills-row">
+    <!-- Quick Location Presets (only shown if not in compact mode) -->
+    <div v-if="!compact" class="preset-pills-row">
       <span class="preset-label">Quick Jump:</span>
       <div class="preset-pills-scroll">
         <button
@@ -84,19 +87,22 @@
         title="Detect your current location via device GPS"
       >
         <span v-if="isLocating" class="locate-spinner"></span>
-        <span v-else>📍 Locate Me</span>
+        <span v-else class="locate-btn-content">
+          <Navigation :size="12" class="locate-icon-svg" />
+          <span>Locate Me</span>
+        </span>
       </button>
 
-      <div class="map-coords-badge">
+      <div v-if="!compact" class="map-coords-badge">
         <span class="coords-label">GPS:</span>
         <span class="coords-val">{{ formattedCoords }}</span>
       </div>
     </div>
 
-    <!-- Auto-Filled Address Confirmation Banner -->
-    <div v-if="reverseGeoAddress" class="geocoded-address-banner">
+    <!-- Auto-Filled Address Confirmation Banner (only shown if not in compact mode) -->
+    <div v-if="!compact && reverseGeoAddress" class="geocoded-address-banner">
       <div class="geo-banner-left">
-        <span class="geo-icon">✨</span>
+        <Sparkles :size="15" class="geo-icon-svg" />
         <div class="geo-text">
           <span class="geo-label">Auto-detected Address from Pin:</span>
           <strong class="geo-value">{{ reverseGeoAddress }}</strong>
@@ -109,7 +115,8 @@
         @click="forceApplyToForm"
         title="Fill this address into the checkout form"
       >
-        <span>{{ appliedToForm ? '✓ Auto-Filled to Form' : 'Apply to Address Form' }}</span>
+        <Check v-if="appliedToForm" :size="13" class="applied-check-icon" />
+        <span>{{ appliedToForm ? 'Auto-Filled to Form' : 'Apply to Address Form' }}</span>
       </button>
     </div>
 
@@ -126,7 +133,9 @@
             rel="noopener noreferrer"
             class="gmaps-preview-link"
           >
-            🗺️ Open Google Maps in New Tab ↗
+            <Compass :size="13" class="gmaps-icon-svg" />
+            <span>Open Google Maps in New Tab</span>
+            <ExternalLink :size="12" class="ext-arrow-svg" />
           </a>
         </div>
       </div>
@@ -146,6 +155,15 @@
 import { ref, computed, onMounted, onBeforeUnmount, nextTick } from 'vue'
 import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
+import {
+  MapPin,
+  Search,
+  Compass,
+  Navigation,
+  Sparkles,
+  Check,
+  ExternalLink
+} from 'lucide-vue-next'
 
 const props = defineProps({
   initialLat: {
@@ -188,6 +206,9 @@ let reverseGeoTimeout = null
 const searchQuery = ref('')
 const searchResults = ref([])
 let searchDebounceTimeout = null
+let searchAbortController = null
+let reverseGeoAbortController = null
+let currentSearchId = 0
 
 // Paste Google Maps input
 const pasteGmapsInput = ref('')
@@ -237,11 +258,15 @@ function updatePin(lat, lng, shouldReverseGeocode = true) {
 
 function triggerReverseGeocode(lat, lng) {
   if (reverseGeoTimeout) clearTimeout(reverseGeoTimeout)
+  if (reverseGeoAbortController) reverseGeoAbortController.abort()
+  reverseGeoAbortController = new AbortController()
+
   reverseGeoTimeout = setTimeout(async () => {
     try {
       const url = `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lng}&accept-language=en`
       const res = await fetch(url, {
-        headers: { 'Accept': 'application/json' }
+        signal: reverseGeoAbortController.signal,
+        headers: { 'Accept': 'application/json', 'User-Agent': 'Lumea-Atelier-Delivery/1.0' }
       })
       if (!res.ok) return
       const data = await res.json()
@@ -254,7 +279,18 @@ function triggerReverseGeocode(lat, lng) {
         if (a.city_district || a.county) parts.push(a.city_district || a.county)
         
         const cleanAddress = parts.filter(Boolean).join(', ') || data.display_name.split(',').slice(0, 3).join(', ')
-        const detectedCity = a.city || a.town || a.province || a.state || 'Phnom Penh'
+        let detectedCity = 'Phnom Penh'
+        if (a.state && a.state.toLowerCase().includes('phnom penh')) {
+          detectedCity = 'Phnom Penh'
+        } else if (a.province) {
+          detectedCity = a.province
+        } else if (a.state) {
+          detectedCity = a.state
+        } else if (a.city) {
+          detectedCity = a.city
+        } else if (a.town && !a.town.toLowerCase().startsWith('khan')) {
+          detectedCity = a.town
+        }
 
         reverseGeoAddress.value = cleanAddress
         reverseGeoCity.value = detectedCity
@@ -313,27 +349,50 @@ function locateUser() {
 // Live Place Search
 function handleSearchInput() {
   if (searchDebounceTimeout) clearTimeout(searchDebounceTimeout)
+  if (searchAbortController) {
+    searchAbortController.abort()
+    searchAbortController = null
+  }
+  currentSearchId++
+  const activeId = currentSearchId
+
   if (!searchQuery.value || searchQuery.value.trim().length < 2) {
     searchResults.value = []
     return
   }
   searchDebounceTimeout = setTimeout(() => {
-    triggerSearch()
+    triggerSearch(activeId)
   }, 350)
 }
 
-async function triggerSearch() {
+async function triggerSearch(reqId) {
   const q = searchQuery.value.trim()
-  if (!q) return
+  if (!q || q.length < 2) {
+    searchResults.value = []
+    return
+  }
+  if (searchAbortController) searchAbortController.abort()
+  searchAbortController = new AbortController()
   try {
     const url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(q)}&countrycodes=kh&format=json&limit=5&accept-language=en`
-    const res = await fetch(url, { headers: { 'Accept': 'application/json' } })
+    const res = await fetch(url, {
+      signal: searchAbortController.signal,
+      headers: { 'Accept': 'application/json', 'User-Agent': 'Lumea-Atelier-Delivery/1.0' }
+    })
+    // Invalidate if input was cleared or changed while request was in-flight
+    if (reqId !== currentSearchId || !searchQuery.value || searchQuery.value.trim() !== q) {
+      return
+    }
     if (res.ok) {
       const data = await res.json()
-      searchResults.value = data || []
+      if (reqId === currentSearchId && searchQuery.value.trim() === q) {
+        searchResults.value = data || []
+      }
     }
   } catch (e) {
-    console.warn('Place search error:', e)
+    if (e.name !== 'AbortError') {
+      console.warn('Place search error:', e)
+    }
   }
 }
 
@@ -350,6 +409,12 @@ function selectSearchResult(res) {
 }
 
 function clearSearch() {
+  if (searchDebounceTimeout) clearTimeout(searchDebounceTimeout)
+  if (searchAbortController) {
+    searchAbortController.abort()
+    searchAbortController = null
+  }
+  currentSearchId++
   searchQuery.value = ''
   searchResults.value = []
 }
@@ -401,6 +466,7 @@ onMounted(async () => {
     center: [selectedLat.value, selectedLng.value],
     zoom: 14,
     zoomControl: true,
+    attributionControl: true,
     scrollWheelZoom: false
   })
 
@@ -705,9 +771,13 @@ onBeforeUnmount(() => {
   position: relative;
   width: 100%;
   height: 190px;
-  border-radius: 10px;
+  border-radius: 12px;
   overflow: hidden;
-  border: 1px solid #D6D3D1;
+  border: 1px solid #E5E7EB;
+}
+
+.compact-mode .map-viewport-wrapper {
+  height: 155px;
 }
 
 .leaflet-map-canvas {
@@ -716,21 +786,22 @@ onBeforeUnmount(() => {
   z-index: 1;
 }
 
-/* Locate Me Button Floating on Map */
+/* Locate Me Button Floating on Map matching mockup */
 .locate-btn-on-map {
   position: absolute;
-  top: 10px;
-  right: 10px;
+  bottom: 12px;
+  right: 12px;
+  top: auto;
   z-index: 500;
   background: #FFFFFF;
-  border: 1px solid #D1D5DB;
-  color: #1C1917;
-  font-size: 0.74rem;
-  font-weight: 700;
-  padding: 6px 12px;
-  border-radius: 20px;
+  border: 1px solid #D6D3D1;
+  color: #7A2E22;
+  font-size: 0.76rem;
+  font-weight: 600;
+  padding: 6px 14px;
+  border-radius: 9999px;
   cursor: pointer;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.12);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
   display: inline-flex;
   align-items: center;
   gap: 5px;
@@ -738,7 +809,7 @@ onBeforeUnmount(() => {
 }
 
 .locate-btn-on-map:hover:not(:disabled) {
-  background: #FDF9F6;
+  background: #FFF8F6;
   border-color: #7A2E22;
   color: #7A2E22;
 }

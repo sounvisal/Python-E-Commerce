@@ -20,6 +20,7 @@ import {
   Trash2,
   Upload,
   CheckCircle2,
+  AlertCircle,
   X,
   ExternalLink,
   Sparkles,
@@ -31,6 +32,10 @@ import {
 
 const adminStore = useAdminStore()
 const hostedDeployment = import.meta.env.VITE_HOSTED_DEPLOYMENT === 'true'
+const canUploadMedia = computed(() => {
+  if (hostedDeployment) return false
+  return adminStore.uploadStatus?.enabled === true
+})
 const productImageUrl = ref('')
 
 // View Mode: 'list' | 'editor'
@@ -365,6 +370,10 @@ const fileInputRef = ref(null)
 const isUploading = ref(false)
 
 const triggerImageUpload = () => {
+  if (!canUploadMedia.value) {
+    adminStore.addToast('Hosted media upload is disabled on this server. Provide an image URL directly.', 'warning')
+    return
+  }
   if (fileInputRef.value) {
     fileInputRef.value.click()
   }
@@ -398,6 +407,10 @@ const videoFileInputRef = ref(null)
 const isUploadingVideo = ref(false)
 
 const triggerVideoUpload = () => {
+  if (!canUploadMedia.value) {
+    adminStore.addToast('Hosted media upload is disabled on this server. Provide a video URL directly.', 'warning')
+    return
+  }
   if (videoFileInputRef.value) {
     videoFileInputRef.value.click()
   }
@@ -1138,21 +1151,29 @@ const toggleSkinConcern = (concern) => {
           <div class="card editor-card">
             <h3 class="editor-card-title">Product Images</h3>
 
-            <div v-if="hostedDeployment" class="form-group">
-              <label for="product-image-url" class="form-label">Image URL or Asset Path</label>
-              <input
-                id="product-image-url"
-                v-model="productImageUrl"
-                type="text"
-                placeholder="/images/prod-sk2.jpg"
-                class="atelier-input"
-                @keydown.enter.prevent="addProductImage"
-              />
-              <button type="button" class="btn-outline" :disabled="!productImageUrl.trim()" @click="addProductImage">
-                Add Image
-              </button>
+            <div v-if="!canUploadMedia" class="media-disabled-notice mb-3">
+              <AlertCircle :size="14" class="text-taupe" />
+              <span>Hosted media upload is disabled on this server. Provide an image URL directly.</span>
             </div>
-            <div v-else class="dropzone-box" @click="triggerImageUpload">
+
+            <div class="form-group mb-3">
+              <label for="product-image-url" class="form-label">Image URL or Asset Path</label>
+              <div class="input-with-button-row">
+                <input
+                  id="product-image-url"
+                  v-model="productImageUrl"
+                  type="text"
+                  placeholder="e.g. /images/prod-sk2.jpg or https://..."
+                  class="atelier-input"
+                  @keydown.enter.prevent="addProductImage"
+                />
+                <button type="button" class="btn-outline" :disabled="!productImageUrl.trim()" @click="addProductImage">
+                  Add Image
+                </button>
+              </div>
+            </div>
+
+            <div v-if="canUploadMedia" class="dropzone-box" @click="triggerImageUpload">
               <input
                 type="file"
                 ref="fileInputRef"
@@ -1201,7 +1222,12 @@ const toggleSkinConcern = (concern) => {
             </div>
 
             <!-- Video File Upload Box -->
-            <div v-if="!hostedDeployment" class="video-dropzone-box" @click="triggerVideoUpload">
+            <div v-if="!canUploadMedia" class="media-disabled-notice mb-3">
+              <AlertCircle :size="14" class="text-taupe" />
+              <span>Hosted media upload is disabled on this server. Provide a video URL directly.</span>
+            </div>
+
+            <div v-if="canUploadMedia" class="video-dropzone-box" @click="triggerVideoUpload">
               <input
                 type="file"
                 ref="videoFileInputRef"

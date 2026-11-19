@@ -2,19 +2,27 @@
 import AdminSidebar from '@/components/layout/AdminSidebar.vue'
 import ToastContainer from '@/components/common/ToastContainer.vue'
 import AdminHeader from '@/components/layout/AdminHeader.vue'
-import { ref, watch } from 'vue'
+import { ref, watch, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
+import { useAdminStore } from '@/stores/admin'
 
 const route = useRoute()
+const adminStore = useAdminStore()
 const contentRef = ref(null)
 const isSidebarCollapsed = ref(false)
+const isMobileSidebarOpen = ref(false)
+
+onMounted(() => {
+  adminStore.fetchUploadStatus()
+})
 
 function toggleSidebar() {
   isSidebarCollapsed.value = !isSidebarCollapsed.value
 }
 
-// Reset content scroll position on route change
+// Reset content scroll position & close mobile sidebar on route change
 watch(() => route.path, () => {
+  isMobileSidebarOpen.value = false
   if (contentRef.value) {
     contentRef.value.scrollTop = 0
   }
@@ -23,13 +31,21 @@ watch(() => route.path, () => {
 
 <template>
   <div class="admin-shell">
+    <div
+      v-if="isMobileSidebarOpen"
+      class="sidebar-mobile-backdrop"
+      @click="isMobileSidebarOpen = false"
+    ></div>
+
     <AdminSidebar
       :collapsed="isSidebarCollapsed"
+      :mobile-open="isMobileSidebarOpen"
       @toggle-collapse="toggleSidebar"
+      @close-mobile="isMobileSidebarOpen = false"
     />
 
     <div class="admin-main-area">
-      <AdminHeader />
+      <AdminHeader @toggle-mobile-sidebar="isMobileSidebarOpen = !isMobileSidebarOpen" />
 
       <main ref="contentRef" class="admin-content">
         <router-view />
@@ -66,9 +82,27 @@ watch(() => route.path, () => {
   background-color: var(--bg-app);
 }
 
+.sidebar-mobile-backdrop {
+  display: none;
+}
+
 @media (max-width: 768px) {
+  .admin-main-area {
+    width: 100vw;
+    max-width: 100vw;
+  }
+
+  .sidebar-mobile-backdrop {
+    display: block;
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.45);
+    z-index: 1050;
+    backdrop-filter: blur(2px);
+  }
+
   .admin-content {
-    padding: 1rem;
+    padding: 1rem 0.75rem;
   }
 }
 </style>

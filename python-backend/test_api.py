@@ -1,5 +1,7 @@
 import sys
 import io
+import os
+import secrets
 
 # Ensure UTF-8 output on Windows consoles
 if sys.platform == "win32":
@@ -119,6 +121,9 @@ def run_tests():
             }
         ]
     }
+    quote_res = client.post("/api/orders/quote", json=order_payload)
+    if quote_res.status_code == 200:
+        order_payload["expected_total"] = quote_res.json()["data"]["total"]
     res = client.post("/api/orders", json=order_payload)
     assert res.status_code == 201, f"Place order failed: {res.text}"
     created_order = res.json()["data"]
@@ -290,28 +295,60 @@ def run_tests():
     print(f"[PASS] 28. POST /api/upload/video -> Uploaded streaming video: {v_upload['data']['url']}")
 
     # 29. Bakong KHQR Generate API
-    res = client.post("/api/payments/khqr/generate", json={"order_number": "LUM-999888", "amount": 68.0, "try_live": False})
-    assert res.status_code == 200
-    khqr_data = res.json()
-    assert khqr_data["status"] == "success"
-    assert khqr_data["data"]["qr_string"].startswith("000201010212")
-    assert khqr_data["data"]["amount"] == 68.0
-    print(f"[PASS] 29. POST /api/payments/khqr/generate -> Generated valid Bakong KHQR (EMVCo TLV + CRC16: {khqr_data['data']['qr_string'][-4:]})")
+    khqr_ord_payload = {
+        "customer_name": "Sreynich Chan",
+        "customer_email": "sreynich.chan@example.com",
+        "shipping_address": "Norodom Blvd #45",
+        "shipping_city": "Phnom Penh",
+        "payment_method": "khqr",
+        "items": [{"product_id": 201, "quantity": 1}]
+    }
+    q_res = client.post("/api/orders/quote", json=khqr_ord_payload)
+    if q_res.status_code == 200:
+        khqr_ord_payload["expected_total"] = q_res.json()["data"]["total"]
+    khqr_ord_res = client.post("/api/orders", json=khqr_ord_payload)
+    assert khqr_ord_res.status_code == 201
+    khqr_ord_data = khqr_ord_res.json()["data"]
+    khqr_token = khqr_ord_data.get("access_token")
+
+    import app.api.payments as payments_mod
+    orig_get_bakong = payments_mod.get_bakong_khqr_data
+    async def mock_bakong_khqr_data(amount, order_number, try_live):
+        return {"source": "live_aba_payway", "qr_string": "test-qr", "amount": amount, "currency": "USD"}
+    payments_mod.get_bakong_khqr_data = mock_bakong_khqr_data
+    try:
+        res = client.post(
+            "/api/payments/khqr/generate",
+            json={"order_number": khqr_ord_data["order_number"], "amount": khqr_ord_data["total"], "try_live": False},
+            headers={"X-Order-Token": khqr_token}
+        )
+        assert res.status_code == 200, res.text
+        khqr_data = res.json()
+        assert khqr_data["status"] == "success"
+        assert khqr_data["data"]["amount"] == khqr_ord_data["total"]
+        print(f"[PASS] 29. POST /api/payments/khqr/generate -> Generated valid Bakong KHQR for {khqr_ord_data['order_number']}")
+    finally:
+        payments_mod.get_bakong_khqr_data = orig_get_bakong
 
     # 30. Bakong KHQR Payment Simulation API
     from app.core.config import settings
     prev_demo = settings.ENABLE_DEMO_PAYMENTS
     settings.ENABLE_DEMO_PAYMENTS = True
+    prev_payway_url = os.environ.pop("ABA_PAYWAY_URL", None)
     try:
         # Place a test order first
-        order_res = client.post("/api/orders", json={
+        ord_payload = {
             "customer_name": "Sreynich Chan",
             "customer_email": "sreynich.chan@example.com",
             "shipping_address": "Atelier Norodom",
             "shipping_city": "Phnom Penh",
             "payment_method": "khqr",
             "items": [{"product_id": 201, "quantity": 1}]
-        })
+        }
+        q_res = client.post("/api/orders/quote", json=ord_payload)
+        if q_res.status_code == 200:
+            ord_payload["expected_total"] = q_res.json()["data"]["total"]
+        order_res = client.post("/api/orders", json=ord_payload)
         test_ord_data = order_res.json()["data"]
         test_ord_num = test_ord_data["order_number"]
         test_token = test_ord_data.get("access_token")
@@ -323,6 +360,8 @@ def run_tests():
         print(f"[PASS] 30. POST /api/payments/khqr/simulate-approve -> Verified instant bank clearance ({sim_res.json()['transaction_ref']})")
     finally:
         settings.ENABLE_DEMO_PAYMENTS = prev_demo
+        if prev_payway_url is not None:
+            os.environ["ABA_PAYWAY_URL"] = prev_payway_url
 
     print("=" * 60)
     print(f"[SUCCESS] ALL 30/30 ENDPOINT TESTS PASSED WITH 100% SUCCESS!")

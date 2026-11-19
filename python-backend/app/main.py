@@ -157,6 +157,13 @@ class VueFiles(StaticFiles):
 
 
 project_root = Path(__file__).resolve().parents[2]
+from app.api.upload import UPLOADS_DIR, VIDEOS_DIR, ensure_directories
+ensure_directories()
+
+# Dedicated mounts for uploaded media (survives restarts and aligns write/read paths)
+app.mount("/images/uploads", StaticFiles(directory=UPLOADS_DIR), name="uploaded_images")
+app.mount("/videos", StaticFiles(directory=VIDEOS_DIR), name="uploaded_videos")
+
 if settings.SERVE_BUILT_APPS:
     admin_build = project_root / "admin" / "dist"
     storefront_build = project_root / "frontend" / "dist"
@@ -175,10 +182,6 @@ else:
     static_images_dir = project_root / "frontend" / "public" / "images"
     if static_images_dir.exists():
         app.mount("/images", StaticFiles(directory=static_images_dir), name="images")
-
-    static_videos_dir = project_root / "frontend" / "public" / "videos"
-    static_videos_dir.mkdir(parents=True, exist_ok=True)
-    app.mount("/videos", StaticFiles(directory=static_videos_dir), name="videos")
 
     @app.get("/", include_in_schema=False)
     def root_redirect():

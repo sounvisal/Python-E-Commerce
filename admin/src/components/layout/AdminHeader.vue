@@ -11,8 +11,11 @@ import {
   Settings,
   LogOut,
   Sparkles,
-  ExternalLink
+  ExternalLink,
+  Menu
 } from 'lucide-vue-next'
+
+const emit = defineEmits(['toggleMobileSidebar'])
 
 const router = useRouter()
 const authStore = useAuthStore()
@@ -47,8 +50,17 @@ async function handleLogout() {
 
 <template>
   <header class="atelier-header">
-    <!-- Left: Global Search Bar matching mockup -->
+    <!-- Left: Mobile Menu Toggle & Global Search Bar -->
     <div class="header-search-area">
+      <button
+        type="button"
+        class="btn-mobile-menu"
+        aria-label="Toggle navigation menu"
+        @click="emit('toggleMobileSidebar')"
+      >
+        <Menu :size="20" />
+      </button>
+
       <div class="header-search-box">
         <Search :size="16" class="search-icon" />
         <input
@@ -419,5 +431,36 @@ async function handleLogout() {
 
 .popover-menu-item.text-danger:hover {
   background-color: var(--rose-bg);
+}
+
+.btn-mobile-menu {
+  display: none;
+  background: #FFFFFF;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  color: var(--text-main);
+  padding: 0.4rem 0.5rem;
+  cursor: pointer;
+  align-items: center;
+  justify-content: center;
+  transition: all var(--transition-fast);
+  flex-shrink: 0;
+}
+
+.btn-mobile-menu:hover {
+  color: var(--crimson);
+  border-color: var(--crimson-border);
+}
+
+@media (max-width: 768px) {
+  .btn-mobile-menu {
+    display: inline-flex;
+  }
+  .header-search-box {
+    max-width: 200px;
+  }
+  .header-search-box input {
+    font-size: 0.8rem;
+  }
 }
 </style>

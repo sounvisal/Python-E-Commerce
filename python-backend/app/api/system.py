@@ -5,10 +5,27 @@ from datetime import datetime, timezone
 import time
 from sqlalchemy import text
 from sqlalchemy.orm import Session
+from pydantic import BaseModel, EmailStr
 from app.core.database import get_db
 
 router = APIRouter()
 SERVER_START_TIME = time.time()
+
+class NewsletterSubscribeRequest(BaseModel):
+    email: EmailStr
+
+@router.post("/newsletter")
+def subscribe_newsletter(payload: NewsletterSubscribeRequest):
+    """
+    Register an email for Luméa botanical insights, promotions, and formulations newsletter.
+    """
+    clean_email = str(payload.email).strip().lower()
+    return {
+        "status": "success",
+        "message": f"Successfully subscribed {clean_email} to Luméa editorial bulletins.",
+        "email": clean_email,
+        "subscribed_at": datetime.now(timezone.utc).isoformat()
+    }
 
 @router.get("/live", include_in_schema=False)
 def liveness_check():

@@ -20,6 +20,7 @@ import {
   ThumbsUp,
   MessageSquare,
   CheckCircle2,
+  AlertCircle,
   Upload,
   Sparkles,
   Save,
@@ -34,6 +35,7 @@ import {
 
 const adminStore = useAdminStore()
 const hostedDeployment = import.meta.env.VITE_HOSTED_DEPLOYMENT === 'true'
+const canUploadMedia = computed(() => !hostedDeployment && adminStore.uploadStatus?.enabled === true)
 
 // View Mode: 'list' | 'editor'
 const currentView = ref('list')
@@ -85,6 +87,10 @@ const articleFileInput = ref(null)
 const isUploadingImage = ref(false)
 
 function triggerArticleImageUpload() {
+  if (!canUploadMedia.value) {
+    adminStore.addToast('Hosted media upload is disabled on this server. Provide an image URL directly.', 'warning')
+    return
+  }
   if (articleFileInput.value) {
     articleFileInput.value.click()
   }
@@ -277,6 +283,17 @@ async function saveArticle(status) {
 }
 const saveDraft = () => saveArticle('Draft')
 const publishArticle = () => saveArticle('Published')
+
+async function deleteArticle(art) {
+  if (!confirm(`Are you sure you want to delete article "${art.title}"?`)) return
+  try {
+    await apiClient.delete(`/articles/${art.slug}`)
+    adminStore.addToast(`Article "${art.title}" deleted from journal.`, 'success')
+    await fetchArticles()
+  } catch (error) {
+    adminStore.addToast(error.response?.data?.detail || 'Unable to delete article.', 'error')
+  }
+}
 </script>
 
 <template>
@@ -541,6 +558,13 @@ const publishArticle = () => saveArticle('Published')
                   >
                     <Eye :size="14" />
                   </button>
+                  <button
+                    class="action-icon-btn btn-delete-row"
+                    title="Delete Article"
+                    @click="deleteArticle(art)"
+                  >
+                    <Trash2 :size="14" />
+                  </button>
                 </div>
               </td>
             </tr>
@@ -756,20 +780,24 @@ const publishArticle = () => saveArticle('Published')
             <div class="featured-img-preview-box">
               <img :src="articleForm.featured_image" class="featured-img" />
             </div>
-            <div v-if="hostedDeployment" class="form-group">
+            <div v-if="!canUploadMedia" class="media-disabled-notice mb-2">
+              <AlertCircle :size="13" class="text-taupe" />
+              <span>Hosted media upload is disabled on this server. Provide an image URL directly.</span>
+            </div>
+            <div class="form-group mb-2">
               <label for="featured-image-url" class="form-label">Image URL or Asset Path</label>
-              <input id="featured-image-url" v-model.trim="articleForm.featured_image" type="text" class="atelier-input" />
+              <input id="featured-image-url" v-model.trim="articleForm.featured_image" type="text" class="atelier-input" placeholder="/images/... or https://..." />
             </div>
             <div class="featured-img-actions">
               <input
-                v-if="!hostedDeployment"
+                v-if="canUploadMedia"
                 type="file"
                 ref="articleFileInput"
                 @change="handleArticleImageUpload"
                 accept="image/*"
                 style="display: none"
               />
-              <button v-if="!hostedDeployment" class="btn-img-action" @click="triggerArticleImageUpload" :disabled="isUploadingImage">
+              <button v-if="canUploadMedia" class="btn-img-action" @click="triggerArticleImageUpload" :disabled="isUploadingImage">
                 <Upload :size="13" />
                 <span>{{ isUploadingImage ? 'Uploading...' : 'Change Image' }}</span>
               </button>
@@ -1353,6 +1381,7 @@ const publishArticle = () => saveArticle('Published')
 }
 
 .action-icon-btn:hover { border-color: #84261B; color: #84261B; }
+.action-icon-btn.btn-delete-row:hover { border-color: #DC2626; color: #DC2626; background: #FEE2E2; }
 
 /* Pagination Footer */
 .pagination-footer {

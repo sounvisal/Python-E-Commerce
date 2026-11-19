@@ -1,6 +1,6 @@
 # Deploy Luméa on Render & Neon PostgreSQL
 
-This guide covers deploying the full Luméa E-Commerce Atelier (Vue 3 Storefront, Vue 3 Admin Atelier, and Python FastAPI backend) using **Render** (free web service) and **Neon** (serverless PostgreSQL free tier), with fully functional **Bakong KHQR** payment processing.
+This guide covers deploying the full Luméa E-Commerce Atelier (Vue 3 Storefront, Vue 3 Admin Atelier, and Python FastAPI backend) using **Render** (free web service) and **Neon** (serverless PostgreSQL free tier), with **Bakong KHQR** available after ABA PayWay merchant configuration.
 
 ---
 
@@ -24,23 +24,15 @@ This guide covers deploying the full Luméa E-Commerce Atelier (Vue 3 Storefront
 
 ---
 
-## 2. How KHQR Works on Hosted Deployment
+## 2. KHQR on Render and local development
 
-The hosted Luméa system features NBC Bakong KHQR payment processing:
-1. **Dynamic EMVCo TLV Generation**:
-   - Generates compliant Dynamic Bakong KHQR payload with standard CCITT CRC16 checksum.
-   - Renders in real-time on HTML5 canvas with the central Bakong currency emblem.
-   - Dual-currency display: Order total in USD with live conversion to Cambodian Riel (KHR).
-2. **Interactive Academic Defense / Demo Mode**:
-   - `ENABLE_DEMO_PAYMENTS: "true"` is configured in `render.yaml`.
-   - On the KHQR checkout modal, an instant clearance button is available:
-     `⚡ Demo Mode: Simulate Instant Bank Approval`
-   - Clicking this simulates instantaneous NBC Bakong clearance (`DEMO-BAKONG-...`), transitions the order to `Paid`, and opens the order confirmation invoice without needing to deduct real funds.
-3. **Optional Real ABA PayWay Integration**:
-   - To connect a live ABA PayWay merchant payment link, set the `ABA_PAYWAY_URL` environment variable in Render. If set, customer can click **Open ABA Pay Link** or scan directly via ABA Mobile.
-4. **Merchant Account Customization**:
-   - `BAKONG_MERCHANT_NAME`: Displays your atelier name on the banking screen (defaults to `LUMEA ATELIER`).
-   - `BAKONG_ACCOUNT_ID`: Your NBC Bakong / ABA account ID (defaults to `000000000000000`).
+The storefront uses the server-calculated order total. The hosted backend requests a signed QR from ABA PayWay and verifies the transaction against PayWay before marking the order paid. Neon holds the order, stock reservation, and payment status. Render offers cash on delivery until KHQR is configured.
+
+In Render's **Environment** settings add the live ABA-issued `PAYWAY_MERCHANT_ID` and `PAYWAY_API_KEY`. Keep `PAYWAY_ENVIRONMENT=live` and `ENABLE_DEMO_PAYMENTS=false`. The callback uses Render's public HTTPS origin. Set `PAYWAY_PUBLIC_URL` to the HTTPS origin of your custom domain when ABA expects that domain. Ask ABA to confirm the merchant, callback URL, and any allowlisting requirements for your service before enabling live payments. Run a sandbox checkout from a public HTTPS staging origin first. [ABA QR API](https://developer.payway.com.kh/folder-3158158) · [ABA endpoints](https://developer.payway.com.kh/api-endpoints-984508m0)
+
+For local development, the tracked `scripts/khqr/payway-bridge.cjs` uses the configured `ABA_PAYWAY_URL` with Playwright and installed Chrome. Set the link in the backend's ignored local environment file and install the root npm dependencies. This adapter checks the QR amount and currency and watches the matching payment session. Render uses the signed merchant API. Local administrator simulation is available only when explicitly enabled and no PayWay integration is configured.
+
+A cancelled or expired order releases reserved stock. A verified payment received later goes to **Payment Review** for staff reconciliation.
 
 ---
 
@@ -61,31 +53,17 @@ The hosted Luméa system features NBC Bakong KHQR payment processing:
      - `PRODUCTION`: `"true"`
      - `SERVE_BUILT_APPS`: `"true"`
      - `VITE_HOSTED_DEPLOYMENT`: `"true"`
-     - `ENABLE_DEMO_PAYMENTS`: `"true"`
-     - `BAKONG_MERCHANT_NAME`: `"LUMEA ATELIER"`
-     - `BAKONG_ACCOUNT_ID`: `"000000000000000"`
+     - `ENABLE_DEMO_PAYMENTS`: `"false"`
+     - `PAYWAY_ENVIRONMENT`: `live`
 4. **Click Apply**:
    - Render will build both Vue frontends (`npm run build`) and start the FastAPI ASGI server with Uvicorn.
    - On first startup, the backend automatically creates all database tables and seeds the full catalog into Neon.
 
 ---
 
-## 4. Automatic Database Seeding & Pre-seeded Accounts
+## 4. Production launch prerequisite
 
-On the very first launch with a fresh Neon database, the system automatically:
-- Creates all relational tables.
-- Seeds all 8 skincare categories, 46 formulations, dynamic banners, quizzes, and articles.
-- Synchronizes all PostgreSQL primary key sequences (`SELECT setval(...)`) to prevent ID collisions.
-
-### Default Login Accounts for Evaluation & Grading:
-- **Atelier Administrator**:
-  - **Email**: `admin@lumea.com`
-  - **Password**: `password123`
-  - **Role**: `admin` (Full access to Admin Atelier at `/atelier/`)
-- **VIP Customer**:
-  - **Email**: `sreynich.chan@example.com`
-  - **Password**: `password123`
-  - **Role**: `customer` | **Tier**: `Luméa Radiant Gold` (320 reward points)
+The current startup seeder creates evaluation accounts with known passwords and inserts a sample order. Before public launch, restrict these fixtures to local development, provision a unique administrator credential, and review any database already initialized by this seeder.
 
 ---
 
@@ -95,12 +73,8 @@ Once Render finishes deploying:
 1. **Storefront**: Open `https://<your-service>.onrender.com/`
 2. **Admin Console**: Open `https://<your-service>.onrender.com/atelier/`
 3. **Health Check**: Open `https://<your-service>.onrender.com/api/health` -> verify `"database": "connected"`
-4. **Interactive Swagger Docs**: Open `https://<your-service>.onrender.com/docs`
-5. **Test KHQR Checkout**:
-   - Add any product to the shopping bag.
-   - Proceed to Checkout -> select **Bakong KHQR** as payment method.
-   - Confirm order -> the authentic KHQR modal appears with QR canvas, timer, and KHR conversion.
-   - Click `⚡ Demo Mode: Simulate Instant Bank Approval` -> order confirms immediately as Paid!
+4. Place a cash-on-delivery order and verify its total, receipt, and appearance in Admin.
+5. In an ABA sandbox environment, select KHQR and verify that scanning the QR settles the stored order, updates Admin, and leaves the order in Payment Review if payment arrives after cancellation. Verify the same flow with ABA before accepting public payments.
 
 ---
 

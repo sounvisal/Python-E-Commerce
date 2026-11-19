@@ -8,30 +8,104 @@ from datetime import datetime
 from typing import List
 from fastapi import Depends, APIRouter, UploadFile, File, HTTPException, status
 
+def is_env_truthy(key: str, default: bool = False) -> bool:
+    val = os.getenv(key)
+    if val is None:
+        return default
+    return val.strip().lower() in ("1", "true", "yes", "on")
+
+def is_storage_enabled() -> bool:
+    if not settings.PRODUCTION:
+        return True
+    persistent = (os.getenv("PERSISTENT_STORAGE_DIR") or "").strip()
+    return bool(persistent or is_env_truthy("ALLOW_PRODUCTION_UPLOADS", False))
+
+def get_storage_type() -> str:
+    if not is_storage_enabled():
+        return "disabled"
+    persistent = (os.getenv("PERSISTENT_STORAGE_DIR") or "").strip()
+    if persistent:
+        return "persistent"
+    if not settings.PRODUCTION:
+        return "local"
+    return "ephemeral"
+
 def require_local_uploads():
-    if settings.PRODUCTION:
-        raise HTTPException(status_code=403, detail="File uploads are disabled on this deployment.")
+    if not is_storage_enabled():
+        raise HTTPException(
+            status_code=403,
+            detail="Hosted file storage is disabled or read-only on this deployment. Configure persistent storage."
+        )
 
 
-router = APIRouter(prefix="/upload", tags=["File Uploads"], dependencies=[Depends(require_local_uploads)])
+router = APIRouter(prefix="/upload", tags=["File Uploads"])
 
-# Target storage directories (Storefront and Admin public folders)
+# Target storage directories (Storefront, Admin, and Persistent Storage folders)
 PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", ".."))
-FRONTEND_UPLOADS_DIR = os.path.join(PROJECT_ROOT, "frontend", "public", "images", "uploads")
-ADMIN_UPLOADS_DIR = os.path.join(PROJECT_ROOT, "admin", "public", "images", "uploads")
-FRONTEND_VIDEOS_DIR = os.path.join(PROJECT_ROOT, "frontend", "public", "videos")
-ADMIN_VIDEOS_DIR = os.path.join(PROJECT_ROOT, "admin", "public", "videos")
+PERSISTENT_DIR = (os.getenv("PERSISTENT_STORAGE_DIR") or "").strip()
 
-ALLOWED_EXTENSIONS = {".jpg", ".jpeg", ".png", ".webp", ".svg", ".gif", ".avif"}
+if PERSISTENT_DIR:
+    UPLOADS_DIR = os.path.join(PERSISTENT_DIR, "images", "uploads")
+    VIDEOS_DIR = os.path.join(PERSISTENT_DIR, "videos")
+else:
+    UPLOADS_DIR = os.path.join(PROJECT_ROOT, "frontend", "public", "images", "uploads")
+    VIDEOS_DIR = os.path.join(PROJECT_ROOT, "frontend", "public", "videos")
+
+FRONTEND_UPLOADS_DIR = UPLOADS_DIR
+ADMIN_UPLOADS_DIR = os.path.join(PROJECT_ROOT, "admin", "public", "images", "uploads")
+FRONTEND_VIDEOS_DIR = VIDEOS_DIR
+ADMIN_VIDEOS_DIR = os.path.join(PROJECT_ROOT, "admin", "public", "videos")
+DIST_UPLOADS_DIR = os.path.join(PROJECT_ROOT, "frontend", "dist", "images", "uploads")
+DIST_VIDEOS_DIR = os.path.join(PROJECT_ROOT, "frontend", "dist", "videos")
+
+# Safe raster formats only (SVG excluded to prevent same-origin Stored XSS)
+ALLOWED_EXTENSIONS = {".jpg", ".jpeg", ".png", ".webp", ".gif", ".avif"}
 ALLOWED_VIDEO_EXTENSIONS = {".mp4", ".webm", ".mov", ".m4v", ".ogg"}
 MAX_FILE_SIZE = 10 * 1024 * 1024       # 10 MB for images
 MAX_VIDEO_SIZE = 50 * 1024 * 1024      # 50 MB for UGC video clips
+CHUNK_SIZE = 64 * 1024                 # 64 KB streaming chunks
+
+async def read_bounded_content(file: UploadFile, max_size: int) -> bytes:
+    """Reads file content in bounded chunks to protect against memory exhaustion."""
+    chunks = []
+    total = 0
+    while chunk := await file.read(CHUNK_SIZE):
+        total += len(chunk)
+        if total > max_size:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"File exceeds maximum allowed size of {max_size // (1024 * 1024)}MB."
+            )
+        chunks.append(chunk)
+    if total == 0:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Empty files cannot be uploaded.")
+    return b"".join(chunks)
+
+@router.get("/status")
+def get_upload_status(current_user=Depends(get_current_user)):
+    """Check storage availability and readiness."""
+    enabled = is_storage_enabled()
+    storage_type = get_storage_type()
+    return {
+        "status": "success",
+        "data": {
+            "enabled": enabled,
+            "storage_type": storage_type,
+            "max_image_mb": MAX_FILE_SIZE // (1024 * 1024),
+            "max_video_mb": MAX_VIDEO_SIZE // (1024 * 1024),
+            "allowed_formats": sorted(list(ALLOWED_EXTENSIONS))
+        }
+    }
 
 def ensure_directories():
-    os.makedirs(FRONTEND_UPLOADS_DIR, exist_ok=True)
+    os.makedirs(UPLOADS_DIR, exist_ok=True)
+    os.makedirs(VIDEOS_DIR, exist_ok=True)
     os.makedirs(ADMIN_UPLOADS_DIR, exist_ok=True)
-    os.makedirs(FRONTEND_VIDEOS_DIR, exist_ok=True)
     os.makedirs(ADMIN_VIDEOS_DIR, exist_ok=True)
+    if os.path.exists(os.path.dirname(DIST_UPLOADS_DIR)):
+        os.makedirs(DIST_UPLOADS_DIR, exist_ok=True)
+    if os.path.exists(os.path.dirname(DIST_VIDEOS_DIR)):
+        os.makedirs(DIST_VIDEOS_DIR, exist_ok=True)
 
 def sanitize_filename(filename: str) -> str:
     # Extract extension and base
@@ -48,7 +122,7 @@ def sanitize_filename(filename: str) -> str:
     unique_suffix = uuid.uuid4().hex[:6]
     return f"{clean_base}_{timestamp}_{unique_suffix}{ext}"
 
-@router.post("", status_code=status.HTTP_201_CREATED, dependencies=[Depends(get_current_user)])
+@router.post("", status_code=status.HTTP_201_CREATED, dependencies=[Depends(get_current_user), Depends(require_local_uploads)])
 async def upload_single_file(file: UploadFile = File(...)):
     """
     Upload a single image or asset.
@@ -63,25 +137,22 @@ async def upload_single_file(file: UploadFile = File(...)):
 
     safe_name = sanitize_filename(file.filename)
     ensure_directories()
-    frontend_path = os.path.join(FRONTEND_UPLOADS_DIR, safe_name)
-    admin_path = os.path.join(ADMIN_UPLOADS_DIR, safe_name)
+    primary_path = os.path.join(UPLOADS_DIR, safe_name)
 
-    content = await file.read()
-    if len(content) > MAX_FILE_SIZE:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"File exceeds maximum allowed size of 10MB ({len(content)} bytes)."
-        )
+    content = await read_bounded_content(file, MAX_FILE_SIZE)
 
-    # Write to frontend
-    with open(frontend_path, "wb") as f:
+    # Write to primary storage
+    with open(primary_path, "wb") as f:
         f.write(content)
 
-    # Mirror copy to admin
-    try:
-        shutil.copyfile(frontend_path, admin_path)
-    except Exception as e:
-        print(f"[Upload] Warning: Could not mirror to admin: {e}")
+    # Mirror copy to admin and dist uploads if present
+    for extra_dir in (ADMIN_UPLOADS_DIR, DIST_UPLOADS_DIR):
+        if os.path.isdir(os.path.dirname(extra_dir)):
+            try:
+                os.makedirs(extra_dir, exist_ok=True)
+                shutil.copyfile(primary_path, os.path.join(extra_dir, safe_name))
+            except Exception:
+                pass
 
     public_url = f"/images/uploads/{safe_name}"
 
@@ -97,7 +168,7 @@ async def upload_single_file(file: UploadFile = File(...)):
         }
     }
 
-@router.post("/multiple", status_code=status.HTTP_201_CREATED, dependencies=[Depends(get_current_user)])
+@router.post("/multiple", status_code=status.HTTP_201_CREATED, dependencies=[Depends(get_current_user), Depends(require_local_uploads)])
 async def upload_multiple_files(files: List[UploadFile] = File(...)):
     """
     Upload multiple images simultaneously for product galleries or review photo sets.
@@ -108,21 +179,27 @@ async def upload_multiple_files(files: List[UploadFile] = File(...)):
     for file in files:
         if not file.filename:
             continue
-        safe_name = sanitize_filename(file.filename)
-        frontend_path = os.path.join(FRONTEND_UPLOADS_DIR, safe_name)
-        admin_path = os.path.join(ADMIN_UPLOADS_DIR, safe_name)
-
-        content = await file.read()
-        if len(content) > MAX_FILE_SIZE:
+        try:
+            safe_name = sanitize_filename(file.filename)
+        except HTTPException:
             continue
-
-        with open(frontend_path, "wb") as f:
-            f.write(content)
+        primary_path = os.path.join(UPLOADS_DIR, safe_name)
 
         try:
-            shutil.copyfile(frontend_path, admin_path)
-        except Exception:
-            pass
+            content = await read_bounded_content(file, MAX_FILE_SIZE)
+        except HTTPException:
+            continue
+
+        with open(primary_path, "wb") as f:
+            f.write(content)
+
+        for extra_dir in (ADMIN_UPLOADS_DIR, DIST_UPLOADS_DIR):
+            if os.path.isdir(os.path.dirname(extra_dir)):
+                try:
+                    os.makedirs(extra_dir, exist_ok=True)
+                    shutil.copyfile(primary_path, os.path.join(extra_dir, safe_name))
+                except Exception:
+                    pass
 
         uploaded.append({
             "filename": safe_name,
@@ -151,7 +228,7 @@ def sanitize_video_filename(filename: str) -> str:
     unique_suffix = uuid.uuid4().hex[:6]
     return f"{clean_base}_{timestamp}_{unique_suffix}{ext}"
 
-@router.post("/video", status_code=status.HTTP_201_CREATED, dependencies=[Depends(get_current_user)])
+@router.post("/video", status_code=status.HTTP_201_CREATED, dependencies=[Depends(get_current_user), Depends(require_local_uploads)])
 async def upload_video_file(file: UploadFile = File(...)):
     """
     Upload a short-form video review or product texture masterclass clip.
@@ -166,25 +243,22 @@ async def upload_video_file(file: UploadFile = File(...)):
 
     safe_name = sanitize_video_filename(file.filename)
     ensure_directories()
-    frontend_path = os.path.join(FRONTEND_VIDEOS_DIR, safe_name)
-    admin_path = os.path.join(ADMIN_VIDEOS_DIR, safe_name)
+    primary_path = os.path.join(VIDEOS_DIR, safe_name)
 
-    content = await file.read()
-    if len(content) > MAX_VIDEO_SIZE:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Video exceeds maximum allowed size of 50MB ({len(content)} bytes)."
-        )
+    content = await read_bounded_content(file, MAX_VIDEO_SIZE)
 
-    # Write to frontend public/videos
-    with open(frontend_path, "wb") as f:
+    # Write to primary videos storage
+    with open(primary_path, "wb") as f:
         f.write(content)
 
-    # Mirror copy to admin public/videos
-    try:
-        shutil.copyfile(frontend_path, admin_path)
-    except Exception as e:
-        print(f"[Upload] Warning: Could not mirror video to admin: {e}")
+    # Mirror copy to admin and dist videos if present
+    for extra_dir in (ADMIN_VIDEOS_DIR, DIST_VIDEOS_DIR):
+        if os.path.isdir(os.path.dirname(extra_dir)):
+            try:
+                os.makedirs(extra_dir, exist_ok=True)
+                shutil.copyfile(primary_path, os.path.join(extra_dir, safe_name))
+            except Exception:
+                pass
 
     public_url = f"/videos/{safe_name}"
 

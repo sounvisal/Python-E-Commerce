@@ -3,7 +3,7 @@ from datetime import datetime, timezone, timedelta
 from typing import Optional, List
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
-from sqlalchemy import desc
+from sqlalchemy import desc, func, update
 
 from app.core.database import get_db
 from app.models.return_request import ReturnRequest
@@ -89,13 +89,37 @@ def submit_return_request(payload: ReturnRequestCreate, db: Session = Depends(ge
     created = (order.delivered_at or order.created_at).replace(tzinfo=timezone.utc)
     if datetime.now(timezone.utc) - created > timedelta(days=30):
         raise HTTPException(400, "This order is outside the 30-day return window")
-    item = db.query(OrderItem).filter(OrderItem.order_id == order.id, OrderItem.id == payload.order_item_id).first()
+    item = db.query(OrderItem).filter(OrderItem.order_id == order.id, OrderItem.id == payload.order_item_id).with_for_update().first()
     if not item:
         raise HTTPException(400, "Select a purchased item from this order")
-    prior = db.query(ReturnRequest).filter(ReturnRequest.order_number == order.order_number,
-        ((ReturnRequest.order_item_id == item.id) | ((ReturnRequest.order_item_id.is_(None)) & (ReturnRequest.product_name == item.product_name))), ReturnRequest.status.notin_(["Rejected", "rejected"])).all()
-    if payload.quantity + sum(r.quantity for r in prior) > item.quantity:
-        raise HTTPException(400, "The requested quantity has already been returned or exceeds the purchase")
+
+    # Transactional check of cumulative returns to prevent double-return race conditions
+    prior_returned = db.query(func.coalesce(func.sum(ReturnRequest.quantity), 0)).filter(
+        ReturnRequest.order_number == order.order_number,
+        (
+            (ReturnRequest.order_item_id == item.id) |
+            ((ReturnRequest.order_item_id.is_(None)) & (ReturnRequest.product_name == item.product_name))
+        ),
+        ReturnRequest.status.notin_(["Rejected", "rejected"])
+    ).scalar() or 0
+
+    requested_qty = payload.quantity or 1
+    if requested_qty <= 0:
+        raise HTTPException(400, "Return quantity must be greater than zero")
+    if requested_qty + prior_returned > item.quantity:
+        raise HTTPException(400, f"The requested quantity ({requested_qty}) exceeds the available returnable amount ({item.quantity - prior_returned} of {item.quantity} remaining).")
+    
+    # Atomic reservation of return quantity on OrderItem to prevent concurrent over-return race conditions
+    result = db.execute(
+        update(OrderItem)
+        .where(
+            OrderItem.id == item.id,
+            OrderItem.quantity >= OrderItem.returned_quantity + requested_qty
+        )
+        .values(returned_quantity=OrderItem.returned_quantity + requested_qty)
+    )
+    if result.rowcount == 0:
+        raise HTTPException(400, f"The requested quantity ({requested_qty}) exceeds the available returnable amount ({item.quantity - prior_returned} of {item.quantity} remaining).")
     if payload.resolution != "Refund to original payment method":
         raise HTTPException(400, "Only refunds are currently supported")
     now = datetime.now()
@@ -181,6 +205,12 @@ def update_return_status(
         'status': 'completed' if i + 1 < req.current_step else ('current' if i + 1 == req.current_step else 'upcoming')}
         for i, title in enumerate(stages)]
     if target == 'Rejected':
+        if previous != 'Rejected' and req.order_item_id:
+            db.execute(
+                update(OrderItem)
+                .where(OrderItem.id == req.order_item_id)
+                .values(returned_quantity=func.max(0, OrderItem.returned_quantity - req.quantity))
+            )
         req.timeline = [{'id': 1, 'title': 'Submitted', 'date': req.submitted_date, 'status': 'completed'},
                         {'id': 2, 'title': 'Rejected', 'date': datetime.now().strftime('%b %d, %Y'), 'status': 'current'}]
     db.commit()

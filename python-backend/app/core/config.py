@@ -3,7 +3,7 @@ import secrets
 import logging
 from dotenv import load_dotenv
 from pydantic_settings import BaseSettings
-from typing import List
+from typing import List, Literal
 
 # Ensure local .env is loaded
 load_dotenv()
@@ -19,7 +19,13 @@ class Settings(BaseSettings):
     SECRET_KEY: str = os.getenv("SECRET_KEY", "")
     PRODUCTION: bool = False
     SERVE_BUILT_APPS: bool = False
-    ENABLE_DEMO_PAYMENTS: bool = os.getenv("ENABLE_DEMO_PAYMENTS", "true").lower() in ("true", "1", "yes")
+    ENABLE_DEMO_PAYMENTS: bool = False
+    PAYWAY_ENVIRONMENT: Literal["sandbox", "live"] = "sandbox"
+    PAYWAY_MERCHANT_ID: str = ""
+    PAYWAY_API_KEY: str = ""
+    PAYWAY_PUBLIC_URL: str = ""
+    ADMIN_EMAIL: str = ""
+    ADMIN_PASSWORD: str = ""
     ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24 * 7  # 7 days
     
@@ -42,6 +48,8 @@ class Settings(BaseSettings):
 settings = Settings()
 
 if settings.PRODUCTION:
+    if settings.ENABLE_DEMO_PAYMENTS:
+        raise RuntimeError("Demo payments cannot be enabled in production.")
     if len(settings.SECRET_KEY.encode("utf-8")) < 32:
         raise RuntimeError("Set a persistent SECRET_KEY of at least 32 bytes in production.")
     if not settings.DATABASE_URL.startswith(("postgresql://", "postgres://", "postgresql+psycopg://")):

@@ -83,9 +83,12 @@
 
       <div class="price-action-group">
         <div class="price-row">
-          <span class="current-price">${{ Number(product.price).toFixed(2) }}</span>
+          <span class="current-price">{{ localeStore.formatPrice(product.price) }}</span>
           <span v-if="product.compare_at_price" class="compare-price">
-            ${{ Number(product.compare_at_price).toFixed(2) }}
+            {{ localeStore.formatPrice(product.compare_at_price) }}
+          </span>
+          <span v-if="localeStore.currentCurrency !== 'USD'" class="usd-sub-hint">
+            (${{ Number(product.price).toFixed(2) }})
           </span>
         </div>
 
@@ -109,7 +112,10 @@ import { computed, ref, watch } from 'vue'
 import { useCartStore } from '@/stores/cart'
 import { useWishlistStore } from '@/stores/wishlist'
 import { useNotificationStore } from '@/stores/notification'
+import { useLocaleStore } from '@/stores/locale'
 import { Heart, ShoppingCart, Star } from 'lucide-vue-next'
+
+const localeStore = useLocaleStore()
 
 const props = defineProps({
   product: {
@@ -170,9 +176,9 @@ const badgeClass = computed(() => {
 })
 
 const buttonText = computed(() => {
-  if (props.product.stock <= 0) return 'Sold Out'
-  if (isAdded.value) return 'Added!'
-  return 'Add to Cart'
+  if (props.product.stock <= 0) return localeStore.t('product.out_of_stock')
+  if (isAdded.value) return localeStore.t('product.added_to_bag')
+  return localeStore.t('product.add_to_bag')
 })
 
 const formatReviews = (num) => {
@@ -415,6 +421,13 @@ const handleAddToCart = () => {
   font-size: 0.95rem;
   font-weight: 700;
   color: #1C1917;
+}
+
+.usd-sub-hint {
+  font-size: 0.72rem;
+  color: #8C877F;
+  font-weight: 500;
+  margin-left: 2px;
 }
 
 .compare-price {

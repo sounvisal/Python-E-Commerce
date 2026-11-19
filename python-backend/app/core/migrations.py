@@ -20,10 +20,14 @@ ADDITIONS = {
         "delivery_lng": "FLOAT",
         "delivery_notes": "VARCHAR(500)",
         "map_url": "VARCHAR(255)",
+        "payway_gateway": "VARCHAR(150)",
+        "payway_started_at": "DATETIME",
+        "payway_qr": "TEXT",
     },
-    "users": {"profile_data": "JSON"},
+    "users": {"profile_data": "JSON", "token_version": "INTEGER NOT NULL DEFAULT 1"},
     "articles": {"tags": "JSON", "status": "VARCHAR(30) NOT NULL DEFAULT 'Published'"},
     "return_requests": {"order_item_id": "INTEGER", "refund_reference": "VARCHAR(150)"},
+    "order_items": {"returned_quantity": "INTEGER NOT NULL DEFAULT 0"},
 }
 
 def migrate_schema(engine, *, seed_demo_promotions=True):
@@ -42,6 +46,28 @@ def migrate_schema(engine, *, seed_demo_promotions=True):
             connection.execute(text('CREATE UNIQUE INDEX IF NOT EXISTS ix_orders_checkout_key ON orders (checkout_key)'))
         if inspector.has_table('articles'):
             connection.execute(text("UPDATE articles SET tags='[]' WHERE tags IS NULL"))
+        if inspector.has_table('order_items') and inspector.has_table('return_requests'):
+            connection.execute(text("""
+                UPDATE order_items SET returned_quantity = COALESCE((
+                    SELECT SUM(rr.quantity) FROM return_requests rr
+                    WHERE rr.order_item_id = order_items.id
+                    AND rr.status NOT IN ('Rejected', 'rejected')
+                ), 0)
+            """))
+        if connection.dialect.name == "postgresql" and inspector.has_table("products") and inspector.has_table("categories"):
+            fk_rows = connection.execute(text("""
+                SELECT con.conname, con.confdeltype
+                FROM pg_constraint con
+                JOIN pg_class rel ON rel.oid = con.conrelid
+                JOIN pg_class frel ON frel.oid = con.confrelid
+                WHERE rel.relname = 'products'
+                  AND frel.relname = 'categories'
+                  AND con.contype = 'f'
+            """)).fetchall()
+            for conname, confdeltype in fk_rows:
+                if confdeltype == 'c':  # CASCADE
+                    connection.execute(text(f'ALTER TABLE products DROP CONSTRAINT "{conname}"'))
+                    connection.execute(text(f'ALTER TABLE products ADD CONSTRAINT "{conname}" FOREIGN KEY (category_id) REFERENCES categories(id) ON DELETE RESTRICT'))
         connection.execute(text('CREATE TABLE IF NOT EXISTS flow_migrations (name VARCHAR(100) PRIMARY KEY)'))
         if seed_demo_promotions and inspector.has_table('promotions') and not connection.execute(text("SELECT name FROM flow_migrations WHERE name='initial_promotions'")).first():
             for code, percent in [('LUMEA10', 10), ('ATELIER15', 15), ('LUMEA20', 20)]:

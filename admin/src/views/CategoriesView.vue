@@ -1,6 +1,7 @@
 <script setup>
 import { ref, computed, reactive, onMounted } from 'vue'
 import { useAdminStore } from '@/stores/admin'
+import apiClient from '@/api/client'
 import { validateCategory } from '@/utils/validation'
 import ConfirmDialog from '@/components/common/ConfirmDialog.vue'
 import {
@@ -18,12 +19,14 @@ import {
   X,
   Upload,
   CheckCircle2,
+  AlertCircle,
   Sparkles,
   Save,
   Layers
 } from 'lucide-vue-next'
 
 const adminStore = useAdminStore()
+const canUploadMedia = computed(() => adminStore.uploadStatus?.enabled === true)
 
 // State
 const searchQuery = ref('')
@@ -135,6 +138,30 @@ const openEditCategory = (cat) => {
   categoryForm.status = 'active'
   categoryForm.order = cat.id
   showCategoryModal.value = true
+}
+
+const isUploadingImage = ref(false)
+
+const handleCategoryImageUpload = async (e) => {
+  const file = e.target.files?.[0]
+  if (!file) return
+  const formData = new FormData()
+  formData.append('file', file)
+  isUploadingImage.value = true
+  try {
+    const res = await apiClient.post('/upload', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' }
+    })
+    if (res.data?.url) {
+      categoryForm.image = res.data.url
+      adminStore.addToast('Category image uploaded successfully', 'success')
+    }
+  } catch (err) {
+    adminStore.addToast(err.response?.data?.detail || 'Failed to upload category image', 'error')
+  } finally {
+    isUploadingImage.value = false
+    e.target.value = ''
+  }
 }
 
 // Save Category to Database
@@ -462,13 +489,29 @@ const moveOrder = (cat, direction) => {
           </div>
 
           <div class="form-group">
-            <label class="form-label">Category Image URL</label>
-            <input
-              v-model="categoryForm.image"
-              type="text"
-              placeholder="/images/cat-cleansers.jpg"
-              class="atelier-input"
-            />
+            <label class="form-label">Category Image</label>
+            <div v-if="!canUploadMedia" class="media-disabled-notice mb-2">
+              <AlertCircle :size="13" class="text-taupe" />
+              <span>Hosted media upload is disabled on this server. Provide an image URL directly.</span>
+            </div>
+            <div class="category-image-uploader-row">
+              <div class="category-img-preview-box">
+                <img :src="categoryForm.image || '/images/cat-cleansers.jpg'" class="cat-preview-thumb" @error="$event.target.src = '/images/cat-cleansers.jpg'" />
+              </div>
+              <div class="category-img-inputs">
+                <label v-if="canUploadMedia" class="btn-upload-file-label">
+                  <Upload :size="13" />
+                  <span>{{ isUploadingImage ? 'Uploading...' : 'Upload Image' }}</span>
+                  <input type="file" accept="image/*" class="file-hidden-input" @change="handleCategoryImageUpload" :disabled="isUploadingImage" />
+                </label>
+                <input
+                  v-model="categoryForm.image"
+                  type="text"
+                  placeholder="/images/cat-cleansers.jpg"
+                  class="atelier-input input-url-fallback"
+                />
+              </div>
+            </div>
           </div>
 
           <div class="form-row-2 align-center">
@@ -1006,6 +1049,64 @@ const moveOrder = (cat, direction) => {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 14px;
+}
+
+.category-image-uploader-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.category-img-preview-box {
+  width: 54px;
+  height: 54px;
+  border-radius: 8px;
+  border: 1px solid #EFE7E0;
+  overflow: hidden;
+  background: #FAF7F4;
+  flex-shrink: 0;
+}
+
+.cat-preview-thumb {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.category-img-inputs {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.btn-upload-file-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  background: #F5EFEB;
+  color: #7A2E22;
+  border: 1px solid #EFE7E0;
+  border-radius: 6px;
+  font-size: 11.5px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  width: fit-content;
+}
+
+.btn-upload-file-label:hover {
+  background: #EDE4DE;
+}
+
+.file-hidden-input {
+  display: none;
+}
+
+.input-url-fallback {
+  font-size: 11.5px;
+  padding: 6px 10px;
 }
 
 .form-group {

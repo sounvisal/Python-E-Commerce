@@ -33,36 +33,36 @@
               :class="{ 'is-active': isShopActive }"
               @click="closeMenu"
             >
-              <span>Shop</span>
+              <span>{{ localeStore.t('nav.shop') }}</span>
               <ChevronDown :size="13" class="caret-icon" />
             </router-link>
             <div v-show="activeDropdown === 'shop'" class="dropdown-menu">
               <router-link to="/shop" class="dropdown-link featured-link" @click="closeMenu">
-                All Products (Shop All)
+                {{ localeStore.t('nav.all_products') }}
               </router-link>
               <router-link to="/category/cleansers" class="dropdown-link" @click="closeMenu">
-                Cleansers &amp; Balms
+                {{ localeStore.t('nav.cleansers') }}
               </router-link>
               <router-link to="/category/toners" class="dropdown-link" @click="closeMenu">
-                Toners &amp; Essences
+                {{ localeStore.t('nav.toners') }}
               </router-link>
               <router-link to="/category/serums" class="dropdown-link" @click="closeMenu">
-                Serums &amp; Ampoules
+                {{ localeStore.t('nav.serums') }}
               </router-link>
               <router-link to="/category/moisturizers" class="dropdown-link" @click="closeMenu">
-                Moisturizers &amp; Creams
+                {{ localeStore.t('nav.moisturizers') }}
               </router-link>
               <router-link to="/category/sunscreens" class="dropdown-link" @click="closeMenu">
-                Sun Protection SPF
+                {{ localeStore.t('nav.sunscreens') }}
               </router-link>
               <router-link to="/category/masks" class="dropdown-link" @click="closeMenu">
-                Sheet &amp; Clay Masks
+                {{ localeStore.t('nav.masks') }}
               </router-link>
               <router-link to="/category/treatments" class="dropdown-link" @click="closeMenu">
-                Exfoliants &amp; Peels
+                {{ localeStore.t('nav.treatments') }}
               </router-link>
               <router-link to="/category/kits" class="dropdown-link" @click="closeMenu">
-                Discovery Sets &amp; Bundles
+                {{ localeStore.t('nav.kits') }}
               </router-link>
             </div>
           </div>
@@ -79,12 +79,12 @@
               :class="{ 'is-active': isBrandsActive }"
               @click="closeMenu"
             >
-              <span>Brands</span>
+              <span>{{ localeStore.t('nav.brands') }}</span>
               <ChevronDown :size="13" class="caret-icon" />
             </router-link>
             <div v-show="activeDropdown === 'brands'" class="dropdown-menu">
               <router-link to="/brands" class="dropdown-link featured-link" @click="closeMenu">
-                Browse All Brands Directory &rarr;
+                {{ localeStore.t('nav.browse_brands') }}
               </router-link>
               <router-link to="/brand/sk-ii" class="dropdown-link" @click="closeMenu">SK-II Official Store</router-link>
               <router-link to="/brand/innisfree" class="dropdown-link" @click="closeMenu">Innisfree Official Store</router-link>
@@ -110,34 +110,34 @@
               :class="{ 'is-active': route.path === '/concerns' }"
               @click="closeMenu"
             >
-              <span>Concerns &amp; Types</span>
+              <span>{{ localeStore.t('nav.concerns') }}</span>
               <ChevronDown :size="13" class="caret-icon" />
             </router-link>
             <div v-show="activeDropdown === 'concerns'" class="dropdown-menu">
               <router-link to="/concerns" class="dropdown-link featured-link" @click="closeMenu">
-                Explore Full Diagnostic Matrix &rarr;
+                {{ localeStore.t('nav.explore_concerns') }}
               </router-link>
-              <div class="dropdown-section-label">By Skin Concern</div>
+              <div class="dropdown-section-label">{{ localeStore.t('nav.by_concern') }}</div>
               <router-link to="/concerns?concern=dryness" class="dropdown-link" @click="closeMenu">
-                Dryness &amp; Dehydration
+                {{ localeStore.t('nav.dryness') }}
               </router-link>
               <router-link to="/concerns?concern=dark-spots" class="dropdown-link" @click="closeMenu">
-                Dark Spots &amp; Pigmentation
+                {{ localeStore.t('nav.dark_spots') }}
               </router-link>
               <router-link to="/concerns?concern=aging" class="dropdown-link" @click="closeMenu">
-                Fine Lines &amp; Elasticity
+                {{ localeStore.t('nav.aging') }}
               </router-link>
               <router-link to="/concerns?concern=acne" class="dropdown-link" @click="closeMenu">
-                Blemishes &amp; Pore Care
+                {{ localeStore.t('nav.acne') }}
               </router-link>
               <router-link to="/concerns?concern=sensitivity" class="dropdown-link" @click="closeMenu">
-                Redness &amp; Sensitive Barrier
+                {{ localeStore.t('nav.sensitivity') }}
               </router-link>
-              <div class="dropdown-section-label">By Skin Type</div>
-              <router-link to="/concerns?type=dry" class="dropdown-link" @click="closeMenu">Dry Skin</router-link>
-              <router-link to="/concerns?type=oily" class="dropdown-link" @click="closeMenu">Oily Skin</router-link>
-              <router-link to="/concerns?type=combination" class="dropdown-link" @click="closeMenu">Combination Skin</router-link>
-              <router-link to="/concerns?type=sensitive" class="dropdown-link" @click="closeMenu">Sensitive Skin</router-link>
+              <div class="dropdown-section-label">{{ localeStore.t('nav.by_type') }}</div>
+              <router-link to="/concerns?type=dry" class="dropdown-link" @click="closeMenu">{{ localeStore.t('nav.dry_skin') }}</router-link>
+              <router-link to="/concerns?type=oily" class="dropdown-link" @click="closeMenu">{{ localeStore.t('nav.oily_skin') }}</router-link>
+              <router-link to="/concerns?type=combination" class="dropdown-link" @click="closeMenu">{{ localeStore.t('nav.combination_skin') }}</router-link>
+              <router-link to="/concerns?type=sensitive" class="dropdown-link" @click="closeMenu">{{ localeStore.t('nav.sensitive_skin') }}</router-link>
             </div>
           </div>
 
@@ -148,7 +148,7 @@
             :class="{ 'is-active': route.path === '/best-sellers' }"
             @click="closeMenu"
           >
-            Best Sellers
+            {{ localeStore.t('nav.best_sellers') }}
           </router-link>
           <router-link
             to="/new-arrivals"
@@ -156,7 +156,7 @@
             :class="{ 'is-active': route.path === '/new-arrivals' }"
             @click="closeMenu"
           >
-            New Arrivals
+            {{ localeStore.t('nav.new_arrivals') }}
           </router-link>
           <router-link
             to="/deals"
@@ -164,7 +164,7 @@
             :class="{ 'is-active': route.path === '/deals' }"
             @click="closeMenu"
           >
-            Deals
+            {{ localeStore.t('nav.deals') }}
           </router-link>
           <router-link
             to="/articles"
@@ -172,7 +172,7 @@
             :class="{ 'is-active': route.path.startsWith('/articles') }"
             @click="closeMenu"
           >
-            Articles
+            {{ localeStore.t('nav.articles') }}
           </router-link>
           <router-link
             to="/quiz"
@@ -181,7 +181,7 @@
             @click="closeMenu"
           >
             <Sparkles :size="13" class="quiz-badge-sparkle" />
-            <span>Skin Quiz</span>
+            <span>{{ localeStore.t('nav.skin_quiz') }}</span>
           </router-link>
         </nav>
 
@@ -191,7 +191,7 @@
             <input
               type="text"
               v-model="searchQuery"
-              placeholder="Search for products, brands, or concerns..."
+              :placeholder="localeStore.t('nav.search_placeholder')"
               class="search-pill-input"
             />
             <button
@@ -209,12 +209,142 @@
           </form>
         </div>
 
-        <!-- Far Right: Format Minimal Icons (Wishlist, Cart with Badge, Account) -->
+        <!-- Far Right: Format Minimal Icons (Language & Currency, Wishlist, Cart with Badge, Account) -->
         <div class="header-action-icons">
+          <!-- Language & Currency Switcher Pill -->
+          <div class="locale-switcher-wrap" ref="localeDropdownRef">
+            <button
+              class="locale-pill-btn"
+              type="button"
+              @click.stop="toggleLocaleMenu"
+              aria-label="Change Language and Currency"
+              :title="`Language: ${currentLanguageLabel} | Currency: ${localeStore.currentCurrency}`"
+            >
+              <Globe :size="15" class="locale-globe-svg" />
+              <FlagIcon :locale="localeStore.currentLocale" class="locale-flag-icon" />
+              <span class="locale-lang-code">{{ currentLanguageLabel }}</span>
+              <span class="locale-divider-dot">·</span>
+              <span class="locale-currency-code">{{ localeStore.currencySymbol }} {{ localeStore.currentCurrency }}</span>
+              <ChevronDown :size="11" class="locale-caret-icon" :class="{ 'is-open': localeMenuOpen }" />
+            </button>
+
+            <!-- Luxury Atelier Popup Dropdown -->
+            <div v-show="localeMenuOpen" class="locale-popover-menu" @click.stop>
+              <!-- 1. Language Options -->
+              <div class="popover-section">
+                <div class="popover-section-header">
+                  <span class="popover-heading">{{ localeStore.t('common.language') }}</span>
+                  <span class="popover-hint">Auto Currency</span>
+                </div>
+                
+                <div class="popover-options-list">
+                  <!-- English -->
+                  <button
+                    type="button"
+                    class="popover-option-item"
+                    :class="{ active: localeStore.currentLocale === 'en' }"
+                    @click="selectLanguage('en')"
+                  >
+                    <FlagIcon locale="en" class="pop-flag" />
+                    <div class="pop-details">
+                      <span class="pop-name">English</span>
+                      <span class="pop-sub">Default (USD $)</span>
+                    </div>
+                    <Check v-if="localeStore.currentLocale === 'en'" :size="14" class="pop-check" />
+                  </button>
+
+                  <!-- Khmer -->
+                  <button
+                    type="button"
+                    class="popover-option-item"
+                    :class="{ active: localeStore.currentLocale === 'km' }"
+                    @click="selectLanguage('km')"
+                  >
+                    <FlagIcon locale="km" class="pop-flag" />
+                    <div class="pop-details">
+                      <span class="pop-name">ភាសាខ្មែរ (Khmer)</span>
+                      <span class="pop-sub">ប្តូរតម្លៃជាប្រាក់រៀល (៛ KHR)</span>
+                    </div>
+                    <Check v-if="localeStore.currentLocale === 'km'" :size="14" class="pop-check" />
+                  </button>
+
+                  <!-- Chinese -->
+                  <button
+                    type="button"
+                    class="popover-option-item"
+                    :class="{ active: localeStore.currentLocale === 'zh' }"
+                    @click="selectLanguage('zh')"
+                  >
+                    <FlagIcon locale="zh" class="pop-flag" />
+                    <div class="pop-details">
+                      <span class="pop-name">简体中文 (Chinese)</span>
+                      <span class="pop-sub">自动显示人民币 (¥ CNY)</span>
+                    </div>
+                    <Check v-if="localeStore.currentLocale === 'zh'" :size="14" class="pop-check" />
+                  </button>
+                </div>
+              </div>
+
+              <div class="popover-divider"></div>
+
+              <!-- 2. Currency Options (Can change whenever user wants!) -->
+              <div class="popover-section">
+                <div class="popover-section-header">
+                  <span class="popover-heading">{{ localeStore.t('common.currency') }}</span>
+                  <span class="popover-hint">Can Change Anytime</span>
+                </div>
+
+                <div class="currency-chips-grid">
+                  <button
+                    type="button"
+                    class="pop-curr-chip"
+                    :class="{ active: localeStore.currentCurrency === 'USD' }"
+                    @click="selectCurrency('USD')"
+                  >
+                    <span class="chip-sym">$</span>
+                    <span class="chip-label">USD ($)</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    class="pop-curr-chip"
+                    :class="{ active: localeStore.currentCurrency === 'KHR' }"
+                    @click="selectCurrency('KHR')"
+                  >
+                    <span class="chip-sym">៛</span>
+                    <span class="chip-label">KHR (៛)</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    class="pop-curr-chip"
+                    :class="{ active: localeStore.currentCurrency === 'CNY' }"
+                    @click="selectCurrency('CNY')"
+                  >
+                    <span class="chip-sym">¥</span>
+                    <span class="chip-label">CNY (¥)</span>
+                  </button>
+                </div>
+
+                <div class="popover-rate-footnote">
+                  <span v-if="localeStore.currentCurrency === 'KHR'">
+                    Official Atelier Rate: $1.00 USD ≈ 4,100 KHR (រៀល)
+                  </span>
+                  <span v-else-if="localeStore.currentCurrency === 'CNY'">
+                    Official Atelier Rate: $1.00 USD ≈ 7.25 CNY (人民币)
+                  </span>
+                  <span v-else>
+                    Base Atelier Tariff: USD ($)
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+
           <!-- Wishlist Heart Icon with Count Badge -->
           <router-link
             to="/wishlist"
-            class="header-icon-btn"
+            class="header-icon-btn wishlist-icon-btn"
             :class="{ 'is-active': route.path === '/wishlist' }"
             title="Wishlist"
             aria-label="Wishlist"
@@ -241,7 +371,7 @@
           <!-- Account User Icon -->
           <router-link
             to="/account"
-            class="header-icon-btn"
+            class="header-icon-btn account-icon-btn"
             :class="{ 'is-active': route.path.startsWith('/account') || route.path === '/login' }"
             title="My Account"
             aria-label="My Account"
@@ -278,17 +408,17 @@
 
         <nav class="mobile-nav-list">
           <router-link to="/shop" class="mobile-nav-item" @click="closeMenu">
-            <span>Shop All Products</span>
+            <span>{{ localeStore.t('nav.all_products') || 'Shop All Products' }}</span>
           </router-link>
-          <router-link to="/category/cleansers" class="mobile-nav-subitem" @click="closeMenu">Cleansers</router-link>
-          <router-link to="/category/toners" class="mobile-nav-subitem" @click="closeMenu">Toners</router-link>
-          <router-link to="/category/serums" class="mobile-nav-subitem" @click="closeMenu">Serums</router-link>
-          <router-link to="/category/moisturizers" class="mobile-nav-subitem" @click="closeMenu">Moisturizers</router-link>
+          <router-link to="/category/cleansers" class="mobile-nav-subitem" @click="closeMenu">{{ localeStore.t('nav.cleansers') || 'Cleansers' }}</router-link>
+          <router-link to="/category/toners" class="mobile-nav-subitem" @click="closeMenu">{{ localeStore.t('nav.toners') || 'Toners' }}</router-link>
+          <router-link to="/category/serums" class="mobile-nav-subitem" @click="closeMenu">{{ localeStore.t('nav.serums') || 'Serums' }}</router-link>
+          <router-link to="/category/moisturizers" class="mobile-nav-subitem" @click="closeMenu">{{ localeStore.t('nav.moisturizers') || 'Moisturizers' }}</router-link>
 
           <div class="mobile-divider"></div>
 
           <router-link to="/brands" class="mobile-nav-item" @click="closeMenu">
-            <span>All Brands Directory</span>
+            <span>{{ localeStore.t('nav.browse_brands') || 'All Brands Directory' }}</span>
           </router-link>
           <router-link to="/brand/sk-ii" class="mobile-nav-subitem" @click="closeMenu">SK-II</router-link>
           <router-link to="/brand/innisfree" class="mobile-nav-subitem" @click="closeMenu">Innisfree</router-link>
@@ -298,18 +428,84 @@
 
           <div class="mobile-divider"></div>
 
-          <router-link to="/best-sellers" class="mobile-nav-item" @click="closeMenu">Best Sellers</router-link>
-          <router-link to="/new-arrivals" class="mobile-nav-item" @click="closeMenu">New Arrivals</router-link>
-          <router-link to="/deals" class="mobile-nav-item highlight-deals" @click="closeMenu">Special Offers &amp; Deals</router-link>
-          <router-link to="/articles" class="mobile-nav-item" @click="closeMenu">Skincare Journal &amp; Articles</router-link>
+          <router-link to="/best-sellers" class="mobile-nav-item" @click="closeMenu">{{ localeStore.t('nav.best_sellers') || 'Best Sellers' }}</router-link>
+          <router-link to="/new-arrivals" class="mobile-nav-item" @click="closeMenu">{{ localeStore.t('nav.new_arrivals') || 'New Arrivals' }}</router-link>
+          <router-link to="/deals" class="mobile-nav-item highlight-deals" @click="closeMenu">{{ localeStore.t('nav.deals') || 'Special Offers & Deals' }}</router-link>
+          <router-link to="/articles" class="mobile-nav-item" @click="closeMenu">{{ localeStore.t('nav.articles') || 'Skincare Journal' }}</router-link>
           <router-link to="/quiz" class="mobile-nav-item highlight-quiz" @click="closeMenu">
             <Sparkles :size="16" class="mobile-quiz-sparkle" />
-            <span>Skin Diagnostic Quiz</span>
+            <span>{{ localeStore.t('nav.skin_quiz') || 'Skin Diagnostic Quiz' }}</span>
           </router-link>
           <router-link to="/returns/request" class="mobile-nav-item" @click="closeMenu">Returns &amp; Refunds</router-link>
-          <router-link to="/concerns" class="mobile-nav-item" @click="closeMenu">Skin Concerns &amp; Types</router-link>
-          <router-link to="/wishlist" class="mobile-nav-item" @click="closeMenu">My Saved Wishlist</router-link>
+          <router-link to="/concerns" class="mobile-nav-item" @click="closeMenu">{{ localeStore.t('nav.concerns') || 'Skin Concerns & Types' }}</router-link>
+          <router-link to="/wishlist" class="mobile-nav-item" @click="closeMenu">{{ localeStore.t('nav.wishlist') || 'My Saved Wishlist' }}</router-link>
         </nav>
+
+        <!-- Mobile Language & Currency Selector -->
+        <div class="mobile-locale-card">
+          <div class="mobile-locale-row">
+            <span class="mobile-locale-label">{{ localeStore.t('common.language') }}</span>
+            <div class="mobile-lang-pills">
+              <button
+                type="button"
+                class="m-lang-btn"
+                :class="{ active: localeStore.currentLocale === 'en' }"
+                @click="selectLanguage('en')"
+              >
+                <FlagIcon locale="en" />
+                <span>EN</span>
+              </button>
+              <button
+                type="button"
+                class="m-lang-btn"
+                :class="{ active: localeStore.currentLocale === 'km' }"
+                @click="selectLanguage('km')"
+              >
+                <FlagIcon locale="km" />
+                <span>ខ្មែរ</span>
+              </button>
+              <button
+                type="button"
+                class="m-lang-btn"
+                :class="{ active: localeStore.currentLocale === 'zh' }"
+                @click="selectLanguage('zh')"
+              >
+                <FlagIcon locale="zh" />
+                <span>中文</span>
+              </button>
+            </div>
+          </div>
+
+          <div class="mobile-locale-row mt-2">
+            <span class="mobile-locale-label">{{ localeStore.t('common.currency') }}</span>
+            <div class="mobile-lang-pills">
+              <button
+                type="button"
+                class="m-lang-btn"
+                :class="{ active: localeStore.currentCurrency === 'USD' }"
+                @click="selectCurrency('USD')"
+              >
+                $ USD
+              </button>
+              <button
+                type="button"
+                class="m-lang-btn"
+                :class="{ active: localeStore.currentCurrency === 'KHR' }"
+                @click="selectCurrency('KHR')"
+              >
+                ៛ KHR
+              </button>
+              <button
+                type="button"
+                class="m-lang-btn"
+                :class="{ active: localeStore.currentCurrency === 'CNY' }"
+                @click="selectCurrency('CNY')"
+              >
+                ¥ CNY
+              </button>
+            </div>
+          </div>
+        </div>
 
         <div class="mobile-actions-footer">
           <button class="mobile-account-btn" @click="openAccountModal">
@@ -360,6 +556,8 @@
 import { useCartStore } from '@/stores/cart'
 import { useProductStore } from '@/stores/products'
 import { useWishlistStore } from '@/stores/wishlist'
+import { useLocaleStore } from '@/stores/locale'
+import FlagIcon from '@/components/common/FlagIcon.vue'
 import {
   ChevronDown,
   Heart,
@@ -368,7 +566,9 @@ import {
   ShoppingBag,
   Sparkles,
   User,
-  X
+  X,
+  Globe,
+  Check
 } from 'lucide-vue-next'
 import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
@@ -379,6 +579,7 @@ const adminUrl = import.meta.env.VITE_HOSTED_DEPLOYMENT === 'true' ? '/atelier/'
 const cartStore = useCartStore()
 const productStore = useProductStore()
 const wishlistStore = useWishlistStore()
+const localeStore = useLocaleStore()
 
 const headerRef = ref(null)
 const mobileMenuOpen = ref(false)
@@ -387,6 +588,34 @@ const activeDropdown = ref(null)
 const showAccountModal = ref(false)
 const accountEmail = ref('customer@lumea.com')
 const accountPassword = ref('password123')
+
+// Language & Currency Atelier Dropdown State
+const localeMenuOpen = ref(false)
+const localeDropdownRef = ref(null)
+
+const currentLanguageLabel = computed(() => {
+  if (localeStore.currentLocale === 'km') return 'ខ្មែរ'
+  if (localeStore.currentLocale === 'zh') return '中文'
+  return 'EN'
+})
+
+function toggleLocaleMenu() {
+  localeMenuOpen.value = !localeMenuOpen.value
+}
+
+function selectLanguage(lang) {
+  localeStore.setLocale(lang)
+}
+
+function selectCurrency(curr) {
+  localeStore.setCurrency(curr, true)
+}
+
+function handleGlobalLocaleClick(e) {
+  if (localeDropdownRef.value && !localeDropdownRef.value.contains(e.target)) {
+    localeMenuOpen.value = false
+  }
+}
 
 const isShopActive = computed(() => {
   return route.path.startsWith('/shop') || route.path.startsWith('/category')
@@ -406,10 +635,12 @@ function updateHeaderHeight() {
 onMounted(() => {
   updateHeaderHeight()
   window.addEventListener('resize', updateHeaderHeight)
+  document.addEventListener('click', handleGlobalLocaleClick)
 })
 
 onUnmounted(() => {
   window.removeEventListener('resize', updateHeaderHeight)
+  document.removeEventListener('click', handleGlobalLocaleClick)
 })
 
 function handleSearch() {
@@ -819,6 +1050,65 @@ function handleAccountSubmit() {
   }
 }
 
+@media (max-width: 640px) {
+  .container-fluid.header-inner {
+    padding: 0 0.75rem;
+    gap: 0.5rem;
+  }
+  .header-left {
+    gap: 0.5rem;
+  }
+  .brand-logo-img {
+    height: 28px;
+  }
+  .header-action-icons {
+    gap: 0.5rem;
+  }
+  /* Primary icon on mobile is Cart Bag; hide redundant header wishlist and account icons (prominent in drawer) */
+  .wishlist-icon-btn,
+  .account-icon-btn {
+    display: none !important;
+  }
+  /* Compact language & currency pill on mobile */
+  .locale-pill-btn {
+    padding: 0.28rem 0.45rem;
+    gap: 3px;
+  }
+  .locale-globe-svg,
+  .locale-lang-code,
+  .locale-divider-dot {
+    display: none !important;
+  }
+  .locale-currency-code {
+    font-size: 0.7rem;
+  }
+}
+
+@media (max-width: 360px) {
+  .container-fluid.header-inner {
+    padding: 0 0.4rem;
+    gap: 0.35rem;
+  }
+  .header-left {
+    gap: 0.35rem;
+  }
+  .brand-logo-img {
+    height: 24px;
+  }
+  .header-action-icons {
+    gap: 0.35rem;
+  }
+  .locale-pill-btn {
+    padding: 0.22rem 0.35rem;
+  }
+  .locale-flag-icon {
+    font-size: 0.75rem;
+  }
+  .locale-currency-code {
+    font-size: 0.65rem;
+  }
+}
+
 .mobile-drawer-backdrop {
   position: fixed;
   inset: 0;
@@ -1052,5 +1342,278 @@ function handleAccountSubmit() {
   color: #8E4A3E;
   font-weight: 600;
   text-decoration: none;
+}
+
+/* ==========================================================================
+   LANGUAGE & CURRENCY ATELIER SWITCHER STYLES
+   ========================================================================== */
+.locale-switcher-wrap {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+
+.locale-pill-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: #F4EFEB;
+  border: 1px solid rgba(28, 25, 23, 0.1);
+  border-radius: 9999px;
+  padding: 0.35rem 0.65rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #2D2422;
+  cursor: pointer;
+  transition: all 0.18s ease;
+  user-select: none;
+}
+
+.locale-pill-btn:hover {
+  background: #EFE7E0;
+  border-color: #8B2E24;
+  color: #8B2E24;
+}
+
+.locale-globe-svg {
+  color: #8C877F;
+  flex-shrink: 0;
+}
+
+.locale-flag-icon {
+  font-size: 0.85rem;
+  line-height: 1;
+}
+
+.locale-lang-code {
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+.locale-divider-dot {
+  color: #B8ADA5;
+  font-weight: 700;
+  font-size: 0.75rem;
+}
+
+.locale-currency-code {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: #8B2E24;
+}
+
+.locale-caret-icon {
+  color: #8C877F;
+  transition: transform 0.2s ease;
+}
+
+.locale-caret-icon.is-open {
+  transform: rotate(180deg);
+  color: #8B2E24;
+}
+
+/* Luxury Atelier Popover Dropdown */
+.locale-popover-menu {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  width: 280px;
+  background: #FFFFFF;
+  border: 1px solid rgba(28, 25, 23, 0.1);
+  border-radius: 12px;
+  box-shadow: 0 16px 36px rgba(35, 25, 20, 0.14);
+  padding: 0.85rem;
+  z-index: 300;
+  animation: dropdownFadeIn 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.popover-section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.45rem;
+}
+
+.popover-heading {
+  font-size: 0.6875rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #8C877F;
+}
+
+.popover-hint {
+  font-size: 0.625rem;
+  font-weight: 600;
+  color: #92400E;
+  background: #FEF3C7;
+  padding: 0.1rem 0.4rem;
+  border-radius: 4px;
+}
+
+.popover-options-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.popover-option-item {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  width: 100%;
+  padding: 0.5rem 0.65rem;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  background: #FAF8F5;
+  cursor: pointer;
+  text-align: left;
+  transition: all 0.15s ease;
+}
+
+.popover-option-item:hover {
+  background: #F4EFEB;
+  border-color: #E2D7CE;
+}
+
+.popover-option-item.active {
+  background: #FFF7F5;
+  border-color: #8B2E24;
+}
+
+.pop-flag {
+  font-size: 1.15rem;
+  line-height: 1;
+}
+
+.pop-details {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+}
+
+.pop-name {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: #2D2422;
+}
+
+.pop-sub {
+  font-size: 0.65rem;
+  color: #8C877F;
+  margin-top: 1px;
+}
+
+.pop-check {
+  color: #8B2E24;
+  flex-shrink: 0;
+}
+
+.popover-divider {
+  height: 1px;
+  background: #F0E8E2;
+  margin: 0.75rem 0;
+}
+
+/* Currency Chips Grid */
+.currency-chips-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.4rem;
+  margin-top: 0.35rem;
+}
+
+.pop-curr-chip {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 0.45rem 0.25rem;
+  border: 1px solid #E5DDD5;
+  border-radius: 6px;
+  background: #FAF8F5;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.pop-curr-chip:hover {
+  background: #F4EFEB;
+  border-color: #8B2E24;
+}
+
+.pop-curr-chip.active {
+  background: #8B2E24;
+  border-color: #8B2E24;
+  color: #FFFFFF;
+}
+
+.chip-sym {
+  font-size: 0.85rem;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.chip-label {
+  font-size: 0.65rem;
+  font-weight: 600;
+  margin-top: 2px;
+}
+
+.pop-curr-chip.active .chip-label,
+.pop-curr-chip.active .chip-sym {
+  color: #FFFFFF;
+}
+
+.popover-rate-footnote {
+  font-size: 0.65rem;
+  color: #8C877F;
+  margin-top: 0.6rem;
+  text-align: center;
+}
+
+/* Mobile Locale Selector */
+.mobile-locale-card {
+  padding: 1rem 1.25rem;
+  border-top: 1px solid rgba(28, 25, 23, 0.08);
+  border-bottom: 1px solid rgba(28, 25, 23, 0.08);
+  background: #FAF8F5;
+}
+
+.mobile-locale-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.mobile-locale-label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #2D2422;
+}
+
+.mobile-lang-pills {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.m-lang-btn {
+  padding: 0.3rem 0.6rem;
+  font-size: 0.7rem;
+  font-weight: 600;
+  border: 1px solid #E2D7CE;
+  border-radius: 6px;
+  background: #FFFFFF;
+  color: #2D2422;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.m-lang-btn.active {
+  background: #8B2E24;
+  border-color: #8B2E24;
+  color: #FFFFFF;
 }
 </style>

@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Float, DateTime, ForeignKey, Boolean, JSON
+from sqlalchemy import Column, Integer, String, Float, DateTime, ForeignKey, Boolean, JSON, Text
 from datetime import datetime, timezone
 from sqlalchemy.orm import relationship
 from app.core.database import Base
@@ -31,6 +31,9 @@ class Order(Base):
     payment_method = Column(String(50), default="card")
     payment_status = Column(String(50), default="Unpaid")  # Paid, Pending, Failed
     transaction_ref = Column(String(100), nullable=True)
+    payway_gateway = Column(String(150), nullable=True)
+    payway_started_at = Column(DateTime, nullable=True)
+    payway_qr = Column(Text, nullable=True)
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
     checkout_key = Column(String(64), unique=True, nullable=True)
     checkout_fingerprint = Column(String(64), nullable=True)
@@ -53,6 +56,7 @@ class OrderItem(Base):
     image_url = Column(String(255), nullable=True)
     price = Column(Float, nullable=False)
     quantity = Column(Integer, default=1)
+    returned_quantity = Column(Integer, default=0, nullable=False)
     total = Column(Float, nullable=False)
 
     order_rel = relationship("Order", back_populates="items")

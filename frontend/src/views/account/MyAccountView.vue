@@ -1108,6 +1108,11 @@ async function saveAddress() {
 }
 
 /* Responsive */
+.my-account-page {
+  max-width: 100%;
+  overflow-x: clip;
+}
+
 @media (max-width: 1200px) {
   .account-3col-grid {
     grid-template-columns: 240px 1fr;
@@ -1137,6 +1142,72 @@ async function saveAddress() {
   }
   .recommended-cards-grid {
     grid-template-columns: 1fr 1fr;
+  }
+}
+
+@media (max-width: 640px) {
+  .account-container {
+    padding: 0 0.85rem;
+  }
+  .account-hero-banner {
+    padding: 1.5rem 1rem;
+    min-height: auto;
+  }
+  .hero-title {
+    font-size: 2rem;
+  }
+  .hero-right-stage {
+    display: none;
+  }
+  .welcome-banner-card {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 1.25rem;
+    padding: 1.25rem;
+  }
+  .stats-counters-grid {
+    grid-template-columns: 1fr;
+    gap: 0.75rem;
+  }
+  .recent-order-row-card {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.75rem;
+    padding: 1rem;
+  }
+  .recent-order-row-card .order-action-col {
+    width: 100%;
+    margin-top: 0.25rem;
+  }
+  .btn-view-order-details {
+    width: 100%;
+    text-align: center;
+    padding: 0.6rem;
+  }
+  .recommended-cards-grid {
+    grid-template-columns: 1fr;
+  }
+  .dashboard-aside-column {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 360px) {
+  .account-container {
+    padding: 0 0.5rem;
+  }
+  .welcome-banner-card {
+    padding: 1rem 0.75rem;
+  }
+  .greeting-name {
+    font-size: 1.5rem;
+  }
+  .rewards-callout-pill {
+    padding: 0.75rem;
+  }
+  .stat-counter-card {
+    padding: 0.85rem 0.75rem;
   }
 }
 </style>

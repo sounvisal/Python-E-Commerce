@@ -39,7 +39,7 @@ def register(user_in: UserCreate, db: Session = Depends(get_db)):
     db.commit()
     db.refresh(new_user)
 
-    token = create_access_token(new_user.id)
+    token = create_access_token(new_user.id, token_version=getattr(new_user, "token_version", 1))
     return {
         "status": "success",
         "message": "Account created successfully",
@@ -61,7 +61,7 @@ def login(login_in: UserLogin, db: Session = Depends(get_db)):
             headers={"WWW-Authenticate": "Bearer"},
         )
 
-    token = create_access_token(user.id)
+    token = create_access_token(user.id, token_version=getattr(user, "token_version", 1))
     return {
         "status": "success",
         "message": "Login successful",

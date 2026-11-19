@@ -655,3 +655,34 @@ input, select, textarea {
 .atelier-toggle-switch.active .toggle-slider {
   transform: translateX(20px);
 }
+
+/* Media Disabled Notice & Direct Input */
+.media-disabled-notice {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  line-height: 1.4;
+}
+
+.input-with-button-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.input-with-button-row .atelier-input {
+  flex: 1;
+}
+
+.dropzone-disabled {
+  opacity: 0.6;
+  cursor: not-allowed !important;
+  background-color: var(--bg-hover) !important;
+}
+

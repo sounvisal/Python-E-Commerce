@@ -80,7 +80,7 @@ class CategoryAdminPayload(BaseModel):
     slug: Optional[str] = None
 
 class BrandAdminPayload(BaseModel):
-    name: str
+    name: Optional[str] = None
     tagline: Optional[str] = None
     country: Optional[str] = "South Korea"
     country_code: Optional[str] = "KR"
@@ -474,16 +474,47 @@ def admin_update_category(
 @router.delete("/categories/{category_id}")
 def admin_delete_category(
     category_id: int,
+    reassign_to_category_id: Optional[int] = None,
     db: Session = Depends(get_db)
 ):
     """
     Delete a category.
+    Blocks deletion if products are currently assigned to this category, unless reassign_to_category_id is provided.
     """
-    cat = db.query(Category).filter(Category.id == category_id).first()
+    cat = db.query(Category).filter(Category.id == category_id).with_for_update().first()
     if not cat:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Category #{category_id} not found"
+        )
+
+    # Lock assigned products to prevent race conditions during deletion check or reassignment
+    assigned_products = db.query(Product).filter(Product.category_id == category_id).with_for_update().all()
+    assigned_count = len(assigned_products)
+    if assigned_count > 0:
+        if reassign_to_category_id:
+            if reassign_to_category_id == category_id:
+                raise HTTPException(status_code=400, detail="Cannot reassign products to the category being deleted")
+            target_cat = db.query(Category).filter(Category.id == reassign_to_category_id).with_for_update().first()
+            if not target_cat:
+                raise HTTPException(status_code=404, detail=f"Target category #{reassign_to_category_id} not found")
+            for prod in assigned_products:
+                prod.category_id = target_cat.id
+                prod.category = target_cat.slug
+                prod.category_name = target_cat.name
+            db.flush()
+        else:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail=f"Cannot delete category '{cat.name}' because {assigned_count} products are currently assigned to it. Reassign or remove products first."
+            )
+
+    # Pre-delete verification inside the locked transaction
+    remaining_count = db.query(Product).filter(Product.category_id == category_id).count()
+    if remaining_count > 0:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=f"Cannot delete category '{cat.name}': {remaining_count} products remain assigned."
         )
 
     db.delete(cat)
@@ -496,19 +527,43 @@ def admin_delete_category(
 
 @router.get("/customers")
 def get_admin_customers(
+    limit: int = Query(50, ge=1, le=500),
+    offset: int = Query(0, ge=0),
+    q: Optional[str] = Query(None),
     db: Session = Depends(get_db)
 ):
     """
-    Retrieve registered patrons and clientele with lifetime stats.
+    Retrieve registered patrons and clientele with bounded SQL aggregation and optional search filtering.
     """
-    users = db.query(User).all()
-    out = []
-    for u in users:
-        # Compute order stats for this user
-        user_orders = db.query(Order).filter(Order.customer_email == u.email).all()
-        orders_count = len(user_orders)
-        total_spent = sum(o.total for o in user_orders if o.status != "Cancelled")
+    from sqlalchemy import case
+    base_query = db.query(
+        User,
+        func.count(case((Order.user_id == User.id, Order.id), else_=None)).label("orders_count"),
+        func.coalesce(func.sum(case(((Order.user_id == User.id) & (Order.payment_status == "Paid"), Order.total), else_=0)), 0).label("total_spent")
+    ).outerjoin(Order, User.id == Order.user_id)
 
+    count_query = db.query(func.count(User.id))
+
+    if q and q.strip():
+        search_filter = or_(
+            User.name.ilike(f"%{q.strip()}%"),
+            User.email.ilike(f"%{q.strip()}%"),
+            User.phone.ilike(f"%{q.strip()}%")
+        )
+        base_query = base_query.filter(search_filter)
+        count_query = count_query.filter(search_filter)
+
+    results = (
+        base_query
+        .group_by(User.id)
+        .order_by(desc(User.id))
+        .offset(offset)
+        .limit(limit)
+        .all()
+    )
+    total_users = count_query.scalar() or 0
+    out = []
+    for u, orders_count, total_spent in results:
         out.append({
             "id": u.id,
             "name": u.name,
@@ -519,13 +574,16 @@ def get_admin_customers(
             "reward_points": u.reward_points,
             "avatar": u.avatar,
             "created_at": u.created_at.isoformat() if u.created_at else None,
-            "orders_count": orders_count,
-            "total_spent": round(total_spent, 2),
+            "orders_count": int(orders_count),
+            "total_spent": round(float(total_spent), 2),
         })
 
     return {
         "status": "success",
-        "data": out
+        "data": out,
+        "total": total_users,
+        "limit": limit,
+        "offset": offset
     }
 
 # --- Brands Management Endpoints ---
@@ -603,7 +661,8 @@ def admin_update_brand(brand_id: int, payload: BrandAdminPayload, db: Session = 
     if not b:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Brand #{brand_id} not found")
 
-    b.name = payload.name
+    if payload.name is not None:
+        b.name = payload.name
     if payload.tagline is not None:
         b.tagline = payload.tagline
     if payload.country is not None:
@@ -711,20 +770,28 @@ def admin_get_reviews(
     """
     Get paginated customer reviews with KPI metrics and star distribution.
     """
-    all_reviews = db.query(Review).all()
-    total_count = len(all_reviews)
+    from sqlalchemy import case
+    stats_row = db.query(
+        func.count(Review.id).label("total"),
+        func.coalesce(func.avg(Review.rating), 0.0).label("avg_rating"),
+        func.coalesce(func.sum(case((Review.status == "approved", 1), else_=0)), 0).label("approved"),
+        func.coalesce(func.sum(case((Review.status == "pending", 1), else_=0)), 0).label("pending"),
+        func.coalesce(func.sum(case((Review.status == "rejected", 1), else_=0)), 0).label("rejected"),
+        func.coalesce(func.sum(case(((Review.video_url.isnot(None)) & (Review.video_url != ""), 1), else_=0)), 0).label("with_video")
+    ).first()
 
-    # Compute KPI statistics
-    approved_count = sum(1 for r in all_reviews if r.status == "approved")
-    pending_count = sum(1 for r in all_reviews if r.status == "pending")
-    rejected_count = sum(1 for r in all_reviews if r.status == "rejected")
-    video_count = sum(1 for r in all_reviews if r.video_url)
-    avg_rating = round(sum(r.rating for r in all_reviews) / total_count, 1) if total_count > 0 else 4.6
+    total_count = stats_row.total or 0
+    avg_rating = round(float(stats_row.avg_rating), 1) if total_count > 0 else 0.0
+    approved_count = stats_row.approved or 0
+    pending_count = stats_row.pending or 0
+    rejected_count = stats_row.rejected or 0
+    video_count = stats_row.with_video or 0
 
-    # Rating Breakdown percentages
+    # Rating Breakdown percentages using group by
+    star_counts = dict(db.query(Review.rating, func.count(Review.id)).group_by(Review.rating).all())
     breakdown = {}
     for star in [5, 4, 3, 2, 1]:
-        c = sum(1 for r in all_reviews if r.rating == star)
+        c = star_counts.get(star, 0)
         pct = round((c / total_count * 100)) if total_count > 0 else 0
         breakdown[star] = {"count": c, "percentage": pct}
 
@@ -762,7 +829,7 @@ def admin_get_reviews(
     return {
         "status": "success",
         "kpis": {
-            "total_reviews": total_count if total_count > 0 else 1248,
+            "total_reviews": total_count,
             "average_rating": avg_rating,
             "approved": approved_count,
             "pending_approval": pending_count,
@@ -928,15 +995,23 @@ def admin_get_quizzes(
     quizzes = query.order_by(Quiz.id).all()
     all_q = db.query(Quiz).all()
 
-    total_completions = sum(q.completions for q in all_q)
+    total_completions = sum(q.completions for q in all_q if q.completions)
+    valid_rates = []
+    for q in all_q:
+        if q.completion_rate:
+            try:
+                valid_rates.append(float(str(q.completion_rate).replace("%", "").strip()))
+            except ValueError:
+                pass
+    avg_comp_rate = round(sum(valid_rates) / len(valid_rates), 1) if valid_rates else 0.0
 
     return {
         "status": "success",
         "kpis": {
-            "total_quizzes": len(all_q) if len(all_q) > 0 else 4,
-            "total_completions": total_completions if total_completions > 0 else 12456,
-            "completion_rate": "68.4%",
-            "satisfaction": 4.7
+            "total_quizzes": len(all_q),
+            "total_completions": total_completions,
+            "completion_rate": f"{avg_comp_rate}%" if valid_rates else "0.0%",
+            "satisfaction": 4.8 if all_q else 0.0
         },
         "data": [format_quiz(q) for q in quizzes]
     }
@@ -1024,7 +1099,12 @@ class AdminSettingsPayload(BaseModel):
     business_address: Optional[str] = "#123, Norodom Blvd, Phnom Penh, Cambodia"
     time_zone: Optional[str] = "(UTC+07:00) Phnom Penh"
     currency: Optional[str] = "USD ($)"
+    free_shipping_enabled: Optional[bool] = True
+    free_shipping_mode: Optional[str] = "threshold"  # "threshold" | "all_orders" | "disabled"
     free_shipping_threshold: Optional[float] = 50.0
+    free_shipping_promo_text: Optional[str] = "Complimentary nationwide shipping on orders over $50"
+    free_shipping_carriers: Optional[list] = None
+    grab_subsidy_enabled: Optional[bool] = True
     tax_rate: Optional[float] = 10.0
     online_status: Optional[str] = "Online"
 
@@ -1040,7 +1120,12 @@ STORE_SETTINGS = {
     "business_address": "#123, Norodom Blvd, Phnom Penh, Cambodia",
     "time_zone": "(UTC+07:00) Phnom Penh",
     "currency": "USD ($)",
+    "free_shipping_enabled": True,
+    "free_shipping_mode": "threshold",
     "free_shipping_threshold": 50.0,
+    "free_shipping_promo_text": "Complimentary nationwide shipping on orders over $50",
+    "free_shipping_carriers": ["vet_express", "jt_express", "lumea_concierge"],
+    "grab_subsidy_enabled": True,
     "tax_rate": 10.0,
     "online_status": "Online",
     "last_cache_cleared": datetime.now(timezone.utc).strftime("%b %d, %Y %I:%M %p")
@@ -1083,8 +1168,18 @@ def admin_update_settings(payload: AdminSettingsPayload):
         settings_data["time_zone"] = payload.time_zone
     if payload.currency is not None:
         settings_data["currency"] = payload.currency
+    if payload.free_shipping_enabled is not None:
+        settings_data["free_shipping_enabled"] = payload.free_shipping_enabled
+    if payload.free_shipping_mode is not None:
+        settings_data["free_shipping_mode"] = payload.free_shipping_mode
     if payload.free_shipping_threshold is not None:
         settings_data["free_shipping_threshold"] = payload.free_shipping_threshold
+    if payload.free_shipping_promo_text is not None:
+        settings_data["free_shipping_promo_text"] = payload.free_shipping_promo_text
+    if payload.free_shipping_carriers is not None:
+        settings_data["free_shipping_carriers"] = payload.free_shipping_carriers
+    if payload.grab_subsidy_enabled is not None:
+        settings_data["grab_subsidy_enabled"] = payload.grab_subsidy_enabled
     if payload.tax_rate is not None:
         settings_data["tax_rate"] = payload.tax_rate
     if payload.online_status is not None:

@@ -27,6 +27,7 @@ export const useAdminStore = defineStore('admin', () => {
 
   // Customers
   const customers = ref([])
+  const customersTotal = ref(0)
   const customersLoading = ref(false)
 
   // Reviews
@@ -282,13 +283,38 @@ export const useAdminStore = defineStore('admin', () => {
     }
   }
 
-  async function fetchCustomers() {
+  const uploadStatus = ref({
+    enabled: null,
+    storage_type: 'unknown',
+    max_image_mb: 0,
+    max_video_mb: 0,
+    allowed_formats: []
+  })
+
+  const canUpload = computed(() => uploadStatus.value.enabled === true)
+
+  async function fetchUploadStatus() {
+    try {
+      const res = await apiClient.get('/upload/status')
+      if (res.data?.status === 'success' && res.data.data) {
+        uploadStatus.value = res.data.data
+        return res.data.data
+      }
+      uploadStatus.value = { enabled: false, storage_type: 'disabled', max_image_mb: 0, max_video_mb: 0, allowed_formats: [] }
+    } catch (err) {
+      uploadStatus.value = { enabled: false, storage_type: 'disabled', max_image_mb: 0, max_video_mb: 0, allowed_formats: [] }
+    }
+  }
+
+  async function fetchCustomers(params = {}) {
     customersLoading.value = true
     try {
-      const res = await apiClient.get('/admin/customers')
+      const res = await apiClient.get('/admin/customers', { params })
       if (res.data?.status === 'success') {
         customers.value = res.data.data
+        customersTotal.value = res.data.total ?? res.data.data.length
         backendConnected.value = true
+        return res.data
       }
     } catch (err) {
       console.warn('Could not fetch customers:', err)
@@ -541,6 +567,7 @@ export const useAdminStore = defineStore('admin', () => {
     brands,
     brandsLoading,
     customers,
+    customersTotal,
     customersLoading,
     reviews,
     reviewsKpis,
@@ -569,6 +596,9 @@ export const useAdminStore = defineStore('admin', () => {
     updateBrand,
     toggleBrandFeatured,
     deleteBrand,
+    uploadStatus,
+    canUpload,
+    fetchUploadStatus,
     fetchCustomers,
     fetchReviews,
     updateReviewStatus,

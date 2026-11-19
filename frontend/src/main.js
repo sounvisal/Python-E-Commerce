@@ -1,6 +1,7 @@
 import axios from 'axios'
 import { useAuthStore } from './stores/auth'
 import { useSystemModalStore } from './stores/systemModal'
+import { useLocaleStore } from './stores/locale'
 import { createApp } from 'vue'
 import { createPinia } from 'pinia'
 import App from './App.vue'
@@ -31,5 +32,12 @@ axios.interceptors.response.use(response => response, error => {
   return Promise.reject(error)
 })
 app.use(pinia)
+
+// Register global localization and currency helpers
+const localeStore = useLocaleStore(pinia)
+app.config.globalProperties.$t = (key, params) => localeStore.t(key, params)
+app.config.globalProperties.$formatPrice = (amt) => localeStore.formatPrice(amt)
+app.config.globalProperties.$locale = localeStore
+
 app.use(router)
 app.mount('#app')

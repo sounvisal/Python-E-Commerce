@@ -20,10 +20,7 @@ def check_order_access(order, user=None, token=None):
         raise HTTPException(404, "Order not found")
     if user and (user.role == "admin" or order.user_id == user.id):
         return order
-    # Preserve account access for legacy records, without granting access to new
-    # guest orders on the strength of an unverified email address alone.
-    if user and not order.checkout_key and not order.user_id and order.customer_email.lower() == user.email.lower():
-        return order
+    # Cryptographic access token required for guest orders to prevent unverified email matching
     if token and order.access_token_hash and hmac.compare_digest(hashlib.sha256(token.encode()).hexdigest(), order.access_token_hash):
         return order
     raise HTTPException(404, "Order not found for this session")
@@ -72,9 +69,90 @@ def cancel_order(db, order):
     return order
 
 def transition_order(db, order, target):
-    allowed = {"Confirmed": "Processing", "Processing": "Shipped", "Shipped": "Out for Delivery", "Out for Delivery": "Delivered"}
     if target == order.status:
         return order
+
+    # Handle staff reconciliation from Payment Review state
+    if order.status == "Payment Review":
+        if target == "Confirmed":
+            if order.payment_status != "Paid":
+                raise HTTPException(409, "Payment must be verified before confirming a review order")
+            
+            # 1. Aggregate required quantities across line items by product_id
+            from collections import defaultdict
+            required_by_product = defaultdict(int)
+            line_names = {}
+            for line in order.items:
+                if line.product_id:
+                    required_by_product[line.product_id] += (line.quantity or 1)
+                    line_names[line.product_id] = line.product_name
+
+            # 2. Lock products in consistent sorted order and verify sufficient stock
+            sorted_product_ids = sorted(required_by_product.keys())
+            insufficient = []
+            for pid in sorted_product_ids:
+                req_qty = required_by_product[pid]
+                product = db.query(Product).filter(Product.id == pid).with_for_update().first()
+                if not product or product.stock < req_qty:
+                    avail = product.stock if product else 0
+                    pname = line_names.get(pid, f"#{pid}")
+                    insufficient.append(f"'{pname}' (available: {avail}, required: {req_qty})")
+
+            if insufficient:
+                # Rollback uncommitted queries and abort without reserving stock
+                db.rollback()
+                raise HTTPException(
+                    409,
+                    f"Cannot fulfill order: insufficient stock for {', '.join(insufficient)}. Issue a refund or wait for restocking."
+                )
+
+            # 3. Conditional order-state claim: ensure only one thread can transition the order and reserve stock
+            claim = db.execute(
+                update(Order)
+                .where(
+                    Order.id == order.id,
+                    Order.status == "Payment Review",
+                    Order.stock_reserved == False
+                )
+                .values(stock_reserved=True, status="Confirmed")
+                .execution_options(synchronize_session=False)
+            ).rowcount
+
+            db.refresh(order)
+            if not claim:
+                # Repeat or stale invocation: return existing confirmed order if already reconciled, else conflict
+                if order.status == "Confirmed" and order.stock_reserved:
+                    return order
+                raise HTTPException(409, f"Order is already '{order.status}', cannot reconcile")
+
+            # 4. Deduct aggregated stock only once
+            for pid, req_qty in required_by_product.items():
+                db.execute(
+                    update(Product)
+                    .where(Product.id == pid)
+                    .values(stock=Product.stock - req_qty)
+                )
+
+            add_event(order, "Reconciled to Confirmed by Staff")
+            return order
+        elif target == "Cancelled":
+            claim = db.execute(
+                update(Order)
+                .where(Order.id == order.id, Order.status == "Payment Review")
+                .values(status="Cancelled", payment_status="Refund Pending")
+                .execution_options(synchronize_session=False)
+            ).rowcount
+            db.refresh(order)
+            if not claim:
+                if order.status == "Cancelled":
+                    return order
+                raise HTTPException(409, f"Order is already '{order.status}', cannot cancel")
+            add_event(order, "Cancelled by Staff for Refund")
+            return order
+        else:
+            raise HTTPException(409, "Payment Review orders can only be reconciled to Confirmed or Cancelled")
+
+    allowed = {"Confirmed": "Processing", "Processing": "Shipped", "Shipped": "Out for Delivery", "Out for Delivery": "Delivered"}
     if target == "Cancelled":
         return cancel_order(db, order)
     if allowed.get(order.status) != target:

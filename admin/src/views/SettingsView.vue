@@ -18,6 +18,7 @@ import {
   RotateCcw,
   Save,
   CheckCircle2,
+  AlertCircle,
   ExternalLink,
   Lightbulb,
   Database,
@@ -30,7 +31,8 @@ import {
   ShieldCheck,
   Globe,
   Sliders,
-  ChevronDown
+  ChevronDown,
+  Sparkles
 } from 'lucide-vue-next'
 
 const adminStore = useAdminStore()
@@ -69,14 +71,41 @@ const form = reactive({
   business_address: '#123, Norodom Blvd, Phnom Penh, Cambodia',
   time_zone: '(UTC+07:00) Phnom Penh',
   currency: 'USD ($)',
+  free_shipping_enabled: true,
+  free_shipping_mode: 'threshold', // 'threshold' | 'all_orders' | 'disabled'
   free_shipping_threshold: 50.0,
+  free_shipping_promo_text: 'Complimentary nationwide shipping on orders over $50',
+  free_shipping_carriers: ['vet_express', 'jt_express', 'lumea_concierge'],
+  grab_subsidy_enabled: true,
   tax_rate: 10.0,
   online_status: 'Online'
 })
 
+const uploadStatus = ref({
+  enabled: null,
+  storage_type: 'unknown',
+  max_image_mb: 0,
+  max_video_mb: 0,
+  allowed_formats: []
+})
+
+async function loadUploadStatus() {
+  try {
+    const res = await apiClient.get('/upload/status')
+    if (res.data?.status === 'success' && res.data.data) {
+      uploadStatus.value = res.data.data
+    } else {
+      uploadStatus.value = { enabled: false, storage_type: 'unknown', max_image_mb: 0, max_video_mb: 0, allowed_formats: [] }
+    }
+  } catch (err) {
+    console.warn('Could not load upload status:', err)
+    uploadStatus.value = { enabled: false, storage_type: 'unknown', max_image_mb: 0, max_video_mb: 0, allowed_formats: [] }
+  }
+}
+
 // Load settings from backend API
 onMounted(async () => {
-  await loadSettings()
+  await Promise.all([loadSettings(), loadUploadStatus()])
 })
 
 async function loadSettings() {
@@ -94,7 +123,12 @@ async function loadSettings() {
       form.business_address = d.business_address || form.business_address
       form.time_zone = d.time_zone || form.time_zone
       form.currency = d.currency || form.currency
+      form.free_shipping_enabled = d.free_shipping_enabled ?? form.free_shipping_enabled
+      form.free_shipping_mode = d.free_shipping_mode || form.free_shipping_mode
       form.free_shipping_threshold = d.free_shipping_threshold ?? form.free_shipping_threshold
+      form.free_shipping_promo_text = d.free_shipping_promo_text || form.free_shipping_promo_text
+      form.free_shipping_carriers = d.free_shipping_carriers || form.free_shipping_carriers
+      form.grab_subsidy_enabled = d.grab_subsidy_enabled ?? form.grab_subsidy_enabled
       form.tax_rate = d.tax_rate ?? form.tax_rate
       form.online_status = d.online_status || form.online_status
     }
@@ -118,7 +152,12 @@ async function saveSettings() {
       business_address: form.business_address,
       time_zone: form.time_zone,
       currency: form.currency,
+      free_shipping_enabled: form.free_shipping_enabled,
+      free_shipping_mode: form.free_shipping_mode,
       free_shipping_threshold: form.free_shipping_threshold,
+      free_shipping_promo_text: form.free_shipping_promo_text,
+      free_shipping_carriers: form.free_shipping_carriers,
+      grab_subsidy_enabled: form.grab_subsidy_enabled,
       tax_rate: form.tax_rate,
       online_status: form.online_status
     }
@@ -146,6 +185,63 @@ function resetSettings() {
   form.business_address = '#123, Norodom Blvd, Phnom Penh, Cambodia'
   form.time_zone = '(UTC+07:00) Phnom Penh'
   adminStore.addToast('Settings reset to default atelier values', 'info')
+}
+
+// Free Delivery & Shipping Controls
+function onToggleFreeShipping() {
+  if (form.free_shipping_enabled && form.free_shipping_mode === 'disabled') {
+    form.free_shipping_mode = 'threshold'
+  }
+}
+
+function setPromoMode(mode) {
+  form.free_shipping_mode = mode
+  if (mode === 'all_orders') {
+    form.free_shipping_enabled = true
+    form.free_shipping_promo_text = 'Atelier Special: Complimentary Free Delivery on All Orders!'
+  } else if (mode === 'threshold') {
+    form.free_shipping_enabled = true
+    if (!form.free_shipping_promo_text || form.free_shipping_promo_text.includes('All Orders')) {
+      form.free_shipping_promo_text = `Complimentary nationwide shipping on orders over $${form.free_shipping_threshold}`
+    }
+  } else if (mode === 'disabled') {
+    form.free_shipping_enabled = false
+  }
+}
+
+function toggleCarrierEligibility(carrierId) {
+  const list = form.free_shipping_carriers || []
+  const idx = list.indexOf(carrierId)
+  if (idx >= 0) {
+    list.splice(idx, 1)
+  } else {
+    list.push(carrierId)
+  }
+  form.free_shipping_carriers = [...list]
+}
+
+function applyPromoPreset(text, threshold = null) {
+  form.free_shipping_promo_text = text
+  if (threshold !== null) {
+    form.free_shipping_threshold = threshold
+    if (threshold === 0) {
+      form.free_shipping_mode = 'all_orders'
+      form.free_shipping_enabled = true
+    } else {
+      form.free_shipping_mode = 'threshold'
+      form.free_shipping_enabled = true
+    }
+  }
+}
+
+function resetShippingSettings() {
+  form.free_shipping_enabled = true
+  form.free_shipping_mode = 'threshold'
+  form.free_shipping_threshold = 50.0
+  form.free_shipping_promo_text = 'Complimentary nationwide shipping on orders over $50'
+  form.free_shipping_carriers = ['vet_express', 'jt_express', 'lumea_concierge']
+  form.grab_subsidy_enabled = true
+  adminStore.addToast('Shipping settings reset to standard atelier configuration', 'info')
 }
 
 // Clear Cache Action
@@ -470,23 +566,322 @@ function backupStoreData() {
             </div>
           </div>
 
-          <!-- TAB 4: SHIPPING -->
-          <div v-else-if="activeTab === 'shipping'" class="config-content">
+          <!-- TAB 4: SHIPPING & DELIVERY ATELIER STUDIO -->
+          <div v-else-if="activeTab === 'shipping'" class="config-content shipping-studio-content">
+            <!-- Header Row -->
             <div class="pane-header-row">
               <div>
-                <h2 class="pane-heading">Shipping & Delivery Rates</h2>
-                <p class="pane-subheading">Manage courier fees and free delivery rules.</p>
+                <h2 class="pane-heading">Shipping & Delivery Management</h2>
+                <p class="pane-subheading">Configure nationwide courier tariffs, dynamic free delivery rules, and promotional subsidies.</p>
               </div>
-              <button class="btn-save" @click="saveSettings">
-                <Save class="w-3.5 h-3.5 mr-1" />
-                <span>Save Changes</span>
-              </button>
+
+              <div class="header-buttons">
+                <button class="btn-reset" @click="resetShippingSettings">
+                  <RotateCcw class="w-3.5 h-3.5 mr-1" />
+                  <span>Reset</span>
+                </button>
+                <button class="btn-save" :disabled="isSaving" @click="saveSettings">
+                  <Save class="w-3.5 h-3.5 mr-1" />
+                  <span>{{ isSaving ? 'Saving...' : 'Save Changes' }}</span>
+                </button>
+              </div>
             </div>
-            <div class="form-body-grid mt-4">
-              <div class="form-field">
-                <label class="field-label">Free Shipping Minimum Threshold ($)</label>
-                <input v-model="form.free_shipping_threshold" type="number" class="field-input" />
+
+            <!-- Master Campaign Status Bar -->
+            <div class="shipping-status-banner" :class="{ 'status-promo-active': form.free_shipping_enabled && form.free_shipping_mode !== 'disabled' }">
+              <div class="status-banner-left">
+                <div class="status-indicator-dot" :class="{ active: form.free_shipping_enabled && form.free_shipping_mode !== 'disabled' }"></div>
+                <div>
+                  <h4 class="status-banner-title">
+                    {{ !form.free_shipping_enabled || form.free_shipping_mode === 'disabled'
+                      ? 'Free Delivery is Currently Disabled'
+                      : form.free_shipping_mode === 'all_orders'
+                      ? 'Storewide Free Delivery Active (All Orders - $0 Min)'
+                      : `Free Delivery Active for Orders Over $${Number(form.free_shipping_threshold).toFixed(2)}` }}
+                  </h4>
+                  <p class="status-banner-sub">
+                    {{ !form.free_shipping_enabled || form.free_shipping_mode === 'disabled'
+                      ? 'Customers are charged full courier tariffs regardless of bag total.'
+                      : form.free_shipping_mode === 'all_orders'
+                      ? 'All customers receive 100% complimentary delivery on eligible couriers.'
+                      : `Orders reaching $${Number(form.free_shipping_threshold).toFixed(2)} automatically unlock free nationwide shipping.` }}
+                  </p>
+                </div>
               </div>
+              <div class="status-toggle-wrap">
+                <label class="switch-control">
+                  <input type="checkbox" v-model="form.free_shipping_enabled" @change="onToggleFreeShipping" />
+                  <span class="slider-round"></span>
+                </label>
+                <span class="switch-label">{{ form.free_shipping_enabled ? 'Active' : 'Disabled' }}</span>
+              </div>
+            </div>
+
+            <!-- Section 1: Choose Free Delivery Mode -->
+            <div class="studio-section mt-5">
+              <div class="section-title-row">
+                <h3 class="studio-section-title">1. Free Delivery Policy Mode</h3>
+                <span class="studio-section-badge">Admin Configurable Anytime</span>
+              </div>
+              <p class="studio-section-sub">Choose when customers qualify for free shipping. You can change this whenever you want (e.g. flash sales, weekend promos, or threshold changes).</p>
+
+              <div class="modes-three-grid mt-3">
+                <!-- Mode 1: Minimum Order Threshold -->
+                <div
+                  class="mode-card"
+                  :class="{ selected: form.free_shipping_mode === 'threshold' && form.free_shipping_enabled }"
+                  @click="setPromoMode('threshold')"
+                >
+                  <div class="mode-card-header">
+                    <span class="mode-radio-circle" :class="{ active: form.free_shipping_mode === 'threshold' && form.free_shipping_enabled }"></span>
+                    <span class="mode-badge badge-standard">Custom Threshold</span>
+                  </div>
+                  <h4 class="mode-title">Orders Over Threshold</h4>
+                  <p class="mode-desc">Free delivery when customer cart subtotal reaches a specified minimum dollar amount.</p>
+                  
+                  <div class="mode-threshold-input-wrap" @click.stop>
+                    <label class="threshold-label">Threshold ($):</label>
+                    <div class="currency-input-box">
+                      <span class="currency-symbol">$</span>
+                      <input
+                        v-model.number="form.free_shipping_threshold"
+                        type="number"
+                        min="0"
+                        step="5"
+                        class="threshold-input"
+                        placeholder="50.00"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Mode 2: All Orders Promo (100% Free Shipping) -->
+                <div
+                  class="mode-card"
+                  :class="{ selected: form.free_shipping_mode === 'all_orders' && form.free_shipping_enabled }"
+                  @click="setPromoMode('all_orders')"
+                >
+                  <div class="mode-card-header">
+                    <span class="mode-radio-circle" :class="{ active: form.free_shipping_mode === 'all_orders' && form.free_shipping_enabled }"></span>
+                    <span class="mode-badge badge-promo">Campaign Promo</span>
+                  </div>
+                  <h4 class="mode-title">All Orders (Storewide Free)</h4>
+                  <p class="mode-desc">100% Free delivery for every order ($0 minimum). Boosts sales during promotions & launches.</p>
+                  <div class="mode-perk-pill">
+                    <Sparkles class="w-3 h-3 text-gold mr-1" />
+                    <span>$0 Minimum Order Required</span>
+                  </div>
+                </div>
+
+                <!-- Mode 3: Disabled -->
+                <div
+                  class="mode-card"
+                  :class="{ selected: !form.free_shipping_enabled || form.free_shipping_mode === 'disabled' }"
+                  @click="setPromoMode('disabled')"
+                >
+                  <div class="mode-card-header">
+                    <span class="mode-radio-circle" :class="{ active: !form.free_shipping_enabled || form.free_shipping_mode === 'disabled' }"></span>
+                    <span class="mode-badge badge-muted">Standard</span>
+                  </div>
+                  <h4 class="mode-title">Disabled (Full Tariffs)</h4>
+                  <p class="mode-desc">Free delivery promotion is turned off. Customers always pay the courier fee for every order.</p>
+                  <div class="mode-perk-pill text-taupe">
+                    <span>Standard Courier Rates Apply</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Section 2: Eligible Couriers Configuration -->
+            <div class="studio-section mt-5">
+              <div class="section-title-row">
+                <h3 class="studio-section-title">2. Cambodian Couriers & Free Delivery Eligibility</h3>
+                <span class="studio-section-badge">Carrier Tariffs</span>
+              </div>
+              <p class="studio-section-sub">Select which delivery carriers offer complimentary delivery when customer qualifies.</p>
+
+              <div class="couriers-config-list mt-3">
+                <!-- VET -->
+                <div class="courier-config-item">
+                  <div class="courier-item-left">
+                    <img src="/images/couriers/vet_express.png" alt="VET Logistics" class="courier-item-logo" />
+                    <div class="courier-item-details">
+                      <div class="courier-item-title-row">
+                        <h4 class="courier-item-name">Vireak Buntham (VET Logistics)</h4>
+                        <span class="courier-item-badge">Nationwide #1</span>
+                      </div>
+                      <p class="courier-item-meta">Standard Flat Rate: <strong>$1.50 nationwide</strong> (All 25 provinces and Phnom Penh) • 1–2 Business Days</p>
+                    </div>
+                  </div>
+                  <div class="courier-item-right">
+                    <label class="eligibility-checkbox-label">
+                      <input
+                        type="checkbox"
+                        :checked="form.free_shipping_carriers.includes('vet_express')"
+                        @change="toggleCarrierEligibility('vet_express')"
+                      />
+                      <span>Qualifies for Free Delivery</span>
+                    </label>
+                  </div>
+                </div>
+
+                <!-- J&T -->
+                <div class="courier-config-item">
+                  <div class="courier-item-left">
+                    <img src="/images/couriers/jt_express.png" alt="J&T Express" class="courier-item-logo" />
+                    <div class="courier-item-details">
+                      <div class="courier-item-title-row">
+                        <h4 class="courier-item-name">J&T Express Cambodia</h4>
+                        <span class="courier-item-badge">Fast Domestic</span>
+                      </div>
+                      <p class="courier-item-meta">Standard Flat Rate: <strong>$1.75 nationwide</strong> (All 25 provinces and Phnom Penh) • Next-Day Delivery</p>
+                    </div>
+                  </div>
+                  <div class="courier-item-right">
+                    <label class="eligibility-checkbox-label">
+                      <input
+                        type="checkbox"
+                        :checked="form.free_shipping_carriers.includes('jt_express')"
+                        @change="toggleCarrierEligibility('jt_express')"
+                      />
+                      <span>Qualifies for Free Delivery</span>
+                    </label>
+                  </div>
+                </div>
+
+                <!-- GrabExpress -->
+                <div class="courier-config-item">
+                  <div class="courier-item-left">
+                    <img src="/images/couriers/grab_express.png" alt="GrabExpress" class="courier-item-logo" />
+                    <div class="courier-item-details">
+                      <div class="courier-item-title-row">
+                        <h4 class="courier-item-name">GrabExpress On-Demand</h4>
+                        <span class="courier-item-badge badge-grab">Instant Express (PP Only)</span>
+                      </div>
+                      <p class="courier-item-meta">Distance Tariff: <strong>$2.00 base + $0.40/km</strong> • 60–90 Mins Motorbike Handover</p>
+                    </div>
+                  </div>
+                  <div class="courier-item-right">
+                    <label class="eligibility-checkbox-label">
+                      <input
+                        type="checkbox"
+                        v-model="form.grab_subsidy_enabled"
+                      />
+                      <span>Apply $1.50 Free Delivery Subsidy Credit</span>
+                    </label>
+                  </div>
+                </div>
+
+                <!-- Luméa Concierge -->
+                <div class="courier-config-item">
+                  <div class="courier-item-left">
+                    <div class="courier-item-logo concierge-logo-placeholder">
+                      <Sparkles :size="16" />
+                    </div>
+                    <div class="courier-item-details">
+                      <div class="courier-item-title-row">
+                        <h4 class="courier-item-name">Luméa Atelier Concierge</h4>
+                        <span class="courier-item-badge badge-signature">Atelier Signature</span>
+                      </div>
+                      <p class="courier-item-meta">White-Glove Rate: <strong>$3.00 flat</strong> • Signature silk-ribbon box presentation</p>
+                    </div>
+                  </div>
+                  <div class="courier-item-right">
+                    <label class="eligibility-checkbox-label">
+                      <input
+                        type="checkbox"
+                        :checked="form.free_shipping_carriers.includes('lumea_concierge')"
+                        @change="toggleCarrierEligibility('lumea_concierge')"
+                      />
+                      <span>Qualifies for Free Delivery</span>
+                    </label>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Section 3: Promotional Announcement Copy -->
+            <div class="studio-section mt-5">
+              <div class="section-title-row">
+                <h3 class="studio-section-title">3. Customer Promotional Announcement Banner</h3>
+                <span class="studio-section-badge">Storefront Display</span>
+              </div>
+              <p class="studio-section-sub">Announcement displayed in the customer cart drawer and checkout page header.</p>
+
+              <div class="promo-text-field-wrap mt-3">
+                <input
+                  v-model="form.free_shipping_promo_text"
+                  type="text"
+                  class="field-input promo-input"
+                  placeholder="e.g. Complimentary nationwide shipping on orders over $50"
+                />
+                <div class="promo-presets-row mt-2">
+                  <span class="presets-label">Quick Presets:</span>
+                  <button type="button" class="preset-pill" @click="applyPromoPreset('Complimentary nationwide shipping on orders over $50', 50)">Orders over $50</button>
+                  <button type="button" class="preset-pill" @click="applyPromoPreset('Complimentary nationwide shipping on orders over $35', 35)">Orders over $35</button>
+                  <button type="button" class="preset-pill" @click="applyPromoPreset('Atelier Special: Complimentary Free Delivery on All Orders!', 0)">Storewide Free Delivery</button>
+                  <button type="button" class="preset-pill" @click="applyPromoPreset('Weekend Flash Promotion: Free Shipping Active!', 0)">Weekend Flash</button>
+                </div>
+              </div>
+            </div>
+
+            <!-- Section 4: Live Storefront Checkout Preview -->
+            <div class="studio-section mt-5 preview-studio-section">
+              <div class="section-title-row">
+                <h3 class="studio-section-title">4. Live Storefront Preview</h3>
+                <span class="studio-section-badge badge-live">Live Preview</span>
+              </div>
+              <p class="studio-section-sub">This is exactly how patrons see your shipping configuration at checkout right now:</p>
+
+              <div class="checkout-simulation-box mt-3">
+                <div class="simulation-banner">
+                  <Sparkles class="w-4 h-4 text-gold mr-2" />
+                  <span v-if="!form.free_shipping_enabled || form.free_shipping_mode === 'disabled'">
+                    Standard nationwide courier rates applied.
+                  </span>
+                  <span v-else-if="form.free_shipping_mode === 'all_orders'">
+                    {{ form.free_shipping_promo_text || 'Free nationwide delivery on all orders!' }}
+                  </span>
+                  <span v-else>
+                    {{ form.free_shipping_promo_text || `Complimentary nationwide shipping on orders over $${Number(form.free_shipping_threshold).toFixed(2)}` }}
+                  </span>
+                </div>
+
+                <div class="simulation-cards-row mt-3">
+                  <div class="sim-card">
+                    <span class="sim-name">VET Express</span>
+                    <span class="sim-rate" :class="{ 'sim-free': form.free_shipping_enabled && form.free_shipping_mode === 'all_orders' && form.free_shipping_carriers.includes('vet_express') }">
+                      {{ form.free_shipping_enabled && form.free_shipping_mode === 'all_orders' && form.free_shipping_carriers.includes('vet_express') ? 'FREE ($0.00)' : '$1.50' }}
+                    </span>
+                  </div>
+                  <div class="sim-card">
+                    <span class="sim-name">J&T Express</span>
+                    <span class="sim-rate" :class="{ 'sim-free': form.free_shipping_enabled && form.free_shipping_mode === 'all_orders' && form.free_shipping_carriers.includes('jt_express') }">
+                      {{ form.free_shipping_enabled && form.free_shipping_mode === 'all_orders' && form.free_shipping_carriers.includes('jt_express') ? 'FREE ($0.00)' : '$1.75' }}
+                    </span>
+                  </div>
+                  <div class="sim-card">
+                    <span class="sim-name">GrabExpress</span>
+                    <span class="sim-rate">
+                      {{ form.free_shipping_enabled && form.free_shipping_mode === 'all_orders' && form.grab_subsidy_enabled ? '$2.00 ($1.50 credit)' : '$3.50 (GPS)' }}
+                    </span>
+                  </div>
+                  <div class="sim-card">
+                    <span class="sim-name">Concierge</span>
+                    <span class="sim-rate" :class="{ 'sim-free': form.free_shipping_enabled && form.free_shipping_mode === 'all_orders' && form.free_shipping_carriers.includes('lumea_concierge') }">
+                      {{ form.free_shipping_enabled && form.free_shipping_mode === 'all_orders' && form.free_shipping_carriers.includes('lumea_concierge') ? 'FREE ($0.00)' : '$3.00' }}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Footer Save Bar -->
+            <div class="pane-footer-save-bar mt-6">
+              <button class="btn-save btn-save-large" :disabled="isSaving" @click="saveSettings">
+                <Save class="w-4 h-4 mr-2" />
+                <span>{{ isSaving ? 'Saving Configurations...' : 'Save & Publish Shipping Settings' }}</span>
+              </button>
             </div>
           </div>
 
@@ -596,6 +991,28 @@ function backupStoreData() {
                 <ExternalLink class="w-4 h-4 mr-1.5" />
                 <span>View Store</span>
               </a>
+            </div>
+          </div>
+
+          <!-- Widget: Media & Upload Storage -->
+          <div class="widget-card mt-3">
+            <h4 class="widget-heading">Media & Upload Storage</h4>
+            <div class="status-banner-box">
+              <div :class="uploadStatus.storage_type === 'unknown' ? 'status-badge-neutral' : (uploadStatus.enabled ? 'status-badge-live' : 'status-badge-warning')">
+                <component :is="uploadStatus.storage_type === 'unknown' ? RefreshCw : (uploadStatus.enabled ? CheckCircle2 : AlertCircle)" class="w-4 h-4" :class="uploadStatus.storage_type === 'unknown' ? 'text-taupe' : (uploadStatus.enabled ? 'text-green' : 'text-crimson')" />
+                <span :class="uploadStatus.storage_type === 'unknown' ? 'text-taupe font-medium text-xs' : (uploadStatus.enabled ? 'status-text-live' : 'text-crimson font-medium text-xs')">
+                  {{ uploadStatus.storage_type === 'unknown' ? 'Storage Unknown' : (uploadStatus.enabled ? (uploadStatus.storage_type === 'persistent' ? 'Persistent Storage' : 'Local Storage (Dev)') : 'Storage Read-Only') }}
+                </span>
+              </div>
+              <p class="status-desc-text" style="font-size: 0.75rem; line-height: 1.3; margin-top: 0.25rem;">
+                <template v-if="uploadStatus.storage_type !== 'unknown'">
+                  Safe Formats: {{ (uploadStatus.allowed_formats || []).join(', ') }}<br/>
+                  Max Image: {{ uploadStatus.max_image_mb }}MB | Max Video: {{ uploadStatus.max_video_mb }}MB
+                </template>
+                <template v-else>
+                  Verifying storage backend readiness...
+                </template>
+              </p>
             </div>
           </div>
 
@@ -1182,6 +1599,484 @@ function backupStoreData() {
   font-size: 0.625rem;
   color: #8C827A;
   line-height: 1.25;
+}
+
+/* ==========================================================================
+   SHIPPING & FREE DELIVERY ATELIER STUDIO STYLES
+   ========================================================================== */
+.shipping-studio-content {
+  padding-bottom: 2rem;
+}
+
+.shipping-status-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: #FAF6F2;
+  border: 1px solid #EBE1D7;
+  border-radius: 8px;
+  padding: 1rem 1.25rem;
+  margin-top: 1.25rem;
+  transition: all 0.2s ease;
+}
+
+.shipping-status-banner.status-promo-active {
+  background: #FDF9F3;
+  border-color: #D97706;
+}
+
+.status-banner-left {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+}
+
+.status-indicator-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #9CA3AF;
+  flex-shrink: 0;
+}
+
+.status-indicator-dot.active {
+  background: #10B981;
+  box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.2);
+}
+
+.status-banner-title {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #2D2422;
+  margin: 0;
+}
+
+.status-banner-sub {
+  font-size: 0.75rem;
+  color: #8C827A;
+  margin: 0.15rem 0 0 0;
+}
+
+.status-toggle-wrap {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+/* Switch Slider */
+.switch-control {
+  position: relative;
+  display: inline-block;
+  width: 36px;
+  height: 20px;
+}
+
+.switch-control input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.slider-round {
+  position: absolute;
+  cursor: pointer;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: #D1D5DB;
+  transition: 0.2s;
+  border-radius: 20px;
+}
+
+.slider-round:before {
+  position: absolute;
+  content: "";
+  height: 14px;
+  width: 14px;
+  left: 3px;
+  bottom: 3px;
+  background-color: white;
+  transition: 0.2s;
+  border-radius: 50%;
+}
+
+input:checked + .slider-round {
+  background-color: #84261B;
+}
+
+input:checked + .slider-round:before {
+  transform: translateX(16px);
+}
+
+.switch-label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #2D2422;
+}
+
+/* Studio Sections */
+.studio-section {
+  border-top: 1px solid #F5ECE6;
+  padding-top: 1.25rem;
+}
+
+.section-title-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.studio-section-title {
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: #2D2422;
+  margin: 0;
+}
+
+.studio-section-badge {
+  font-size: 0.625rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 0.2rem 0.5rem;
+  border-radius: 4px;
+  background: #F5ECE6;
+  color: #84261B;
+}
+
+.studio-section-sub {
+  font-size: 0.75rem;
+  color: #8C827A;
+  margin: 0.25rem 0 0 0;
+}
+
+/* Modes Grid */
+.modes-three-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1rem;
+}
+
+.mode-card {
+  border: 1px solid #EBE1D7;
+  border-radius: 8px;
+  padding: 1rem;
+  background: #FFFFFF;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  transition: all 0.15s ease;
+}
+
+.mode-card:hover {
+  border-color: #CDBEB5;
+}
+
+.mode-card.selected {
+  border-color: #84261B;
+  background: #FFFDFB;
+  box-shadow: 0 0 0 1px #84261B;
+}
+
+.mode-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.65rem;
+}
+
+.mode-radio-circle {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  border: 2px solid #D1D5DB;
+  position: relative;
+  display: inline-block;
+}
+
+.mode-radio-circle.active {
+  border-color: #84261B;
+}
+
+.mode-radio-circle.active::after {
+  content: '';
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #84261B;
+}
+
+.mode-badge {
+  font-size: 0.625rem;
+  font-weight: 600;
+  padding: 0.15rem 0.4rem;
+  border-radius: 4px;
+}
+
+.badge-standard { background: #E0E7FF; color: #3730A3; }
+.badge-promo { background: #FEF3C7; color: #92400E; }
+.badge-muted { background: #F3F4F6; color: #4B5563; }
+
+.mode-title {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: #2D2422;
+  margin: 0;
+}
+
+.mode-desc {
+  font-size: 0.6875rem;
+  color: #8C827A;
+  margin: 0.35rem 0 0.75rem 0;
+  line-height: 1.35;
+}
+
+.mode-threshold-input-wrap {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: auto;
+  padding-top: 0.5rem;
+  border-top: 1px dashed #EBE1D7;
+}
+
+.threshold-label {
+  font-size: 0.6875rem;
+  font-weight: 600;
+  color: #6E635E;
+}
+
+.currency-input-box {
+  position: relative;
+  display: flex;
+  align-items: center;
+  flex: 1;
+}
+
+.currency-symbol {
+  position: absolute;
+  left: 0.5rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #8C827A;
+}
+
+.threshold-input {
+  width: 100%;
+  padding: 0.35rem 0.5rem 0.35rem 1.25rem;
+  border: 1px solid #E4D8CE;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  background: #FAF6F2;
+  color: #2D2422;
+}
+
+.mode-perk-pill {
+  display: flex;
+  align-items: center;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  color: #92400E;
+  margin-top: auto;
+  padding-top: 0.5rem;
+}
+
+/* Couriers List */
+.couriers-config-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+}
+
+.courier-config-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border: 1px solid #EBE1D7;
+  border-radius: 8px;
+  padding: 0.75rem 1rem;
+  background: #FFFFFF;
+}
+
+.courier-item-left {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+}
+
+.courier-item-logo {
+  width: 38px;
+  height: 24px;
+  object-fit: contain;
+  background: #FFFFFF;
+  padding: 2px;
+  border: 1px solid #F0E8E2;
+  border-radius: 4px;
+}
+
+.concierge-logo-placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.875rem;
+  background: #FAF6F2;
+}
+
+.courier-item-title-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.courier-item-name {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: #2D2422;
+  margin: 0;
+}
+
+.courier-item-badge {
+  font-size: 0.5625rem;
+  font-weight: 600;
+  padding: 0.1rem 0.4rem;
+  border-radius: 3px;
+  background: #F3F4F6;
+  color: #4B5563;
+}
+
+.badge-grab { background: #DCFCE7; color: #166534; }
+.badge-signature { background: #FEF3C7; color: #92400E; }
+
+.courier-item-meta {
+  font-size: 0.6875rem;
+  color: #8C827A;
+  margin: 0.15rem 0 0 0;
+}
+
+.eligibility-checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: #2D2422;
+  cursor: pointer;
+}
+
+/* Promo Text Presets */
+.promo-input {
+  background: #FAF6F2;
+}
+
+.promo-presets-row {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+}
+
+.presets-label {
+  font-size: 0.6875rem;
+  color: #8C827A;
+}
+
+.preset-pill {
+  background: #FFFFFF;
+  border: 1px solid #E4D8CE;
+  border-radius: 12px;
+  padding: 0.2rem 0.6rem;
+  font-size: 0.6875rem;
+  color: #6E635E;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.preset-pill:hover {
+  background: #FAF6F2;
+  border-color: #84261B;
+  color: #84261B;
+}
+
+/* Simulation Preview */
+.preview-studio-section {
+  background: #FAF6F2;
+  border: 1px dashed #E0D4C8;
+  border-radius: 8px;
+  padding: 1.25rem;
+}
+
+.badge-live {
+  background: #ECFDF5;
+  color: #065F46;
+}
+
+.checkout-simulation-box {
+  background: #FFFFFF;
+  border: 1px solid #EBE1D7;
+  border-radius: 8px;
+  padding: 1rem;
+}
+
+.simulation-banner {
+  display: flex;
+  align-items: center;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #84261B;
+  background: #FFF9F6;
+  border: 1px solid #FCD7CE;
+  border-radius: 6px;
+  padding: 0.5rem 0.75rem;
+}
+
+.simulation-cards-row {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0.5rem;
+}
+
+.sim-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 0.6rem;
+  border: 1px solid #EBE1D7;
+  border-radius: 6px;
+  background: #FAF6F2;
+}
+
+.sim-name {
+  font-size: 0.6875rem;
+  font-weight: 500;
+  color: #6E635E;
+}
+
+.sim-rate {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #2D2422;
+  margin-top: 0.15rem;
+}
+
+.sim-rate.sim-free {
+  color: #059669;
+  font-weight: 700;
+}
+
+.pane-footer-save-bar {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.btn-save-large {
+  padding: 0.65rem 1.5rem;
+  font-size: 0.8125rem;
 }
 
 @media (max-width: 1200px) {

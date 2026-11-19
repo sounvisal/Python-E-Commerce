@@ -18,6 +18,7 @@ class User(Base):
     tier = Column(String(50), default="Luméa Radiant Gold")
     reward_points = Column(Integer, default=100)
     profile_data = Column(JSON, default=dict)
+    token_version = Column(Integer, default=1, nullable=False)
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
 
     orders = relationship("Order", back_populates="user_rel")

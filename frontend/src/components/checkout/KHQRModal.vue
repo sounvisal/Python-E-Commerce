@@ -1,9 +1,16 @@
 <template>
   <div class="khqr-modal-backdrop" @click.self="handleClose">
-    <div class="khqr-modal-container">
+    <div
+      ref="modalContainerRef"
+      class="khqr-modal-container"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="khqr-dialog-title"
+      tabindex="-1"
+    >
       <!-- Modal Header -->
       <div class="khqr-modal-top-bar">
-        <h2 class="khqr-modal-heading">KHQR Payment</h2>
+        <h2 id="khqr-dialog-title" class="khqr-modal-heading">KHQR Payment</h2>
         <div v-if="!paymentApproved && !qrError" class="khqr-timer-pill">
           <span class="timer-dot"></span>
           <span>{{ formattedTimer }}</span>
@@ -54,13 +61,13 @@
             <span>Generating QR code…</span>
           </div>
           <div v-else-if="paymentApproved" class="khqr-state-box status-success">
-            <div class="success-checkmark">✓</div>
+            <div class="success-checkmark"><Check :size="24" /></div>
             <strong>Payment Approved</strong>
             <span>Redirecting to receipt…</span>
           </div>
           <div v-else-if="qrError" class="khqr-state-box status-err">
             <p>{{ qrError }}</p>
-            <button type="button" class="btn-retry-khqr" @click="fetchAndRenderKHQR">Retry</button>
+            <button v-if="!reviewRequired && !closing" type="button" class="btn-retry-khqr" @click="fetchAndRenderKHQR">Retry</button>
           </div>
           <div v-else class="qr-canvas-holder">
             <canvas ref="canvasEl" class="qr-canvas-element"></canvas>
@@ -73,7 +80,7 @@
 
       <!-- Slogan (from checkout.html) -->
       <p class="khqr-text-desc">
-        Scan with ABA Mobile, or other Mobile Banking App supporting KHQR
+        {{ demoMode ? 'Demo QR for internal testing' : 'Scan with ABA Mobile, or other Mobile Banking App supporting KHQR' }}
       </p>
 
       <!-- Action buttons -->
@@ -82,37 +89,45 @@
           v-if="!paymentApproved"
           type="button"
           class="btn-khqr-close"
+          :disabled="closing"
           @click="handleClose"
         >
-          Cancel
+          {{ reviewRequired ? 'Close' : closing ? 'Cancelling…' : 'Cancel' }}
         </button>
         <button
-          v-if="paywayUrl && !paymentApproved"
+          v-if="paywayUrl && !paymentApproved && !qrError"
           type="button"
           class="btn-khqr-aba"
           @click="openAbaLink"
         >
-          Open ABA Pay Link
+          Open ABA Mobile
         </button>
         <button
-          v-if="!paymentApproved"
+          v-if="paywayUrl && !paymentApproved && !qrError"
           type="button"
           class="btn-khqr-copy"
           @click="copyPaymentLink"
         >
-          {{ copiedPaymentLink ? '✓ Copied' : '📋 Copy Link' }}
+          <span class="btn-copy-inner">
+            <Check v-if="copiedPaymentLink" :size="13" class="copy-icon-svg" />
+            <Copy v-else :size="13" class="copy-icon-svg" />
+            <span>{{ copiedPaymentLink ? 'Copied' : 'Copy Link' }}</span>
+          </span>
         </button>
       </div>
 
       <!-- Demo Simulation for Presentation / Grading -->
       <button
-        v-if="!paymentApproved && !qrError"
+        v-if="demoMode && !paymentApproved && !qrError && !closing"
         type="button"
         class="btn-demo-sim"
         :disabled="simulating"
         @click="handleSimulateApproval"
       >
-        <span v-if="!simulating">⚡ Demo Mode: Simulate Instant Bank Approval</span>
+        <span v-if="!simulating" class="demo-btn-inner">
+          <Zap :size="13" class="demo-icon-svg" />
+          <span>Demo Mode: Simulate Instant Bank Approval</span>
+        </span>
         <span v-else>Clearing bank transaction…</span>
       </button>
     </div>
@@ -124,211 +139,249 @@ import { ref, computed, onMounted, onUnmounted, nextTick } from 'vue'
 import QRCode from 'qrcode'
 import axios from 'axios'
 import { orderRequest } from '@/utils/orderAccess'
+import { Copy, Check, Zap } from 'lucide-vue-next'
 
 const props = defineProps({
-  orderNumber: {
-    type: String,
-    required: true
-  },
-  amount: {
-    type: Number,
-    required: true
-  },
-  expiresAt: {
-    type: String,
-    default: ''
-  },
-  merchantName: {
-    type: String,
-    default: 'LUMÉA ATELIER'
-  }
+  orderNumber: { type: String, required: true },
+  amount: { type: Number, required: true },
+  expiresAt: { type: String, required: true },
+  merchantName: { type: String, default: 'LUMÉA ATELIER' }
 })
 
 const emit = defineEmits(['approved', 'cancelled'])
-
+const modalContainerRef = ref(null)
 const canvasEl = ref(null)
 const loadingQr = ref(true)
 const qrError = ref('')
 const paymentApproved = ref(false)
+const demoMode = ref(false)
 const simulating = ref(false)
-const qrString = ref('')
-const clientId = ref(null)
+const closing = ref(false)
+const reviewRequired = ref(false)
 const paywayUrl = ref('')
-const liveMerchantName = ref(props.merchantName || 'LUMÉA ATELIER')
-const timeLeft = ref(props.expiresAt ? Math.max(0, Math.floor((new Date(props.expiresAt).getTime() - Date.now()) / 1000)) : 300)
+const liveMerchantName = ref(props.merchantName)
+const expires = Date.parse(props.expiresAt)
+const timeLeft = ref(remainingSeconds())
 const copiedPaymentLink = ref(false)
+const controller = new AbortController()
+const request = { ...orderRequest(props.orderNumber), signal: controller.signal }
 
-let timerInterval = null
-let pollInterval = null
+let timerInterval
+let pollTimeout
+let successTimeout
+let copyTimeout
+let issuing = false
+let previousActiveElement = null
 
 const formattedAmount = computed(() => props.amount.toFixed(2))
-
 const formattedTimer = computed(() => {
-  const m = Math.floor(timeLeft.value / 60)
-  const s = timeLeft.value % 60
-  return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`
+  const minutes = String(Math.floor(timeLeft.value / 60)).padStart(2, '0')
+  const seconds = String(timeLeft.value % 60).padStart(2, '0')
+  return minutes + ':' + seconds
 })
 
-onMounted(async () => {
-  await fetchAndRenderKHQR()
-  startCountdown()
-  startPolling()
-})
-
-onUnmounted(() => {
-  if (timerInterval) clearInterval(timerInterval)
-  if (pollInterval) clearInterval(pollInterval)
-})
-
-async function fetchAndRenderKHQR() {
-  loadingQr.value = true
-  qrError.value = ''
-  try {
-    const res = await axios.post('/api/payments/khqr/generate', {
-      order_number: props.orderNumber,
-      amount: props.amount,
-      try_live: true
-    }, orderRequest(props.orderNumber))
-    
-    if (res.data && res.data.data) {
-      const d = res.data.data
-      qrString.value = d.qr_string
-      clientId.value = d.client_id
-      if (d.payway_url) paywayUrl.value = d.payway_url
-      if (d.merchant_name) liveMerchantName.value = d.merchant_name
+function handleKeydown(e) {
+  if (e.key === 'Escape') {
+    e.preventDefault()
+    handleClose()
+    return
+  }
+  if (e.key === 'Tab') {
+    if (!modalContainerRef.value) return
+    const focusable = Array.from(modalContainerRef.value.querySelectorAll(
+      'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
+    ))
+    if (focusable.length === 0) return
+    const first = focusable[0]
+    const last = focusable[focusable.length - 1]
+    if (e.shiftKey && document.activeElement === first) {
+      e.preventDefault()
+      last.focus()
+    } else if (!e.shiftKey && document.activeElement === last) {
+      e.preventDefault()
+      first.focus()
     }
-  } catch (err) {
-    console.warn('KHQR generate error:', err)
-    qrError.value = err.response?.data?.detail || 'Unable to generate payment code. Please retry.'
-  } finally {
-    loadingQr.value = false
-    await nextTick()
-    renderQR()
   }
 }
 
-function renderQR() {
-  if (!canvasEl.value || !qrString.value) return
-
-  QRCode.toCanvas(
-    canvasEl.value,
-    qrString.value,
-    {
-      width: 200,
-      margin: 1,
-      color: {
-        dark: '#000000',
-        light: '#FFFFFF'
-      },
-      errorCorrectionLevel: 'H'
-    },
-    (error) => {
-      if (error) console.error('KHQR Canvas error:', error)
-    }
-  )
-}
-
-function startCountdown() {
-  timerInterval = setInterval(() => {
-    if (timeLeft.value > 0) {
-      timeLeft.value--
+onMounted(() => {
+  previousActiveElement = document.activeElement
+  window.addEventListener('keydown', handleKeydown)
+  fetchAndRenderKHQR()
+  nextTick(() => {
+    const focusable = modalContainerRef.value?.querySelectorAll(
+      'button:not([disabled]), [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+    )
+    if (focusable && focusable.length > 0) {
+      focusable[0].focus()
     } else {
-      clearInterval(timerInterval)
-      if (pollInterval) clearInterval(pollInterval)
-      handleClose()
+      modalContainerRef.value?.focus()
     }
-  }, 1000)
+  })
+})
+
+onUnmounted(() => {
+  window.removeEventListener('keydown', handleKeydown)
+  controller.abort()
+  stopMonitoring()
+  clearTimeout(successTimeout)
+  clearTimeout(copyTimeout)
+  if (previousActiveElement && typeof previousActiveElement.focus === 'function') {
+    previousActiveElement.focus()
+  }
+})
+
+function remainingSeconds() {
+  return Number.isFinite(expires) ? Math.max(0, Math.ceil((expires - Date.now()) / 1000)) : 0
 }
 
-function startPolling() {
-  pollInterval = setInterval(async () => {
-    if (paymentApproved.value) return
-    try {
-      const res = await axios.post('/api/payments/khqr/check', {
-        order_number: props.orderNumber,
-        client_id: clientId.value
-      }, orderRequest(props.orderNumber))
-      if (res.data && res.data.paid) {
-        onSuccess()
-      } else if (['expired', 'cancelled'].includes(res.data.action)) {
-        handleClose()
-      }
-    } catch (e) {}
-  }, 2500)
+function message(error, fallback) {
+  const detail = error.response?.data?.detail
+  return typeof detail === 'string' ? detail : fallback
+}
+
+async function fetchAndRenderKHQR() {
+  if (issuing || closing.value) return
+  issuing = true
+  stopMonitoring()
+  loadingQr.value = true
+  qrError.value = ''
+  try {
+    const { data } = await axios.post('/api/payments/khqr/generate', {
+      order_number: props.orderNumber,
+      amount: props.amount
+    }, request)
+    const payment = data.data
+    if (!payment?.qr_string) throw new Error('Missing payment code')
+    demoMode.value = payment.demo === true
+    if (payment.source === 'payway_api' || payment.source === 'live_aba_payway') {
+      const deeplink = new URL('abamobilebank://ababank.com')
+      deeplink.searchParams.set('type', 'payway')
+      deeplink.searchParams.set('qrcode', payment.qr_string)
+      paywayUrl.value = deeplink.toString()
+    }
+    if (payment.merchant_name) liveMerchantName.value = payment.merchant_name
+    loadingQr.value = false
+    await nextTick()
+    if (controller.signal.aborted || closing.value) return
+    await QRCode.toCanvas(canvasEl.value, payment.qr_string, {
+      width: 200,
+      margin: 4,
+      errorCorrectionLevel: 'H'
+    })
+    if (controller.signal.aborted || closing.value) return
+    timeLeft.value = remainingSeconds()
+    timerInterval = setInterval(() => { timeLeft.value = remainingSeconds() }, 1000)
+    pollTimeout = setTimeout(poll, 2000)
+  } catch (error) {
+    if (controller.signal.aborted || closing.value) return
+    qrError.value = message(error, 'Unable to generate the payment code. Please retry.')
+    // A verified payment can arrive while the QR request is still in flight.
+    await poll(false)
+  } finally {
+    issuing = false
+    loadingQr.value = false
+  }
+}
+
+function stopMonitoring() {
+  clearInterval(timerInterval)
+  clearTimeout(pollTimeout)
+}
+
+function applyStatus(status) {
+  if (status.action === 'review') {
+    reviewRequired.value = true
+    qrError.value = status.message
+    stopMonitoring()
+    return true
+  }
+  if (status.paid) {
+    onSuccess()
+    return true
+  }
+  if (['expired', 'cancelled'].includes(status.action)) {
+    stopMonitoring()
+    emit('cancelled', { closed: true })
+    return true
+  }
+  return false
+}
+
+async function poll(reschedule = true) {
+  if (controller.signal.aborted || paymentApproved.value || closing.value) return
+  try {
+    const { data } = await axios.post('/api/payments/khqr/check', { order_number: props.orderNumber }, request)
+    if (controller.signal.aborted || closing.value || applyStatus(data)) return
+  } catch (error) {
+    if (controller.signal.aborted || closing.value) return
+    if (remainingSeconds() === 0) qrError.value = 'Payment verification is temporarily unavailable. Check the order before paying again.'
+  }
+  if (remainingSeconds() === 0) {
+    stopMonitoring()
+    qrError.value ||= 'This QR has expired. Check the order status before starting another payment.'
+    return
+  }
+  if (reschedule) pollTimeout = setTimeout(poll, 5000)
 }
 
 async function handleSimulateApproval() {
-  if (simulating.value || paymentApproved.value) return
+  if (!demoMode.value || simulating.value || paymentApproved.value || closing.value) return
   simulating.value = true
   try {
-    const res = await axios.post('/api/payments/khqr/simulate-approve', {
-      order_number: props.orderNumber
-    }, orderRequest(props.orderNumber))
-    if (res.data && res.data.paid) {
-      onSuccess()
-    }
-  } catch (err) {
-    console.error('Simulation error:', err)
+    const { data } = await axios.post('/api/payments/khqr/simulate-approve', { order_number: props.orderNumber }, request)
+    if (!controller.signal.aborted) applyStatus(data)
+  } catch (error) {
+    if (!controller.signal.aborted) qrError.value = message(error, 'Demo approval failed. Please retry.')
   } finally {
     simulating.value = false
   }
 }
 
 function onSuccess() {
+  if (paymentApproved.value) return
   paymentApproved.value = true
-  if (pollInterval) clearInterval(pollInterval)
-  if (timerInterval) clearInterval(timerInterval)
-  setTimeout(() => {
-    emit('approved', {
-      orderNumber: props.orderNumber,
-      amount: props.amount,
-      paid: true
-    })
-  }, 1600)
+  stopMonitoring()
+  successTimeout = setTimeout(() => {
+    emit('approved', { orderNumber: props.orderNumber, amount: props.amount, paid: true })
+  }, 1000)
 }
 
 function openAbaLink() {
-  if (paywayUrl.value) {
-    window.open(paywayUrl.value, '_blank')
-  }
+  if (paywayUrl.value) window.location.assign(paywayUrl.value)
 }
 
-function copyPaymentLink() {
-  const link = paywayUrl.value || `${window.location.origin}/account/orders/${props.orderNumber}`
-  if (navigator.clipboard && navigator.clipboard.writeText) {
-    navigator.clipboard.writeText(link).then(() => {
-      copiedPaymentLink.value = true
-      setTimeout(() => { copiedPaymentLink.value = false }, 2500)
-    }).catch(() => fallbackCopy(link))
-  } else {
-    fallbackCopy(link)
-  }
-}
-
-function fallbackCopy(text) {
-  const el = document.createElement('textarea')
-  el.value = text
-  el.setAttribute('readonly', '')
-  el.style.position = 'absolute'
-  el.style.left = '-9999px'
-  document.body.appendChild(el)
-  el.select()
+async function copyPaymentLink() {
+  if (!paywayUrl.value) return
   try {
-    document.execCommand('copy')
+    await navigator.clipboard.writeText(paywayUrl.value)
     copiedPaymentLink.value = true
-    setTimeout(() => { copiedPaymentLink.value = false }, 2500)
-  } catch (e) {
-    console.warn('Copy failed', e)
+    clearTimeout(copyTimeout)
+    copyTimeout = setTimeout(() => { copiedPaymentLink.value = false }, 2500)
+  } catch {
+    copiedPaymentLink.value = false
   }
-  document.body.removeChild(el)
 }
 
-function handleClose() {
-  if (paymentApproved.value) return
-  if (props.orderNumber) {
-    axios.post('/api/payments/khqr/cancel', { order_number: props.orderNumber }, orderRequest(props.orderNumber)).catch(() => {})
+async function handleClose() {
+  if (paymentApproved.value || closing.value) return
+  if (reviewRequired.value) {
+    emit('cancelled', { closed: false, message: qrError.value })
+    return
   }
-  emit('cancelled')
+  closing.value = true
+  stopMonitoring()
+  try {
+    const { data } = await axios.post('/api/payments/khqr/cancel', { order_number: props.orderNumber }, request)
+    if (!controller.signal.aborted) applyStatus(data)
+  } catch (error) {
+    if (controller.signal.aborted) return
+    qrError.value = message(error, 'Cancellation could not be confirmed. Check the order before paying again.')
+    closing.value = false
+    await poll(false)
+  } finally {
+    closing.value = false
+  }
 }
 </script>
 
@@ -650,6 +703,13 @@ function handleClose() {
   background: #f8fafc;
 }
 
+.btn-copy-inner {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+}
+
 .btn-demo-sim {
   margin-top: 12px;
   width: 100%;
@@ -662,6 +722,13 @@ function handleClose() {
   font-weight: 700;
   cursor: pointer;
   transition: background 0.15s ease;
+}
+
+.demo-btn-inner {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
 }
 
 .btn-demo-sim:hover:not(:disabled) {
@@ -681,5 +748,41 @@ function handleClose() {
   0% { transform: scale(0.9); opacity: 0.7; }
   50% { transform: scale(1.15); opacity: 1; }
   100% { transform: scale(0.9); opacity: 0.7; }
+}
+
+@media (max-width: 480px) {
+  .khqr-modal-backdrop {
+    padding: 10px 8px;
+  }
+  .khqr-modal-container {
+    padding: 16px 12px;
+    max-width: calc(100vw - 16px);
+    max-height: 94vh;
+    overflow-y: auto;
+  }
+}
+
+@media (max-width: 360px) {
+  .khqr-modal-backdrop {
+    padding: 6px;
+  }
+  .khqr-modal-container {
+    padding: 12px 8px;
+    border-radius: 18px;
+    max-width: calc(100vw - 12px);
+  }
+  .khqr-content {
+    width: 260px;
+    height: 380px;
+    border-radius: 18px;
+  }
+  .qr-canvas-holder {
+    width: 180px;
+    height: 180px;
+  }
+  .qr-canvas-element {
+    width: 180px !important;
+    height: 180px !important;
+  }
 }
 </style>

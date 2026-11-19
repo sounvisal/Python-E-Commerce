@@ -19,31 +19,32 @@ import AllDealsView from '@/views/deals/AllDealsView.vue'
 import ConcernsView from '@/views/concerns/ConcernsView.vue'
 import WishlistView from '@/views/wishlist/WishlistView.vue'
 
-import AboutView from '@/views/about/AboutView.vue'
-import AuthenticityView from '@/views/authenticity/AuthenticityView.vue'
-import ContactView from '@/views/contact/ContactView.vue'
-import FaqView from '@/views/faq/FaqView.vue'
-import ShippingView from '@/views/shipping/ShippingView.vue'
-import ReturnsView from '@/views/returns/ReturnsView.vue'
+// Lazy-loaded secondary views
+const AboutView = () => import('@/views/about/AboutView.vue')
+const AuthenticityView = () => import('@/views/authenticity/AuthenticityView.vue')
+const ContactView = () => import('@/views/contact/ContactView.vue')
+const FaqView = () => import('@/views/faq/FaqView.vue')
+const ShippingView = () => import('@/views/shipping/ShippingView.vue')
+const ReturnsView = () => import('@/views/returns/ReturnsView.vue')
 
-import SkinQuizIntroView from '@/views/quiz/SkinQuizIntroView.vue'
-import SkinQuizQuestionsView from '@/views/quiz/SkinQuizQuestionsView.vue'
-import QuizResultsView from '@/views/quiz/QuizResultsView.vue'
-import RecommendedRoutineView from '@/views/quiz/RecommendedRoutineView.vue'
-import SkinProfileView from '@/views/account/SkinProfileView.vue'
-import SkincareJournalView from '@/views/account/SkincareJournalView.vue'
-import LoginRegisterView from '@/views/auth/LoginRegisterView.vue'
-import MyAccountView from '@/views/account/MyAccountView.vue'
-import MyOrdersView from '@/views/account/MyOrdersView.vue'
-import OrderDetailsView from '@/views/account/OrderDetailsView.vue'
-import PrivacyPolicyView from '@/views/legal/PrivacyPolicyView.vue'
-import TermsOfServiceView from '@/views/legal/TermsOfServiceView.vue'
-import NotFoundView from '@/views/error/NotFoundView.vue'
-import ArticlesView from '@/views/articles/ArticlesView.vue'
-import ArticleDetailView from '@/views/articles/ArticleDetailView.vue'
-import SustainabilityView from '@/views/sustainability/SustainabilityView.vue'
-import ReturnRequestView from '@/views/returns/ReturnRequestView.vue'
-import ReturnStatusView from '@/views/returns/ReturnStatusView.vue'
+const SkinQuizIntroView = () => import('@/views/quiz/SkinQuizIntroView.vue')
+const SkinQuizQuestionsView = () => import('@/views/quiz/SkinQuizQuestionsView.vue')
+const QuizResultsView = () => import('@/views/quiz/QuizResultsView.vue')
+const RecommendedRoutineView = () => import('@/views/quiz/RecommendedRoutineView.vue')
+const SkinProfileView = () => import('@/views/account/SkinProfileView.vue')
+const SkincareJournalView = () => import('@/views/account/SkincareJournalView.vue')
+const LoginRegisterView = () => import('@/views/auth/LoginRegisterView.vue')
+const MyAccountView = () => import('@/views/account/MyAccountView.vue')
+const MyOrdersView = () => import('@/views/account/MyOrdersView.vue')
+const OrderDetailsView = () => import('@/views/account/OrderDetailsView.vue')
+const PrivacyPolicyView = () => import('@/views/legal/PrivacyPolicyView.vue')
+const TermsOfServiceView = () => import('@/views/legal/TermsOfServiceView.vue')
+const NotFoundView = () => import('@/views/error/NotFoundView.vue')
+const ArticlesView = () => import('@/views/articles/ArticlesView.vue')
+const ArticleDetailView = () => import('@/views/articles/ArticleDetailView.vue')
+const SustainabilityView = () => import('@/views/sustainability/SustainabilityView.vue')
+const ReturnRequestView = () => import('@/views/returns/ReturnRequestView.vue')
+const ReturnStatusView = () => import('@/views/returns/ReturnStatusView.vue')
 
 const routes = [
   {

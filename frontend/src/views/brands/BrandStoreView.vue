@@ -198,7 +198,7 @@
               <span class="f-lbl">Synthetic Dyes</span>
             </div>
             <div class="film-metric">
-              <span class="f-num">4.9★</span>
+              <span class="f-num rating-with-star">4.9 <Star :size="13" class="gold-star-icon" /></span>
               <span class="f-lbl">Patron Rating</span>
             </div>
           </div>

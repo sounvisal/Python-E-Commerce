@@ -12,4 +12,4 @@ class Category(Base):
     icon = Column(String(50), nullable=True, default="Sparkles")
     image_url = Column(String(255), nullable=True)
 
-    products = relationship("Product", back_populates="category_rel", cascade="all, delete-orphan")
+    products = relationship("Product", back_populates="category_rel")

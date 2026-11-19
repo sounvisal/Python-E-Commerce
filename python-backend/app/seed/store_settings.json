@@ -10,9 +10,18 @@
   "time_zone": "(UTC+07:00) Phnom Penh",
   "currency": "USD ($)",
   "currency_symbol": "$",
+  "free_shipping_enabled": true,
+  "free_shipping_mode": "threshold",
   "free_shipping_threshold": 50.0,
+  "free_shipping_promo_text": "Complimentary nationwide shipping on orders over $50",
+  "free_shipping_carriers": [
+    "vet_express",
+    "jt_express",
+    "lumea_concierge"
+  ],
+  "grab_subsidy_enabled": true,
   "tax_rate": 10.0,
   "online_status": "Online",
   "maintenance_mode": false,
-  "last_updated": "Oct 19, 2026 01:02 PM"
+  "last_updated": "Nov 17, 2026 12:53 PM"
 }

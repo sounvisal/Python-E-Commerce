@@ -501,6 +501,8 @@ import { ShieldCheck, Award, Truck, Leaf, Search, FileCheck, Heart } from 'lucid
   border: 1px solid #EAE5DF;
   border-radius: 12px;
   padding: 1.5rem 2rem;
+  max-width: 100%;
+  box-sizing: border-box;
 }
 
 .partners-label {
@@ -526,8 +528,11 @@ import { ShieldCheck, Award, Truck, Leaf, Search, FileCheck, Heart } from 'lucid
   align-items: center;
   justify-content: space-between;
   flex: 1;
+  min-width: 0;
+  max-width: 100%;
   gap: 1.5rem;
   overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
 }
 
 .b-logo {
@@ -536,6 +541,7 @@ import { ShieldCheck, Award, Truck, Leaf, Search, FileCheck, Heart } from 'lucid
   color: #292524;
   opacity: 0.8;
   white-space: nowrap;
+  flex-shrink: 0;
 }
 
 .serif-brand {
@@ -599,6 +605,11 @@ import { ShieldCheck, Award, Truck, Leaf, Search, FileCheck, Heart } from 'lucid
 }
 
 /* Responsive */
+.authenticity-page {
+  max-width: 100%;
+  overflow-x: clip;
+}
+
 @media (max-width: 1024px) {
   .auth-hero {
     grid-template-columns: 1fr;
@@ -617,14 +628,60 @@ import { ShieldCheck, Award, Truck, Leaf, Search, FileCheck, Heart } from 'lucid
   .brand-partners-strip {
     flex-direction: column;
     align-items: flex-start;
+    padding: 1.25rem 1rem;
+    gap: 1rem;
   }
   .partners-divider {
     display: none;
+  }
+  .partners-logos-row {
+    width: 100%;
+    flex-wrap: wrap;
+    justify-content: flex-start;
+    gap: 1rem 1.25rem;
   }
   .trust-banner-inner {
     flex-direction: column;
     align-items: flex-start;
     gap: 1.5rem;
+  }
+}
+
+@media (max-width: 640px) {
+  .auth-hero {
+    padding: 1.5rem 1rem;
+    min-height: auto;
+  }
+  .hero-script-overlay {
+    display: none;
+  }
+  .hero-title {
+    font-size: 2rem;
+  }
+  .pillars-strip {
+    padding: 1.25rem 1rem;
+  }
+  .pillar-col {
+    gap: 0.85rem;
+  }
+  .trust-cta-banner {
+    padding: 1.5rem 1rem;
+  }
+  .trust-title {
+    font-size: 1.65rem;
+  }
+  .btn-shop-brands-rect {
+    width: 100%;
+    justify-content: center;
+  }
+}
+
+@media (max-width: 360px) {
+  .hero-title {
+    font-size: 1.75rem;
+  }
+  .trust-title {
+    font-size: 1.45rem;
   }
 }
 </style>

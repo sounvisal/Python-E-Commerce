@@ -4,26 +4,39 @@
     <div class="drawer-backdrop" @click="cartStore.closeDrawer"></div>
 
     <!-- Drawer Panel -->
-    <aside class="drawer-panel">
+    <aside
+      ref="drawerPanelRef"
+      class="drawer-panel"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="cart-drawer-title"
+      tabindex="-1"
+    >
       <!-- Header -->
       <div class="drawer-header">
         <div class="header-title">
-          <h3>Shopping Bag</h3>
+          <h3 id="cart-drawer-title">{{ localeStore.t('cart.title') || 'Shopping Bag' }}</h3>
           <span class="badge badge-subtle">{{ cartStore.totalItems }} items</span>
         </div>
-        <button class="close-btn" @click="cartStore.closeDrawer" aria-label="Close Bag">
+        <button ref="closeBtnRef" class="close-btn" @click="cartStore.closeDrawer" aria-label="Close Bag">
           <X :size="20" />
         </button>
       </div>
 
       <!-- Free Shipping Bar -->
-      <div class="shipping-tracker">
+      <div v-if="cartStore.freeShippingEnabled && cartStore.freeShippingMode !== 'disabled'" class="shipping-tracker">
         <div class="tracker-text">
-          <span v-if="cartStore.subtotal >= cartStore.freeShippingThreshold" class="shipping-unlocked">
-            <Sparkles :size="15" class="shipping-sparkle" /> You have unlocked <strong>Free Complimentary Shipping!</strong>
+          <span v-if="cartStore.isFreeDeliveryActive" class="shipping-unlocked">
+            <Sparkles :size="15" class="shipping-sparkle" />
+            <template v-if="cartStore.freeShippingMode === 'all_orders'">
+              {{ cartStore.freeShippingPromoText || 'Complimentary Shipping active on all orders today!' }}
+            </template>
+            <template v-else>
+              You have unlocked <strong>Free Complimentary Shipping!</strong>
+            </template>
           </span>
           <span v-else>
-            Add <strong>${{ Math.max(0, cartStore.freeShippingThreshold - cartStore.subtotal).toFixed(2) }}</strong> more for Free Shipping
+            Add <strong>${{ cartStore.freeDeliveryRemaining.toFixed(2) }}</strong> more for Free Shipping
           </span>
         </div>
         <div class="progress-bar-bg">
@@ -84,7 +97,7 @@
                   </button>
                 </div>
 
-                <span class="item-total">${{ (item.price * item.quantity).toFixed(2) }}</span>
+                <span class="item-total">{{ localeStore.formatPrice(item.price * item.quantity) }}</span>
               </div>
             </div>
           </div>
@@ -99,47 +112,52 @@
             <input
               type="text"
               v-model="promoInput"
-              placeholder="Promo code (Try LUMEA10)"
+              :placeholder="localeStore.t('cart.enter_code')"
               class="promo-input"
               @keyup.enter="applyPromo"
             />
-            <button class="btn btn-sm btn-outline" @click="applyPromo">Apply</button>
+            <button class="btn btn-sm btn-outline" @click="applyPromo">{{ localeStore.t('common.apply') }}</button>
           </div>
           <div v-else class="promo-applied">
             <span class="applied-tag">
-              <Check :size="14" /> {{ cartStore.discountCode }} applied (−${{ cartStore.discountAmount.toFixed(2) }})
+              <Check :size="14" /> {{ cartStore.discountCode }} (−{{ localeStore.formatPrice(cartStore.discountAmount) }})
             </span>
-            <button class="remove-promo" @click="cartStore.removePromoCode">Remove</button>
+            <button class="remove-promo" @click="cartStore.removePromoCode">{{ localeStore.t('common.remove') }}</button>
           </div>
         </div>
 
         <!-- Price Breakdown -->
         <div class="totals-breakdown">
           <div class="total-row">
-            <span>Subtotal</span>
-            <span>${{ cartStore.subtotal.toFixed(2) }}</span>
+            <span>{{ localeStore.t('common.subtotal') }}</span>
+            <span>{{ localeStore.formatPrice(cartStore.subtotal) }}</span>
           </div>
           <div v-if="cartStore.discountAmount > 0" class="total-row discount-row">
-            <span>Promo Discount</span>
-            <span>-${{ cartStore.discountAmount.toFixed(2) }}</span>
+            <span>{{ localeStore.t('common.discount') }}</span>
+            <span>-{{ localeStore.formatPrice(cartStore.discountAmount) }}</span>
           </div>
           <div class="total-row">
-            <span>Estimated Shipping</span>
-            <span>{{ cartStore.shippingFee === 0 ? 'Free' : `$${cartStore.shippingFee.toFixed(2)}` }}</span>
+            <span>{{ localeStore.t('common.shipping') }}</span>
+            <span>{{ cartStore.shippingFee === 0 ? localeStore.t('common.free') : localeStore.formatPrice(cartStore.shippingFee) }}</span>
           </div>
           <div class="total-row grand-total-row">
-            <span>Total</span>
-            <span class="grand-total-amount">${{ cartStore.grandTotal.toFixed(2) }}</span>
+            <span>{{ localeStore.t('common.total') }}</span>
+            <div class="grand-total-wrap">
+              <span class="grand-total-amount">{{ localeStore.formatPrice(cartStore.grandTotal) }}</span>
+              <span v-if="localeStore.currentCurrency !== 'USD'" class="grand-total-usd-hint">
+                (${{ cartStore.grandTotal.toFixed(2) }} USD)
+              </span>
+            </div>
           </div>
         </div>
 
         <!-- Checkout Buttons -->
         <div class="action-buttons">
           <button class="btn btn-primary btn-block btn-lg" @click="goToCheckout">
-            Proceed to Checkout
+            {{ localeStore.t('cart.checkout_btn') }}
           </button>
           <router-link to="/cart" class="btn btn-outline btn-block" @click="cartStore.closeDrawer">
-            View Full Bag
+            {{ localeStore.t('cart.view_bag') }}
           </router-link>
         </div>
       </div>
@@ -148,22 +166,74 @@
 </template>
 
 <script setup>
-import { computed, ref, onMounted } from 'vue'
+import { computed, ref, onMounted, onUnmounted, watch, nextTick } from 'vue'
 import { useRouter } from 'vue-router'
 import { useCartStore } from '@/stores/cart'
 import { useNotificationStore } from '@/stores/notification'
+import { useLocaleStore } from '@/stores/locale'
 import { X, Trash2, Plus, Minus, ShoppingBag, Check, Sparkles } from 'lucide-vue-next'
 
 const router = useRouter()
 const cartStore = useCartStore()
 const notificationStore = useNotificationStore()
+const localeStore = useLocaleStore()
+
+const drawerPanelRef = ref(null)
+const closeBtnRef = ref(null)
+let previousActiveElement = null
+
 const shippingProgress = computed(() => {
-  if (cartStore.subtotal >= cartStore.freeShippingThreshold) return 1
-  return Math.max(0, cartStore.subtotal / cartStore.freeShippingThreshold)
+  if (cartStore.freeShippingMode === 'all_orders') return 1
+  if (cartStore.isFreeDeliveryActive) return 1
+  if (cartStore.freeShippingThreshold <= 0) return 1
+  return Math.max(0, Math.min(1, cartStore.subtotal / cartStore.freeShippingThreshold))
+})
+
+function handleKeydown(e) {
+  if (e.key === 'Escape') {
+    e.preventDefault()
+    cartStore.closeDrawer()
+    return
+  }
+  if (e.key === 'Tab') {
+    if (!drawerPanelRef.value) return
+    const focusable = Array.from(drawerPanelRef.value.querySelectorAll(
+      'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
+    ))
+    if (focusable.length === 0) return
+    const first = focusable[0]
+    const last = focusable[focusable.length - 1]
+    if (e.shiftKey && document.activeElement === first) {
+      e.preventDefault()
+      last.focus()
+    } else if (!e.shiftKey && document.activeElement === last) {
+      e.preventDefault()
+      first.focus()
+    }
+  }
+}
+
+watch(() => cartStore.isDrawerOpen, (isOpen) => {
+  if (isOpen) {
+    previousActiveElement = document.activeElement
+    window.addEventListener('keydown', handleKeydown)
+    nextTick(() => {
+      closeBtnRef.value?.focus()
+    })
+  } else {
+    window.removeEventListener('keydown', handleKeydown)
+    if (previousActiveElement && typeof previousActiveElement.focus === 'function') {
+      previousActiveElement.focus()
+    }
+  }
 })
 
 onMounted(() => {
   cartStore.fetchSettings()
+})
+
+onUnmounted(() => {
+  window.removeEventListener('keydown', handleKeydown)
 })
 
 const promoInput = ref('')

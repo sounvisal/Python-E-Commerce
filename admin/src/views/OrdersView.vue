@@ -27,7 +27,8 @@ import {
   User,
   CreditCard,
   MapPin,
-  Check
+  Check,
+  Navigation
 } from 'lucide-vue-next'
 
 const adminStore = useAdminStore()
@@ -275,6 +276,9 @@ const nextAction = computed(() => {
   if (s === 'pending') {
     return null
   }
+  if (s === 'payment review') {
+    return { label: 'Reconcile & Confirm (Re-reserve Stock)', nextStatus: 'Confirmed', icon: CheckCircle2, btnClass: 'btn-advance-processing' }
+  }
   if (s === 'confirmed') {
     return { label: 'Pack & Move to Processing', nextStatus: 'Processing', icon: Package, btnClass: 'btn-advance-processing' }
   }
@@ -290,10 +294,12 @@ const nextAction = computed(() => {
   return null
 })
 
-const canCancelOrder = computed(() =>
-  ['Pending', 'Confirmed', 'Processing'].includes(activeOrder.value?.status) &&
-  activeOrder.value.payment_status !== 'Paid'
-)
+const canCancelOrder = computed(() => {
+  if (!activeOrder.value) return false
+  const status = activeOrder.value.status
+  if (status === 'Payment Review') return true
+  return ['Pending', 'Confirmed', 'Processing'].includes(status) && activeOrder.value.payment_status !== 'Paid'
+})
 
 const orderEvents = computed(() => activeOrder.value?.events || [])
 
@@ -995,7 +1001,10 @@ const exportOrders = () => {
                   <p>{{ activeOrder.shipping_city }} {{ activeOrder.shipping_postal_code || '' }}, Cambodia</p>
                   <p class="text-muted">{{ activeOrder.customer_phone || '+855 12 345 678' }}</p>
                   <div v-if="activeOrder.delivery_notes" class="admin-delivery-note">
-                    <strong>📍 Driver Landmark:</strong> {{ activeOrder.delivery_notes }}
+                    <strong class="landmark-label-admin">
+                      <MapPin :size="12" class="pin-icon-admin" />
+                      <span>Driver Landmark:</span>
+                    </strong> {{ activeOrder.delivery_notes }}
                   </div>
                   <div v-if="activeOrder.map_url" class="admin-map-link-wrap">
                     <a
@@ -1004,7 +1013,9 @@ const exportOrders = () => {
                       rel="noopener noreferrer"
                       class="btn-admin-driver-map"
                     >
-                      🗺️ Open Driver Route in Google Maps ↗
+                      <Navigation :size="13" class="nav-icon-admin" />
+                      <span>Open Driver Route in Google Maps</span>
+                      <ExternalLink :size="12" class="ext-icon-admin" />
                     </a>
                   </div>
                 </div>
@@ -1758,7 +1769,7 @@ const exportOrders = () => {
   background: #1B5E20;
 }
 
-/* ⚡ University Defense Demo Fast-Forward Button */
+/* University Defense Demo Fast-Forward Button */
 .btn-demo-action {
   display: inline-flex;
   align-items: center;

@@ -6,7 +6,7 @@ class Product(Base):
     __tablename__ = "products"
 
     id = Column(Integer, primary_key=True, index=True)
-    category_id = Column(Integer, ForeignKey("categories.id", ondelete="CASCADE"), nullable=False)
+    category_id = Column(Integer, ForeignKey("categories.id", ondelete="RESTRICT"), nullable=False)
     name = Column(String(200), nullable=False)
     brand = Column(String(100), nullable=False, index=True)
     slug = Column(String(200), unique=True, index=True, nullable=False)
