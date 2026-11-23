@@ -13,7 +13,7 @@ from app.core.config import settings
 from app.api.deps import get_optional_user
 from app.services.order_lifecycle import check_order_access, expire_pending_orders, cancel_order, settle_payment, utcnow
 from app.models.user import User
-from app.services.khqr_service import ACTIVE_PAYMENT_PROCS, get_bakong_khqr_data, cancel_payment_session, build_instant_bakong_khqr
+from app.services.khqr_service import ACTIVE_PAYMENT_PROCS, get_bakong_khqr_data, cancel_payment_session, build_instant_bakong_khqr, check_payway_link_status
 from app.services import payway_api
 
 router = APIRouter(prefix="/payments", tags=["Payments"])
@@ -162,6 +162,14 @@ async def check_khqr_payment(req: KHQRCheckRequest, db: Session = Depends(get_db
     if order.payment_method != "khqr":
         raise HTTPException(409, "This order does not use KHQR.")
     await _reconcile_merchant_payment(db, order)
+
+    if order.status == "Pending" and order.payment_status != "Paid":
+        status_res = await check_payway_link_status(order.order_number)
+        if status_res and status_res.get("approved"):
+            settle_payment(db, order, f"ABA-{status_res.get('client_id')}")
+            db.commit()
+            db.refresh(order)
+            cancel_payment_session(order.order_number)
 
     if order.payment_status == "Paid" and order.status == 'Payment Review':
         return {'status': 'success', 'paid': False, 'action': 'review',
