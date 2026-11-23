@@ -1,4 +1,10 @@
 {
+  "name": "lumea",
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "build": "node scripts/build-vercel.mjs"
+  },
   "dependencies": {
     "playwright": "^1.64.1",
     "puppeteer-core": "^25.14.0",

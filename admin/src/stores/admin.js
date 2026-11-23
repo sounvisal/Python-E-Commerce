@@ -1,6 +1,6 @@
 import apiClient from '@/api/client'
 import { defineStore } from 'pinia'
-import { ref } from 'vue'
+import { computed, ref } from 'vue'
 
 export const useAdminStore = defineStore('admin', () => {
   // Stats

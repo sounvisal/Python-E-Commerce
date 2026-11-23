@@ -6,24 +6,15 @@ services:
     region: singapore
     autoDeployTrigger: "off"
     healthCheckPath: /api/live
-    buildCommand: >-
-      python -m pip install -r python-backend/requirements.txt &&
-      npm --prefix frontend ci --include=dev &&
-      npm --prefix frontend run build &&
-      npm --prefix admin ci --include=dev &&
-      npm --prefix admin run build -- --base /atelier/
+    buildCommand: python -m pip install -r python-backend/requirements.txt
     startCommand: python -m uvicorn --app-dir python-backend app.main:app --host 0.0.0.0 --port "$PORT" --workers 1 --no-access-log
     envVars:
       - key: PYTHON_VERSION
         value: 3.12.10
-      - key: NODE_VERSION
-        value: 22.19.0
       - key: PRODUCTION
         value: "true"
       - key: SERVE_BUILT_APPS
-        value: "true"
-      - key: VITE_HOSTED_DEPLOYMENT
-        value: "true"
+        value: "false"
       - key: CORS_ORIGINS
         value: "[]"
       - key: ENABLE_DEMO_PAYMENTS
