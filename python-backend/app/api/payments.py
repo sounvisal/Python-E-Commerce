@@ -108,10 +108,10 @@ async def generate_khqr(req: KHQRGenerateRequest, db: Session = Depends(get_db),
         qr_data = await _merchant_qr(db, order, gateway)
     elif payment_options(current_user)["demo"]:
         qr_data = {"qr_string": f"LUMEA-DEMO:{order.order_number}", "source": "demo", "demo": True}
-    elif os.getenv("ABA_PAYWAY_URL"):
+    elif os.getenv("ABA_PAYWAY_URL") or (not settings.PRODUCTION):
         qr_data = await get_bakong_khqr_data(amount=order.total, order_number=order.order_number,
                                            try_live=req.try_live is not False)
-        if not qr_data or not qr_data.get("qr_string"):
+        if (not qr_data or not qr_data.get("qr_string")) and os.getenv("BAKONG_ACCOUNT_ID"):
             instant_qr = build_instant_bakong_khqr(order.total, order.order_number)
             qr_data = {
                 "success": True,
