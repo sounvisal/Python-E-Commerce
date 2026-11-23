@@ -61,18 +61,28 @@ def login(login_in: UserLogin, db: Session = Depends(get_db)):
     if "@" in login_id:
         user = db.query(User).filter(User.email.ilike(login_id)).first()
     else:
+        # Check exact string match against phone or email
+        user = db.query(User).filter(
+            or_(
+                User.phone == login_id,
+                User.email.ilike(login_id)
+            )
+        ).first()
+
+        # If not matched directly, check by normalized phone digits
         digits = re.sub(r"\D", "", login_id)
-        if digits:
-            user = db.query(User).filter(
-                or_(
-                    User.phone == login_id,
-                    User.phone == digits,
-                    User.phone.like(f"%{digits[-8:]}%") if len(digits) >= 8 else False,
-                    User.email.ilike(login_id)
-                )
-            ).first()
-        else:
-            user = db.query(User).filter(User.email.ilike(login_id)).first()
+        if not user and digits:
+            candidates = db.query(User).filter(User.phone.isnot(None), User.phone != "").all()
+            target_suffix = digits[-8:] if len(digits) >= 8 else digits
+            for cand in candidates:
+                cand_digits = re.sub(r"\D", "", cand.phone or "")
+                if cand_digits and (
+                    cand_digits == digits
+                    or cand_digits.endswith(target_suffix)
+                    or digits.endswith(cand_digits[-8:] if len(cand_digits) >= 8 else cand_digits)
+                ):
+                    user = cand
+                    break
 
     if not user or not verify_password(login_in.password, user.hashed_password):
         raise HTTPException(
