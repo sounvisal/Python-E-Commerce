@@ -47,6 +47,7 @@ const ArticleDetailView = () => import('@/views/articles/ArticleDetailView.vue')
 const SustainabilityView = () => import('@/views/sustainability/SustainabilityView.vue')
 const ReturnRequestView = () => import('@/views/returns/ReturnRequestView.vue')
 const ReturnStatusView = () => import('@/views/returns/ReturnStatusView.vue')
+const ReviewsView = () => import('@/views/reviews/ReviewsView.vue')
 
 const routes = [
   {
@@ -316,6 +317,19 @@ const routes = [
     path: '/sustainability',
     name: 'sustainability',
     component: SustainabilityView,
+  },
+  {
+    path: '/reviews',
+    name: 'customer-reviews',
+    component: ReviewsView,
+  },
+  {
+    path: '/customer-reviews',
+    redirect: '/reviews',
+  },
+  {
+    path: '/community-reviews',
+    redirect: '/reviews',
   },
   {
     path: '/404',

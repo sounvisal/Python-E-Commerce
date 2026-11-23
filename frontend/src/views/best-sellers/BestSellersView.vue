@@ -202,7 +202,7 @@
             <div class="test-text-col">
               <h3 class="test-promo-title">Real People.<br />Real Results.</h3>
               <p class="test-promo-sub">See why these products are customer favorites.</p>
-              <router-link to="/articles" class="btn-read-reviews">Read Skincare Journal &rarr;</router-link>
+              <router-link to="/reviews" class="btn-read-reviews">Read Reviews &rarr;</router-link>
             </div>
             <div class="test-img-col">
               <img
@@ -283,6 +283,8 @@ const filteredProducts = computed(() => {
 .bestsellers-page {
   padding-bottom: 5rem;
   background-color: var(--bg-main, #FAF8F5);
+  max-width: 100%;
+  overflow-x: clip;
 }
 
 /* Breadcrumbs */
@@ -327,11 +329,11 @@ const filteredProducts = computed(() => {
   background: linear-gradient(135deg, #FAF4EF 0%, #F6EBE2 50%, #ECE0D5 100%);
   border: 1px solid rgba(196, 98, 60, 0.12);
   border-radius: 16px;
-  padding: 1.75rem 2.5rem;
+  padding: clamp(1.25rem, 2.5vw, 1.75rem) clamp(1.25rem, 3vw, 2.5rem);
   display: flex;
   align-items: stretch;
   justify-content: space-between;
-  gap: 2rem;
+  gap: clamp(1rem, 2vw, 2rem);
   box-shadow: 0 4px 20px rgba(78, 59, 45, 0.04);
   position: relative;
   overflow: hidden;
@@ -339,8 +341,9 @@ const filteredProducts = computed(() => {
 }
 
 .hero-left-content {
-  flex: 1;
+  flex: 1 1 520px;
   max-width: 620px;
+  min-width: 0;
   display: flex;
   flex-direction: column;
   justify-content: center;
@@ -349,7 +352,7 @@ const filteredProducts = computed(() => {
 
 .hero-title {
   font-family: 'Playfair Display', Georgia, serif;
-  font-size: 2.75rem;
+  font-size: clamp(2rem, 3.4vw, 2.75rem);
   font-weight: 700;
   color: #111C38;
   line-height: 1.12;
@@ -359,7 +362,7 @@ const filteredProducts = computed(() => {
 
 .hero-tagline {
   font-family: 'Playfair Display', Georgia, serif;
-  font-size: 1.2rem;
+  font-size: clamp(1.05rem, 1.6vw, 1.2rem);
   font-weight: 600;
   color: #1C1917;
   margin-bottom: 0.45rem;
@@ -411,8 +414,10 @@ const filteredProducts = computed(() => {
 }
 
 .hero-right-visual {
-  width: 480px;
-  flex-shrink: 0;
+  flex: 0 1 420px;
+  width: 100%;
+  max-width: 440px;
+  min-width: 240px;
   position: relative;
   display: flex;
   align-items: center;
@@ -528,8 +533,8 @@ const filteredProducts = computed(() => {
 
 .catalog-layout {
   display: grid;
-  grid-template-columns: 1fr 340px;
-  gap: 2.5rem;
+  grid-template-columns: 1fr 320px;
+  gap: 2rem;
   align-items: start;
 }
 
@@ -831,21 +836,106 @@ const filteredProducts = computed(() => {
   border: 2px solid #FFFFFF;
 }
 
-/* Responsive */
-@media (max-width: 992px) {
+/* Responsive Breakpoints */
+@media (max-width: 1280px) {
+  .bestsellers-hero-card {
+    padding: 1.5rem 1.75rem;
+    gap: 1.5rem;
+  }
+  .hero-right-visual {
+    max-width: 360px;
+    min-width: 220px;
+  }
+  .trust-badges-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.75rem;
+  }
+  .catalog-layout {
+    grid-template-columns: 1fr 280px;
+    gap: 1.5rem;
+  }
+  .bestsellers-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1rem;
+  }
+  .cat-mini-grid {
+    grid-template-columns: repeat(4, 1fr);
+    gap: 0.5rem;
+  }
+  .cat-mini-avatar {
+    width: 38px;
+    height: 38px;
+  }
+}
+
+@media (max-width: 1024px) {
   .bestsellers-hero-card {
     flex-direction: column;
-    padding: 2rem;
-    text-align: center;
+    padding: 1.75rem;
+    text-align: left;
+  }
+  .hero-left-content {
+    max-width: 100%;
+  }
+  .hero-right-visual {
+    max-width: 100%;
+    width: 100%;
+    height: 220px;
+  }
+  .hero-stage-wrap {
+    min-height: 200px;
+    height: 200px;
+  }
+  .catalog-layout {
+    grid-template-columns: 1fr;
+    gap: 2rem;
+  }
+  .catalog-sidebar {
+    position: static;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 1rem;
+  }
+}
+
+@media (max-width: 768px) {
+  .hero-title {
+    font-size: 1.85rem;
+  }
+  .hero-tagline {
+    font-size: 1.05rem;
   }
   .trust-badges-grid {
     grid-template-columns: 1fr;
   }
-  .catalog-layout {
-    grid-template-columns: 1fr;
+  .catalog-toolbar {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.75rem;
+  }
+  .toolbar-actions {
+    width: 100%;
+    justify-content: space-between;
+  }
+  .bestsellers-grid {
+    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+    gap: 0.85rem;
   }
   .catalog-sidebar {
-    position: static;
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 480px) {
+  .bestsellers-hero-card {
+    padding: 1.25rem 1rem;
+  }
+  .hero-callout-circle {
+    width: 85px;
+    height: 85px;
+  }
+  .callout-italic {
+    font-size: 0.8rem;
   }
 }
 </style>

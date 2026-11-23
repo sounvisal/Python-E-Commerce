@@ -58,6 +58,7 @@
             <li><router-link to="/about">Our Story</router-link></li>
             <li><router-link to="/authenticity">Authenticity</router-link></li>
             <li><router-link to="/sustainability">Sustainability</router-link></li>
+            <li><router-link to="/reviews">Customer Reviews</router-link></li>
             <li><router-link to="/articles">Journal</router-link></li>
           </ul>
         </div>
