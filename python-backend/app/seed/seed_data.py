@@ -636,6 +636,7 @@ def seed_database(db: Session):
 
     # 7. Seed Skincare Journal Articles
     if db.query(Article).count() == 0:
+        from app.seed.rich_articles import RICH_ARTICLES_CONTENT
         initial_articles = [
             Article(
                 slug="how-to-build-a-skincare-routine-for-your-skin-type",
@@ -713,7 +714,7 @@ A morning routine should prioritize protection (antioxidants + SPF), while the e
                 is_featured=False,
                 is_popular=True,
                 popular_rank=2,
-                content="A stripped-down 3-step routine often yields better results than a chaotic 10-step shelf. Start with gentle cleansing, lightweight hydration, and daily broad-spectrum SPF 50."
+                content=RICH_ARTICLES_CONTENT.get("how-to-build-a-simple-skincare-routine-that-actually-works", "")
             ),
             Article(
                 slug="niacinamide-what-it-does-and-why-your-skin-might-love-it",
@@ -732,7 +733,7 @@ A morning routine should prioritize protection (antioxidants + SPF), while the e
                 is_featured=False,
                 is_popular=True,
                 popular_rank=3,
-                content="From minimizing enlarged pores to calming redness and strengthening the lipid barrier, niacinamide is compatible with nearly all skin types."
+                content=RICH_ARTICLES_CONTENT.get("niacinamide-what-it-does-and-why-your-skin-might-love-it", "")
             ),
             Article(
                 slug="the-real-guide-to-sunscreen-spf-pa-and-how-to-apply-it",
@@ -751,7 +752,7 @@ A morning routine should prioritize protection (antioxidants + SPF), while the e
                 is_featured=False,
                 is_popular=True,
                 popular_rank=4,
-                content="Sunscreen is your number one anti-aging formulation. Learn how to prevent white casts and find non-greasy textures that wear beautifully under makeup."
+                content=RICH_ARTICLES_CONTENT.get("the-real-guide-to-sunscreen-spf-pa-and-how-to-apply-it", "")
             ),
             Article(
                 slug="how-to-layer-skincare-products-in-the-right-order",
@@ -769,7 +770,7 @@ A morning routine should prioritize protection (antioxidants + SPF), while the e
                 excerpt="Ensure high absorption and avoid product pilling by applying formulas from lowest to highest viscosity.",
                 is_featured=False,
                 is_popular=False,
-                content="Water-based formulas first, followed by active serums, richer emulsions, and finally occlusive barrier balms."
+                content=RICH_ARTICLES_CONTENT.get("how-to-layer-skincare-products-in-the-right-order", "")
             ),
             Article(
                 slug="how-sleep-affects-your-skin-and-what-you-can-do-about-it",
@@ -787,7 +788,7 @@ A morning routine should prioritize protection (antioxidants + SPF), while the e
                 excerpt="Circadian rhythms regulate cellular mitosis and collagen repair during deep sleep cycles.",
                 is_featured=False,
                 is_popular=False,
-                content="Lack of sleep elevates cortisol, inducing sebum hyper-production and impaired barrier moisture retention."
+                content=RICH_ARTICLES_CONTENT.get("how-sleep-affects-your-skin-and-what-you-can-do-about-it", "")
             ),
             Article(
                 slug="centella-asiatica-the-soothing-ingredient-for-sensitive-skin",
@@ -805,7 +806,7 @@ A morning routine should prioritize protection (antioxidants + SPF), while the e
                 excerpt="Also known as Cica or Tiger Grass, Centella Asiatica contains madecassoside, a powerhouse compound for compromised skin.",
                 is_featured=False,
                 is_popular=False,
-                content="Accelerate wound healing and soothe irritated, red skin with concentrated Centella Asiatica botanical extracts."
+                content=RICH_ARTICLES_CONTENT.get("centella-asiatica-the-soothing-ingredient-for-sensitive-skin", "")
             )
         ]
         try:

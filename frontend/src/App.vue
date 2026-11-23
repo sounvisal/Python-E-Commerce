@@ -6,6 +6,7 @@
     </main>
     <Footer />
     <CartDrawer />
+    <NotificationDrawer />
     <ToastContainer />
     <SystemModalContainer />
   </div>
@@ -18,6 +19,7 @@ onMounted(() => useProductStore().fetchProducts())
 import Navbar from '@/components/Navbar.vue'
 import Footer from '@/components/Footer.vue'
 import CartDrawer from '@/components/CartDrawer.vue'
+import NotificationDrawer from '@/components/NotificationDrawer.vue'
 import ToastContainer from '@/components/ToastContainer.vue'
 import SystemModalContainer from '@/components/SystemModalContainer.vue'
 </script>

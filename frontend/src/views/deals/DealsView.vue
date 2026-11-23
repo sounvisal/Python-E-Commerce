@@ -67,25 +67,17 @@
       </div>
     </section>
 
-    <!-- Flash Deals Pills & Live Countdown Bar matching Deals.png -->
+    <!-- Curated Deals Filter Bar matching Deals.png -->
     <section class="container flash-bar-container">
       <div class="flash-deals-bar">
-        <!-- Left Filter Pills -->
+        <!-- Filter Pills -->
         <div class="flash-pills-left">
           <button
             class="deal-tab-pill"
             :class="{ active: selectedFilter === 'all' }"
             @click="selectedFilter = 'all'"
           >
-            All Deals
-          </button>
-          <button
-            class="deal-tab-pill"
-            :class="{ active: selectedFilter === 'flash' }"
-            @click="selectedFilter = 'flash'"
-          >
-            <Flame :size="14" class="pill-icon" />
-            <span>Flash Deals</span>
+            All Special Offers
           </button>
           <button
             class="deal-tab-pill"
@@ -101,7 +93,7 @@
             @click="selectedFilter = 'bundles'"
           >
             <Gift :size="14" class="pill-icon" />
-            <span>Bundle Offers</span>
+            <span>Curated Sets</span>
           </button>
           <button
             class="deal-tab-pill"
@@ -109,29 +101,14 @@
             @click="selectedFilter = 'clearance'"
           >
             <Tag :size="14" class="pill-icon" />
-            <span>Clearance</span>
+            <span>Seasonal Archive</span>
           </button>
         </div>
 
-        <!-- Right Countdown Timer -->
-        <div class="flash-countdown-right">
-          <span class="flash-countdown-label">Flash Deals End In</span>
-          <div class="countdown-digits-group">
-            <div class="digit-unit">
-              <span class="digit-val">{{ padZero(countdown.hours) }}</span>
-              <span class="digit-sub">Hours</span>
-            </div>
-            <span class="digit-colon">:</span>
-            <div class="digit-unit">
-              <span class="digit-val">{{ padZero(countdown.minutes) }}</span>
-              <span class="digit-sub">Minutes</span>
-            </div>
-            <span class="digit-colon">:</span>
-            <div class="digit-unit">
-              <span class="digit-val">{{ padZero(countdown.seconds) }}</span>
-              <span class="digit-sub">Seconds</span>
-            </div>
-          </div>
+        <!-- Right Atelier Privilege Caption -->
+        <div class="atelier-deals-status">
+          <Sparkles :size="15" class="status-sparkle" />
+          <span>Complimentary Delivery &amp; Botanical Samples on Orders Over $45</span>
         </div>
       </div>
     </section>
@@ -311,39 +288,6 @@ const wishlistStore = useWishlistStore()
 const notificationStore = useNotificationStore()
 
 const selectedFilter = ref('all')
-
-// Real-time countdown timer matching format: 12 : 34 : 56
-const countdown = ref({
-  hours: 12,
-  minutes: 34,
-  seconds: 56
-})
-
-let timer = null
-
-onMounted(() => {
-  timer = setInterval(() => {
-    if (countdown.value.seconds > 0) {
-      countdown.value.seconds--
-    } else {
-      countdown.value.seconds = 59
-      if (countdown.value.minutes > 0) {
-        countdown.value.minutes--
-      } else {
-        countdown.value.minutes = 59
-        if (countdown.value.hours > 0) {
-          countdown.value.hours--
-        } else {
-          countdown.value.hours = 24
-        }
-      }
-    }
-  }, 1000)
-})
-
-onUnmounted(() => {
-  if (timer) clearInterval(timer)
-})
 
 function padZero(num) {
   return String(num).padStart(2, '0')

@@ -202,7 +202,7 @@
             <div class="test-text-col">
               <h3 class="test-promo-title">Real People.<br />Real Results.</h3>
               <p class="test-promo-sub">See why these products are customer favorites.</p>
-              <router-link to="/journal" class="btn-read-reviews">Read Reviews &rarr;</router-link>
+              <router-link to="/articles" class="btn-read-reviews">Read Skincare Journal &rarr;</router-link>
             </div>
             <div class="test-img-col">
               <img

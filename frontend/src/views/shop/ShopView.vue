@@ -322,6 +322,44 @@
 
         <!-- Main Product Listing Content -->
         <main class="shop-main">
+          <!-- Atelier In-Shop Search Banner -->
+          <div class="shop-catalog-search-banner">
+            <div class="shop-search-input-wrap">
+              <Search :size="18" class="shop-search-icon" />
+              <input
+                type="text"
+                v-model="catalogSearch"
+                placeholder="Search products by title, brand, active ingredients (e.g. Niacinamide, Retinol, SPF)..."
+                class="shop-search-input"
+                @input="onSearchInput"
+              />
+              <button
+                v-if="catalogSearch"
+                type="button"
+                class="shop-search-clear-btn"
+                @click="clearCatalogSearch"
+                aria-label="Clear Search"
+              >
+                <X :size="15" />
+              </button>
+            </div>
+
+            <!-- Popular Quick Search Tags -->
+            <div class="shop-quick-tags-row">
+              <span class="quick-tags-label">Popular:</span>
+              <button
+                v-for="tag in trendingTags"
+                :key="tag"
+                type="button"
+                class="quick-tag-chip"
+                :class="{ active: catalogSearch.toLowerCase() === tag.toLowerCase() }"
+                @click="setTrendingSearch(tag)"
+              >
+                {{ tag }}
+              </button>
+            </div>
+          </div>
+
           <!-- Top Results Bar -->
           <div class="catalog-top-bar">
             <div class="products-count-label">
@@ -399,9 +437,12 @@
           <div v-else-if="displayProducts.length === 0" class="no-results-state">
             <div class="no-results-card">
               <h3>No products found</h3>
-              <p>Try adjusting your search criteria or clearing applied filters.</p>
+              <p v-if="catalogSearch">
+                We couldn't find any products matching "<strong>{{ catalogSearch }}</strong>".
+              </p>
+              <p v-else>Try adjusting your search criteria or clearing applied filters.</p>
               <button class="btn btn-pill-dark" @click="clearAllFilters">
-                Reset All Filters
+                Reset All Filters &amp; Search
               </button>
             </div>
           </div>
@@ -479,7 +520,7 @@
 
 <script setup>
 import { ref, computed, reactive, onMounted, watch } from 'vue'
-import { useRoute } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { useProductStore } from '@/stores/products'
 import { useNotificationStore } from '@/stores/notification'
 import ProductCard from '@/components/ProductCard.vue'
@@ -502,6 +543,7 @@ import {
 } from 'lucide-vue-next'
 
 const route = useRoute()
+const router = useRouter()
 const productStore = useProductStore()
 const notificationStore = useNotificationStore()
 
@@ -509,6 +551,8 @@ const notificationStore = useNotificationStore()
 const brandsRowRef = ref(null)
 const viewMode = ref('grid')
 const mobileFiltersOpen = ref(false)
+const catalogSearch = ref(route.query.q || '')
+const trendingTags = ['Niacinamide', 'Sunscreen', 'Retinol', 'Hyaluronic', 'SK-II', 'CeraVe', 'Ceramides']
 const brandSearch = ref('')
 const showAllBrands = ref(false)
 const selectedCategories = ref([])
@@ -522,6 +566,41 @@ const sortBy = ref('popular')
 const currentPage = ref(1)
 const itemsPerPage = ref(12)
 const subscriberEmail = ref('')
+
+// Watch route query ?q= from outside navigations (e.g. mobile search or links)
+watch(
+  () => route.query.q,
+  (newQ) => {
+    if (newQ !== undefined && newQ !== catalogSearch.value) {
+      catalogSearch.value = newQ || ''
+      currentPage.value = 1
+    }
+  }
+)
+
+const onSearchInput = () => {
+  currentPage.value = 1
+  router.replace({
+    query: {
+      ...route.query,
+      q: catalogSearch.value.trim() || undefined,
+    },
+  })
+}
+
+const clearCatalogSearch = () => {
+  catalogSearch.value = ''
+  onSearchInput()
+}
+
+const setTrendingSearch = (tag) => {
+  if (catalogSearch.value.toLowerCase() === tag.toLowerCase()) {
+    catalogSearch.value = ''
+  } else {
+    catalogSearch.value = tag
+  }
+  onSearchInput()
+}
 
 // Accordion open/close state
 const accordions = reactive({
@@ -618,6 +697,7 @@ const ratingOptions = [
 
 const hasActiveFilters = computed(() => {
   return (
+    catalogSearch.value.trim().length > 0 ||
     selectedCategories.value.length > 0 ||
     selectedBrands.value.length > 0 ||
     selectedSkinConcerns.value.length > 0 ||
@@ -630,6 +710,7 @@ const hasActiveFilters = computed(() => {
 
 const activeFiltersCount = computed(() => {
   return (
+    (catalogSearch.value.trim().length > 0 ? 1 : 0) +
     selectedCategories.value.length +
     selectedBrands.value.length +
     selectedSkinConcerns.value.length +
@@ -640,6 +721,7 @@ const activeFiltersCount = computed(() => {
 })
 
 const clearAllFilters = () => {
+  catalogSearch.value = ''
   selectedCategories.value = []
   selectedBrands.value = []
   selectedSkinConcerns.value = []
@@ -649,6 +731,7 @@ const clearAllFilters = () => {
   priceMax.value = 200
   brandSearch.value = ''
   currentPage.value = 1
+  router.replace({ query: {} })
 }
 
 const toggleBrandFilter = (brandName) => {
@@ -674,6 +757,19 @@ const onFilterChange = () => {
 // Compute filtered catalog products
 const displayProducts = computed(() => {
   let list = [...productStore.allCatalogProducts]
+
+  // In-shop search filter
+  if (catalogSearch.value.trim()) {
+    const q = catalogSearch.value.toLowerCase().trim()
+    list = list.filter((p) =>
+      p.name?.toLowerCase().includes(q) ||
+      p.brand?.toLowerCase().includes(q) ||
+      p.category?.toLowerCase().includes(q) ||
+      p.description?.toLowerCase().includes(q) ||
+      p.skin_type?.some((st) => st.toLowerCase().includes(q)) ||
+      p.skin_concern?.some((sc) => sc.toLowerCase().includes(q))
+    )
+  }
 
   // Category filter
   if (selectedCategories.value.length > 0) {
@@ -1310,6 +1406,111 @@ watch(
 .shop-main {
   display: flex;
   flex-direction: column;
+}
+
+/* Atelier In-Shop Search Banner */
+.shop-catalog-search-banner {
+  background: #FFFFFF;
+  border: 1px solid #EAE3DC;
+  border-radius: 14px;
+  padding: 1.15rem 1.35rem;
+  margin-bottom: 1.35rem;
+  box-shadow: 0 2px 10px rgba(28, 25, 23, 0.03);
+}
+
+.shop-search-input-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.shop-search-icon {
+  position: absolute;
+  left: 1rem;
+  color: #7A2E22;
+  pointer-events: none;
+}
+
+.shop-search-input {
+  width: 100%;
+  padding: 0.78rem 2.8rem 0.78rem 2.85rem;
+  font-size: 0.92rem;
+  background: #FAF7F2;
+  border: 1px solid #E5DCD4;
+  border-radius: 9999px;
+  color: #1C1917;
+  outline: none;
+  transition: all 0.2s ease;
+}
+
+.shop-search-input:focus {
+  background: #FFFFFF;
+  border-color: #7A2E22;
+  box-shadow: 0 0 0 3px rgba(122, 46, 34, 0.08);
+}
+
+.shop-search-clear-btn {
+  position: absolute;
+  right: 0.85rem;
+  background: #E8DFD8;
+  border: none;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #57534E;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.shop-search-clear-btn:hover {
+  background: #7A2E22;
+  color: #FFFFFF;
+}
+
+.shop-quick-tags-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+  margin-top: 0.85rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid #F5EFEB;
+}
+
+.quick-tags-label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #8C827A;
+  margin-right: 0.25rem;
+}
+
+.quick-tag-chip {
+  background: #FAF7F2;
+  border: 1px solid #E8DFD8;
+  border-radius: 9999px;
+  padding: 0.25rem 0.75rem;
+  font-size: 0.78rem;
+  font-weight: 500;
+  color: #57534E;
+  cursor: pointer;
+  transition: all 0.18s ease;
+}
+
+.quick-tag-chip:hover {
+  border-color: #7A2E22;
+  color: #7A2E22;
+  background: #FFF;
+}
+
+.quick-tag-chip.active {
+  background: #7A2E22;
+  border-color: #7A2E22;
+  color: #FFFFFF;
 }
 
 .catalog-top-bar {

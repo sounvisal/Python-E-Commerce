@@ -84,16 +84,6 @@
 
         <button
           class="deal-filter-pill"
-          :class="{ active: currentFilter === 'flash' }"
-          @click="setFilter('flash')"
-        >
-          <Flame :size="14" class="pill-icon" />
-          <span>Flash Deals</span>
-          <span class="pill-count">({{ flashCount }})</span>
-        </button>
-
-        <button
-          class="deal-filter-pill"
           :class="{ active: currentFilter === 'brand' }"
           @click="setFilter('brand')"
         >
@@ -225,10 +215,10 @@
                 <span class="spotlight-now">$99.00</span>
                 <span class="spotlight-was">$142.00</span>
               </div>
-              <!-- Countdown Mini -->
+              <!-- Spotlight Badge -->
               <div class="mini-countdown">
-                <Clock :size="13" />
-                <span>Ends in <strong>12h 34m 11s</strong></span>
+                <Sparkles :size="13" />
+                <span>Atelier Highlight · Limited Curation</span>
               </div>
               <router-link to="/product/sk-ii-facial-treatment-essence" class="spotlight-cta-btn">
                 Claim Deal &rarr;
@@ -303,7 +293,6 @@ const allDealsProducts = computed(() => productStore.allCatalogProducts
   .filter(p => p.compare_at_price > p.price).map(p => ({ ...p, deal_type: p.badge_type || 'brand' })))
 
 // Counts for pill badges
-const flashCount = computed(() => allDealsProducts.value.filter(p => p.deal_type === 'flash').length)
 const brandCount = computed(() => allDealsProducts.value.filter(p => p.deal_type === 'brand').length)
 const bundleCount = computed(() => allDealsProducts.value.filter(p => p.deal_type === 'bundles').length)
 const clearanceCount = computed(() => allDealsProducts.value.filter(p => p.deal_type === 'clearance').length)

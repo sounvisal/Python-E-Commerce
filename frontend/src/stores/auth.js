@@ -64,9 +64,9 @@ export const useAuthStore = defineStore('auth', {
         axios.defaults.headers.common.Authorization = `Bearer ${this.token}`
       } else delete axios.defaults.headers.common.Authorization
     },
-    setSession(data, remember = true) {
+    setSession(data, remember = true, clearCart = false) {
       this.user = mapUser(data.user); this.token = data.access_token; this.remember = remember
-      this.isAuthenticated = true; this.validated = true; this.persist(); clearPrivateState()
+      this.isAuthenticated = true; this.validated = true; this.persist(); clearPrivateState(clearCart)
     },
     async ensureSession() {
       if (!this.token) return false
@@ -83,7 +83,7 @@ export const useAuthStore = defineStore('auth', {
       try {
         const { data } = await axios.post('/api/auth/login', { email, password })
         if (!data.data?.access_token) throw new Error('Missing session')
-        this.setSession(data.data, remember)
+        this.setSession(data.data, remember, false)
         useNotificationStore().addToast(`Welcome back, ${this.user.firstName}!`, 'success')
         return true
       } catch (error) {
@@ -96,7 +96,7 @@ export const useAuthStore = defineStore('auth', {
         const { data } = await axios.post('/api/auth/register', { name, email, phone, password })
         if (!data.data?.access_token) throw new Error('Missing session')
         clearPrivateState(true)
-        this.setSession(data.data)
+        this.setSession(data.data, true, true)
         useNotificationStore().addToast(`Welcome to Luméa, ${this.user.firstName}!`, 'success')
         return true
       } catch (error) {

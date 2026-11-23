@@ -238,7 +238,7 @@
           <div class="editorial-card innovation-card">
             <h3 class="ed-title">Skincare Innovation<br />Never Stops</h3>
             <p class="ed-sub">New bio-compatible solutions for every skincare journey.</p>
-            <router-link to="/journal" class="btn-ed-terracotta">Read Our Journal &rarr;</router-link>
+            <router-link to="/articles" class="btn-ed-terracotta">Read Our Journal &rarr;</router-link>
           </div>
 
           <!-- Card 4: Recently Launched Brands -->

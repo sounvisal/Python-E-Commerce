@@ -306,88 +306,51 @@
           <div class="editorial-card routine-card">
             <div class="editorial-card-header">
               <h3 class="editorial-card-title">Recommended Routine<br />For {{ currentConcern.name }}</h3>
-              <router-link to="/shop" class="header-link-red">
+              <router-link :to="'/routine?concern=' + activeConcernId" class="header-link-red">
                 View Full Routine &rarr;
               </router-link>
             </div>
 
             <!-- 4 Step Routine Packshots with Arrow Dividers -->
             <div class="routine-flow-row">
-              <div class="routine-step-col">
-                <div class="step-bottle-wrap">
-                  <img src="/images/prod-laroche-effaclar.jpg" alt="Cleanser" class="step-bottle-img" />
-                </div>
-                <span class="step-label">Cleanser</span>
-              </div>
-              <ChevronRight :size="14" class="step-arrow" />
-
-              <div class="routine-step-col">
-                <div class="step-bottle-wrap">
-                  <img src="/images/prod-ordinary.jpg" alt="Treatment" class="step-bottle-img" />
-                </div>
-                <span class="step-label">Treatment</span>
-              </div>
-              <ChevronRight :size="14" class="step-arrow" />
-
-              <div class="routine-step-col">
-                <div class="step-bottle-wrap">
-                  <img src="/images/prod-laneige.jpg" alt="Moisturizer" class="step-bottle-img" />
-                </div>
-                <span class="step-label">Moisturizer</span>
-              </div>
-              <ChevronRight :size="14" class="step-arrow" />
-
-              <div class="routine-step-col">
-                <div class="step-bottle-wrap">
-                  <img src="/images/prod-cerave-cleanser.jpg" alt="Sunscreen" class="step-bottle-img" />
-                </div>
-                <span class="step-label">Sunscreen</span>
-              </div>
+              <template v-for="(step, sIdx) in currentConcernData.routineSteps" :key="step.label">
+                <router-link :to="step.link" class="routine-step-col" :title="step.productName">
+                  <div class="step-bottle-wrap">
+                    <img :src="step.image" :alt="step.label" class="step-bottle-img" />
+                  </div>
+                  <span class="step-label">{{ step.label }}</span>
+                </router-link>
+                <ChevronRight v-if="sIdx < currentConcernData.routineSteps.length - 1" :size="14" class="step-arrow" />
+              </template>
             </div>
           </div>
 
-          <!-- Card 2: Key Ingredients for Clearer Skin -->
+          <!-- Card 2: Key Ingredients for [Concern Focus] -->
           <div class="editorial-card ingredients-card">
             <div class="editorial-card-header">
-              <h3 class="editorial-card-title">Key Ingredients for<br />Clearer Skin</h3>
-              <router-link to="/shop" class="header-link-red">
+              <h3 class="editorial-card-title">Key Ingredients for<br />{{ currentConcernData.ingredientTitle }}</h3>
+              <router-link :to="currentConcernData.ingredientGuideLink" class="header-link-red">
                 Learn More &rarr;
               </router-link>
             </div>
 
             <!-- 4 Circular Ingredient Swatches matching format -->
             <div class="ingredients-swatch-grid">
-              <div class="ingredient-swatch-col">
+              <button
+                v-for="ing in currentConcernData.ingredients"
+                :key="ing.name"
+                type="button"
+                class="ingredient-swatch-col ingredient-clickable-btn"
+                :class="{ active: selectedIngredients.includes(ing.name) }"
+                @click="toggleIngredient(ing.name)"
+                :title="'Filter by ' + ing.name"
+              >
                 <div class="swatch-circle-wrap">
-                  <img src="/images/search-droplet-macro.jpg" alt="Salicylic Acid" class="swatch-circle-img" />
+                  <img :src="ing.image" :alt="ing.name" class="swatch-circle-img" />
                 </div>
-                <span class="swatch-name">Salicylic Acid</span>
-                <span class="swatch-desc">Exfoliates pores</span>
-              </div>
-
-              <div class="ingredient-swatch-col">
-                <div class="swatch-circle-wrap">
-                  <img src="/images/search-gel-swatch.jpg" alt="Niacinamide" class="swatch-circle-img" />
-                </div>
-                <span class="swatch-name">Niacinamide</span>
-                <span class="swatch-desc">Controls oil</span>
-              </div>
-
-              <div class="ingredient-swatch-col">
-                <div class="swatch-circle-wrap">
-                  <img src="/images/prod-innisfree-cleanser.jpg" alt="Tea Tree" class="swatch-circle-img" />
-                </div>
-                <span class="swatch-name">Tea Tree</span>
-                <span class="swatch-desc">Soothes skin</span>
-              </div>
-
-              <div class="ingredient-swatch-col">
-                <div class="swatch-circle-wrap">
-                  <img src="/images/cat-masks.jpg" alt="Centella Asiatica" class="swatch-circle-img" />
-                </div>
-                <span class="swatch-name">Centella Asiatica</span>
-                <span class="swatch-desc">Calms irritation</span>
-              </div>
+                <span class="swatch-name">{{ ing.name }}</span>
+                <span class="swatch-desc">{{ ing.desc }}</span>
+              </button>
             </div>
           </div>
 
@@ -395,36 +358,26 @@
           <div class="editorial-card articles-card">
             <div class="editorial-card-header">
               <h3 class="editorial-card-title">Expert Tips</h3>
-              <router-link to="/shop" class="header-link-red">
+              <router-link to="/articles" class="header-link-red">
                 View All Tips &rarr;
               </router-link>
             </div>
 
             <!-- 3 Editorial Articles with Thumbnails & Read Times -->
             <div class="expert-articles-list">
-              <div class="article-item-row">
-                <img src="/images/pdp-model-radiant.jpg" alt="Article 1" class="article-thumb" />
+              <router-link
+                v-for="tip in currentConcernData.expertTips"
+                :key="tip.slug"
+                :to="'/articles/' + tip.slug"
+                class="article-item-row article-link-card"
+                :title="tip.title"
+              >
+                <img :src="tip.image" :alt="tip.title" class="article-thumb" />
                 <div class="article-info">
-                  <h4 class="article-title">How to Build a Skincare Routine for Acne-Prone Skin</h4>
-                  <span class="article-time">5 min read</span>
+                  <h4 class="article-title">{{ tip.title }}</h4>
+                  <span class="article-time">{{ tip.readTime }}</span>
                 </div>
-              </div>
-
-              <div class="article-item-row">
-                <img src="/images/quiz-model.jpg" alt="Article 2" class="article-thumb" />
-                <div class="article-info">
-                  <h4 class="article-title">Common Causes of Acne (and How to Prevent Them)</h4>
-                  <span class="article-time">4 min read</span>
-                </div>
-              </div>
-
-              <div class="article-item-row">
-                <img src="/images/banner-skin-quiz.jpg" alt="Article 3" class="article-thumb" />
-                <div class="article-info">
-                  <h4 class="article-title">The Best Ingredients for Blemish-Prone Skin</h4>
-                  <span class="article-time">6 min read</span>
-                </div>
-              </div>
+              </router-link>
             </div>
           </div>
         </aside>
@@ -566,6 +519,191 @@ const currentConcern = computed(() => {
   return concernsList.find(c => c.id === activeConcernId.value) || concernsList[0]
 })
 
+// Dynamic Concern Content for Right Sidebar Cards (Routine, Ingredients, Expert Tips)
+const concernDetailsMap = {
+  acne: {
+    routineSteps: [
+      { label: 'Cleanser', productName: 'Effaclar Purifying Foaming Gel', image: '/images/prod-laroche-effaclar.jpg', link: '/product/la-roche-posay-effaclar-purifying-foaming-gel' },
+      { label: 'Treatment', productName: 'BHA Blackhead Power Liquid', image: '/images/prod-cosrx-snail.jpg', link: '/product/cosrx-bha-blackhead-power-liquid' },
+      { label: 'Moisturizer', productName: 'Niacinamide 10% + Zinc 1%', image: '/images/prod-ordinary.jpg', link: '/product/the-ordinary-niacinamide-10-zinc-1' },
+      { label: 'Sunscreen', productName: 'Relief Sun: Rice + Probiotics SPF50+', image: '/images/prod-boj.jpg', link: '/product/beauty-of-joseon-relief-sun' }
+    ],
+    ingredientTitle: 'Clearer Skin',
+    ingredientGuideLink: '/articles/the-science-of-skin-barrier-repair-ceramides-lipids',
+    ingredients: [
+      { name: 'Salicylic Acid', desc: 'Unclogs deep pores & dissolves sebum', image: '/images/search-droplet-macro.jpg' },
+      { name: 'Niacinamide', desc: 'Fades post-acne marks & calms redness', image: '/images/search-hero-niacinamide.jpg' },
+      { name: 'Tea Tree', desc: 'Botanical antimicrobial purification', image: '/images/texture-oily.jpg' },
+      { name: 'Zinc PCA', desc: 'Regulates oil synthesis & inflammation', image: '/images/search-gel-swatch.jpg' }
+    ],
+    expertTips: [
+      { title: 'The Science of Skin Barrier Repair: Ceramides & Lipids', readTime: '5 min read', image: '/images/article-thumb-centella.jpg', slug: 'the-science-of-skin-barrier-repair-ceramides-lipids' },
+      { title: 'Double Cleansing 101: Why Oil Dissolves Sebum', readTime: '4 min read', image: '/images/article-thumb-niacinamide.jpg', slug: 'double-cleansing-101-why-oil-dissolves-sebum' },
+      { title: 'Why Broad Spectrum Sunscreen Is Non-Negotiable', readTime: '5 min read', image: '/images/article-thumb-sunscreen.jpg', slug: 'why-broad-spectrum-sunscreen-is-non-negotiable-year-round' }
+    ]
+  },
+  'dark-spots': {
+    routineSteps: [
+      { label: 'Cleanser', productName: 'Hydrating Facial Cleanser', image: '/images/prod-cerave-cleanser.jpg', link: '/product/cerave-hydrating-facial-cleanser' },
+      { label: 'Treatment', productName: 'Facial Treatment Essence Pitera', image: '/images/prod-sk2.jpg', link: '/product/sk-ii-facial-treatment-essence' },
+      { label: 'Moisturizer', productName: 'Niacinamide 10% + Zinc 1%', image: '/images/prod-ordinary.jpg', link: '/product/the-ordinary-niacinamide-10-zinc-1' },
+      { label: 'Sunscreen', productName: 'Relief Sun: Rice + Probiotics SPF50+', image: '/images/prod-boj.jpg', link: '/product/beauty-of-joseon-relief-sun' }
+    ],
+    ingredientTitle: 'Fading Dark Spots & Tone',
+    ingredientGuideLink: '/articles/vitamin-c-vs-niacinamide-can-you-layer-them',
+    ingredients: [
+      { name: 'Vitamin C', desc: 'Potent antioxidant brightening tone', image: '/images/search-droplet-macro.jpg' },
+      { name: 'Niacinamide', desc: 'Inhibits melanosome transfer', image: '/images/search-hero-niacinamide.jpg' },
+      { name: 'Tranexamic Acid', desc: 'Fades post-inflammatory pigmentation', image: '/images/search-gel-swatch.jpg' },
+      { name: 'Alpha Arbutin', desc: 'Targeted enzyme inhibitor for spots', image: '/images/texture-combination.jpg' }
+    ],
+    expertTips: [
+      { title: 'Vitamin C vs Niacinamide: Can You Layer Them?', readTime: '4 min read', image: '/images/article-thumb-layer.jpg', slug: 'vitamin-c-vs-niacinamide-can-you-layer-them' },
+      { title: 'Why Broad Spectrum Sunscreen Is Non-Negotiable', readTime: '5 min read', image: '/images/article-thumb-sunscreen.jpg', slug: 'why-broad-spectrum-sunscreen-is-non-negotiable-year-round' },
+      { title: 'The Ultimate Morning Skincare Routine in 4 Steps', readTime: '5 min read', image: '/images/article-thumb-routine.jpg', slug: 'the-ultimate-morning-skincare-routine-in-4-steps' }
+    ]
+  },
+  aging: {
+    routineSteps: [
+      { label: 'Cleanser', productName: 'Gentle Foaming Cleanser', image: '/images/prod-sulwhasoo.jpg', link: '/product/sulwhasoo-gentle-cleansing-foam' },
+      { label: 'Treatment', productName: 'Advanced Night Repair Synchronized', image: '/images/prod-anr.jpg', link: '/product/estee-lauder-advanced-night-repair' },
+      { label: 'Moisturizer', productName: 'Facial Treatment Essence Pitera', image: '/images/prod-sk2.jpg', link: '/product/sk-ii-facial-treatment-essence' },
+      { label: 'Sunscreen', productName: 'Relief Sun: Rice + Probiotics SPF50+', image: '/images/prod-boj.jpg', link: '/product/beauty-of-joseon-relief-sun' }
+    ],
+    ingredientTitle: 'Collagen & Plumping',
+    ingredientGuideLink: '/articles/retinol-beginners-guide-how-to-start-without-purging',
+    ingredients: [
+      { name: 'Retinol', desc: 'Accelerates cellular renewal & elasticity', image: '/images/texture-dry.jpg' },
+      { name: 'Peptides', desc: 'Signals natural collagen synthesis', image: '/images/search-droplet-macro.jpg' },
+      { name: 'Hyaluronic Acid', desc: 'Multi-depth molecular plumping', image: '/images/search-gel-swatch.jpg' },
+      { name: 'Pitera Ferment', desc: 'Bio-fermented peptide & amino matrix', image: '/images/texture-normal.jpg' }
+    ],
+    expertTips: [
+      { title: 'Retinol Beginner’s Guide: How to Start Without Purging', readTime: '7 min read', image: '/images/article-thumb-sleep.jpg', slug: 'retinol-beginners-guide-how-to-start-without-purging' },
+      { title: 'Evening Skincare: Optimizing Cellular Regeneration', readTime: '6 min read', image: '/images/article-thumb-routine.jpg', slug: 'the-ultimate-morning-skincare-routine-in-4-steps' },
+      { title: 'The Science of Skin Barrier Repair: Ceramides & Lipids', readTime: '5 min read', image: '/images/article-thumb-centella.jpg', slug: 'the-science-of-skin-barrier-repair-ceramides-lipids' }
+    ]
+  },
+  dryness: {
+    routineSteps: [
+      { label: 'Cleanser', productName: 'Hydrating Facial Cleanser', image: '/images/prod-cerave-cleanser.jpg', link: '/product/cerave-hydrating-facial-cleanser' },
+      { label: 'Treatment', productName: 'Water Bank Blue Hyaluronic Serum', image: '/images/prod-laneige.jpg', link: '/product/laneige-water-bank-serum' },
+      { label: 'Moisturizer', productName: 'Ultra Facial Cream Squalane', image: '/images/prod-cream.jpg', link: '/product/kiehls-ultra-facial-cream' },
+      { label: 'Sunscreen', productName: 'Relief Sun: Rice + Probiotics SPF50+', image: '/images/prod-boj.jpg', link: '/product/beauty-of-joseon-relief-sun' }
+    ],
+    ingredientTitle: 'Deep Barrier Hydration',
+    ingredientGuideLink: '/articles/the-science-of-skin-barrier-repair-ceramides-lipids',
+    ingredients: [
+      { name: 'Ceramides', desc: 'Rebuilds natural intercellular lipids', image: '/images/texture-dry.jpg' },
+      { name: 'Hyaluronic Acid', desc: 'Binds up to 1000x its weight in water', image: '/images/search-droplet-macro.jpg' },
+      { name: 'Squalane', desc: 'Biomimetic weightless lipid shield', image: '/images/search-gel-swatch.jpg' },
+      { name: 'Panthenol B5', desc: 'Relieves tightness and dry flaking', image: '/images/texture-sensitive.jpg' }
+    ],
+    expertTips: [
+      { title: 'The Science of Skin Barrier Repair: Ceramides & Lipids', readTime: '5 min read', image: '/images/article-thumb-centella.jpg', slug: 'the-science-of-skin-barrier-repair-ceramides-lipids' },
+      { title: 'Double Cleansing 101: Why Oil Dissolves Sebum', readTime: '4 min read', image: '/images/article-thumb-niacinamide.jpg', slug: 'double-cleansing-101-why-oil-dissolves-sebum' },
+      { title: 'The Ultimate Morning Skincare Routine in 4 Steps', readTime: '5 min read', image: '/images/article-thumb-routine.jpg', slug: 'the-ultimate-morning-skincare-routine-in-4-steps' }
+    ]
+  },
+  oiliness: {
+    routineSteps: [
+      { label: 'Cleanser', productName: 'Effaclar Purifying Foaming Gel', image: '/images/prod-laroche-effaclar.jpg', link: '/product/la-roche-posay-effaclar-purifying-foaming-gel' },
+      { label: 'Treatment', productName: 'Niacinamide 10% + Zinc 1%', image: '/images/prod-ordinary.jpg', link: '/product/the-ordinary-niacinamide-10-zinc-1' },
+      { label: 'Moisturizer', productName: 'Sébium Mat Control Mattifying', image: '/images/prod-bioderma-micellar.jpg', link: '/product/bioderma-sebium-h2o' },
+      { label: 'Sunscreen', productName: 'Relief Sun: Rice + Probiotics SPF50+', image: '/images/prod-boj.jpg', link: '/product/beauty-of-joseon-relief-sun' }
+    ],
+    ingredientTitle: 'Sebum Control & Matte Pores',
+    ingredientGuideLink: '/articles/double-cleansing-101-why-oil-dissolves-sebum',
+    ingredients: [
+      { name: 'Niacinamide', desc: 'Normalizes hyperactive oil glands', image: '/images/search-hero-niacinamide.jpg' },
+      { name: 'Zinc PCA', desc: 'Direct anti-shine sebum regulator', image: '/images/search-gel-swatch.jpg' },
+      { name: 'Green Tea', desc: 'Astringent polyphenol pore refiner', image: '/images/texture-oily.jpg' },
+      { name: 'BHA Salicylic', desc: 'Oil-soluble pore clearing acid', image: '/images/search-droplet-macro.jpg' }
+    ],
+    expertTips: [
+      { title: 'Double Cleansing 101: Why Oil Dissolves Sebum', readTime: '4 min read', image: '/images/article-thumb-niacinamide.jpg', slug: 'double-cleansing-101-why-oil-dissolves-sebum' },
+      { title: 'Why Broad Spectrum Sunscreen Is Non-Negotiable', readTime: '5 min read', image: '/images/article-thumb-sunscreen.jpg', slug: 'why-broad-spectrum-sunscreen-is-non-negotiable-year-round' },
+      { title: 'The Science of Skin Barrier Repair: Ceramides & Lipids', readTime: '5 min read', image: '/images/article-thumb-centella.jpg', slug: 'the-science-of-skin-barrier-repair-ceramides-lipids' }
+    ]
+  },
+  sensitivity: {
+    routineSteps: [
+      { label: 'Cleanser', productName: 'Hydrating Facial Cleanser', image: '/images/prod-cerave-cleanser.jpg', link: '/product/cerave-hydrating-facial-cleanser' },
+      { label: 'Treatment', productName: 'Heartleaf 77% Soothing Toner', image: '/images/prod-anua-toner.jpg', link: '/product/anua-heartleaf-77-soothing-toner' },
+      { label: 'Moisturizer', productName: 'Tiger Grass Cicapair Cream', image: '/images/prod-cerave.jpg', link: '/product/cerave-foaming-facial-cleanser' },
+      { label: 'Sunscreen', productName: 'Relief Sun: Rice + Probiotics SPF50+', image: '/images/prod-boj.jpg', link: '/product/beauty-of-joseon-relief-sun' }
+    ],
+    ingredientTitle: 'Barrier Repair & Calming',
+    ingredientGuideLink: '/articles/the-science-of-skin-barrier-repair-ceramides-lipids',
+    ingredients: [
+      { name: 'Centella Asiatica', desc: 'Fast soothing relief for redness', image: '/images/texture-sensitive.jpg' },
+      { name: 'Heartleaf', desc: 'Rich in quercitrin to tame flares', image: '/images/search-droplet-macro.jpg' },
+      { name: 'Madecassoside', desc: 'Stimulates barrier repair enzymes', image: '/images/search-gel-swatch.jpg' },
+      { name: 'Allantoin', desc: 'Non-irritating epidermal protector', image: '/images/texture-normal.jpg' }
+    ],
+    expertTips: [
+      { title: 'The Science of Skin Barrier Repair: Ceramides & Lipids', readTime: '5 min read', image: '/images/article-thumb-centella.jpg', slug: 'the-science-of-skin-barrier-repair-ceramides-lipids' },
+      { title: 'Why Broad Spectrum Sunscreen Is Non-Negotiable', readTime: '5 min read', image: '/images/article-thumb-sunscreen.jpg', slug: 'why-broad-spectrum-sunscreen-is-non-negotiable-year-round' },
+      { title: 'The Ultimate Morning Skincare Routine in 4 Steps', readTime: '5 min read', image: '/images/article-thumb-routine.jpg', slug: 'the-ultimate-morning-skincare-routine-in-4-steps' }
+    ]
+  },
+  dullness: {
+    routineSteps: [
+      { label: 'Cleanser', productName: 'Gentle Foaming Cleanser', image: '/images/prod-sulwhasoo.jpg', link: '/product/sulwhasoo-gentle-cleansing-foam' },
+      { label: 'Treatment', productName: 'Facial Treatment Essence Pitera', image: '/images/prod-sk2.jpg', link: '/product/sk-ii-facial-treatment-essence' },
+      { label: 'Moisturizer', productName: 'Niacinamide 10% + Zinc 1%', image: '/images/prod-ordinary.jpg', link: '/product/the-ordinary-niacinamide-10-zinc-1' },
+      { label: 'Sunscreen', productName: 'Relief Sun: Rice + Probiotics SPF50+', image: '/images/prod-boj.jpg', link: '/product/beauty-of-joseon-relief-sun' }
+    ],
+    ingredientTitle: 'Radiant Glow & Luminosity',
+    ingredientGuideLink: '/articles/vitamin-c-vs-niacinamide-can-you-layer-them',
+    ingredients: [
+      { name: 'Galactomyces', desc: 'Fermented yeast for crystal clarity', image: '/images/texture-normal.jpg' },
+      { name: 'Vitamin C', desc: 'Direct glow-inducing antioxidant', image: '/images/search-droplet-macro.jpg' },
+      { name: 'Glycolic Acid', desc: 'Micro-exfoliates dead cell buildup', image: '/images/search-gel-swatch.jpg' },
+      { name: 'Rice Ferment', desc: 'Nourishing amino acid radiance boost', image: '/images/texture-combination.jpg' }
+    ],
+    expertTips: [
+      { title: 'Vitamin C vs Niacinamide: Can You Layer Them?', readTime: '4 min read', image: '/images/article-thumb-layer.jpg', slug: 'vitamin-c-vs-niacinamide-can-you-layer-them' },
+      { title: 'The Ultimate Morning Skincare Routine in 4 Steps', readTime: '5 min read', image: '/images/article-thumb-routine.jpg', slug: 'the-ultimate-morning-skincare-routine-in-4-steps' },
+      { title: 'The Science of Skin Barrier Repair: Ceramides & Lipids', readTime: '5 min read', image: '/images/article-thumb-centella.jpg', slug: 'the-science-of-skin-barrier-repair-ceramides-lipids' }
+    ]
+  },
+  'uneven-texture': {
+    routineSteps: [
+      { label: 'Cleanser', productName: 'Effaclar Purifying Foaming Gel', image: '/images/prod-laroche-effaclar.jpg', link: '/product/la-roche-posay-effaclar-purifying-foaming-gel' },
+      { label: 'Treatment', productName: 'BHA Blackhead Power Liquid', image: '/images/prod-cosrx-snail.jpg', link: '/product/cosrx-bha-blackhead-power-liquid' },
+      { label: 'Moisturizer', productName: 'Niacinamide 10% + Zinc 1%', image: '/images/prod-ordinary.jpg', link: '/product/the-ordinary-niacinamide-10-zinc-1' },
+      { label: 'Sunscreen', productName: 'Relief Sun: Rice + Probiotics SPF50+', image: '/images/prod-boj.jpg', link: '/product/beauty-of-joseon-relief-sun' }
+    ],
+    ingredientTitle: 'Smoothing Surface Texture',
+    ingredientGuideLink: '/articles/retinol-beginners-guide-how-to-start-without-purging',
+    ingredients: [
+      { name: 'Lactic Acid', desc: 'Gentle hydrating resurfacing AHA', image: '/images/search-droplet-macro.jpg' },
+      { name: 'Salicylic Acid', desc: 'Dislodges trapped pore debris', image: '/images/search-gel-swatch.jpg' },
+      { name: 'PHA Gluconolactone', desc: 'Zero-sting surface polishing acid', image: '/images/texture-oily.jpg' },
+      { name: 'Niacinamide', desc: 'Visibly tightens dilated pore walls', image: '/images/search-hero-niacinamide.jpg' }
+    ],
+    expertTips: [
+      { title: 'Retinol Beginner’s Guide: How to Start Without Purging', readTime: '7 min read', image: '/images/article-thumb-sleep.jpg', slug: 'retinol-beginners-guide-how-to-start-without-purging' },
+      { title: 'Double Cleansing 101: Why Oil Dissolves Sebum', readTime: '4 min read', image: '/images/article-thumb-niacinamide.jpg', slug: 'double-cleansing-101-why-oil-dissolves-sebum' },
+      { title: 'The Science of Skin Barrier Repair: Ceramides & Lipids', readTime: '5 min read', image: '/images/article-thumb-centella.jpg', slug: 'the-science-of-skin-barrier-repair-ceramides-lipids' }
+    ]
+  }
+}
+
+const currentConcernData = computed(() => {
+  return concernDetailsMap[activeConcernId.value] || concernDetailsMap.acne
+})
+
+function toggleIngredient(name) {
+  const idx = selectedIngredients.value.indexOf(name)
+  if (idx > -1) {
+    selectedIngredients.value.splice(idx, 1)
+  } else {
+    selectedIngredients.value.push(name)
+  }
+}
+
 // Brand list from format
 const brandList = [
   { name: 'The Ordinary', count: 12 },
@@ -605,15 +743,7 @@ const keyIngredientsList = [
   { name: 'AHA', count: 16 }
 ]
 
-// 8 Featured Products matching Skin Concern-Skin Type.png grid:
-// 1. La Roche-Posay Effaclar ($18.00) Best Seller
-// 2. The Ordinary Niacinamide 10% + Zinc ($8.90)
-// 3. CeraVe Foaming Facial Cleanser ($16.00)
-// 4. COSRX BHA Blackhead Power Liquid ($25.00)
-// 5. Innisfree Green Tea Seed Serum ($28.00 / $35.00) 20% OFF
-// 6. BIODERMA Sebium H2O Micellar Water ($16.00)
-// 7. SK-II Facial Treatment Essence ($99.00)
-// 8. Some By Mi AHA.BHA.PHA 30 Days Miracle Toner ($20.00)
+// Fallback products if catalog store not loaded yet
 const concernProducts = [
   {
     id: 301,
@@ -713,21 +843,77 @@ const concernProducts = [
   }
 ]
 
-const filteredProducts = computed(() => {
-  let list = [...concernProducts]
+const concernKeywordsMap = {
+  acne: ['acne', 'blemish', 'breakout', 'clarifying', 'bha', 'salicylic'],
+  'dark-spots': ['dark spot', 'pigmentation', 'brightening', 'vitamin c', 'niacinamide', 'discoloration'],
+  aging: ['aging', 'fine line', 'wrinkle', 'firm', 'elasticity', 'peptide', 'retinol', 'collagen'],
+  dryness: ['dryness', 'hydration', 'barrier', 'ceramide', 'hyaluronic', 'moisture'],
+  oiliness: ['oiliness', 'pore', 'sebum', 'matte', 'mattifying'],
+  sensitivity: ['sensitivity', 'sensitive', 'redness', 'soothing', 'cica', 'calm'],
+  dullness: ['dullness', 'radiance', 'glow', 'luminosity', 'tone'],
+  'uneven-texture': ['texture', 'smooth', 'roughness', 'exfoliant', 'bump', 'polish']
+}
 
-  if (selectedBrands.value.length > 0) {
-    list = list.filter(p => selectedBrands.value.some(b => p.brand.toLowerCase() === b.toLowerCase()))
+const filteredProducts = computed(() => {
+  const source = (productStore.allCatalogProducts && productStore.allCatalogProducts.length > 0)
+    ? productStore.allCatalogProducts
+    : concernProducts
+
+  let list = [...source]
+
+  const concernId = activeConcernId.value
+  const targetConcernName = currentConcern.value?.name?.toLowerCase() || ''
+  const keywords = concernKeywordsMap[concernId] || []
+
+  // Dynamic filter by selected skin concern
+  const concernMatched = list.filter(p => {
+    if (p.skin_concern && Array.isArray(p.skin_concern)) {
+      const match = p.skin_concern.some(c => {
+        const cl = c.toLowerCase()
+        return cl.includes(concernId) || (targetConcernName && cl.includes(targetConcernName.split(' ')[0])) || keywords.some(k => cl.includes(k))
+      })
+      if (match) return true
+    }
+    const text = `${p.name} ${p.category || ''} ${p.subcategory || ''} ${p.desc || ''}`.toLowerCase()
+    return keywords.some(k => text.includes(k))
+  })
+
+  // Fallback to source if concern has no specific matches
+  list = concernMatched.length > 0 ? concernMatched : list
+
+  // Filter by skin type tab (Normal, Oily, Dry, Combination, Sensitive)
+  if (activeTypeId.value !== 'all') {
+    const selectedType = activeTypeId.value.toLowerCase()
+    const typeMatched = list.filter(p => {
+      if (!p.skin_type || !Array.isArray(p.skin_type)) return true
+      return p.skin_type.some(t => t.toLowerCase() === selectedType)
+    })
+    if (typeMatched.length > 0) list = typeMatched
   }
 
+  // Filter by selected ingredients
+  if (selectedIngredients.value.length > 0) {
+    list = list.filter(p => {
+      const pText = `${p.name} ${p.desc || ''} ${p.ingredients || ''}`.toLowerCase()
+      return selectedIngredients.value.some(ing => pText.includes(ing.toLowerCase()))
+    })
+  }
+
+  // Filter by brand
+  if (selectedBrands.value.length > 0) {
+    list = list.filter(p => selectedBrands.value.some(b => (p.brand || '').toLowerCase() === b.toLowerCase()))
+  }
+
+  // Filter by price range
   list = list.filter(p => p.price <= maxPrice.value && p.price >= minPrice.value)
 
+  // Sort
   if (sortBy.value === 'price-asc') {
     list.sort((a, b) => a.price - b.price)
   } else if (sortBy.value === 'price-desc') {
     list.sort((a, b) => b.price - a.price)
   } else if (sortBy.value === 'rating') {
-    list.sort((a, b) => b.rating - a.rating)
+    list.sort((a, b) => (b.rating || 0) - (a.rating || 0))
   }
 
   return list
@@ -1585,6 +1771,19 @@ function addToCart(product) {
   flex-direction: column;
   align-items: center;
   gap: 0.35rem;
+  text-decoration: none;
+  color: inherit;
+  cursor: pointer;
+  transition: transform 0.2s ease;
+}
+
+.routine-step-col:hover {
+  transform: translateY(-2px);
+}
+
+.routine-step-col:hover .step-bottle-wrap {
+  border-color: #7A2E22;
+  box-shadow: 0 4px 12px rgba(122, 46, 34, 0.15);
 }
 
 .step-bottle-wrap {
@@ -1597,6 +1796,7 @@ function addToCart(product) {
   align-items: center;
   justify-content: center;
   padding: 4px;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
 }
 
 .step-bottle-img {
@@ -1630,6 +1830,23 @@ function addToCart(product) {
   text-align: center;
 }
 
+.ingredient-clickable-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  transition: transform 0.18s ease;
+}
+
+.ingredient-clickable-btn:hover {
+  transform: translateY(-2px);
+}
+
+.ingredient-clickable-btn.active .swatch-circle-wrap {
+  border-color: #7A2E22;
+  box-shadow: 0 0 0 2px rgba(122, 46, 34, 0.3);
+}
+
 .swatch-circle-wrap {
   width: 48px;
   height: 48px;
@@ -1637,6 +1854,7 @@ function addToCart(product) {
   overflow: hidden;
   border: 1px solid rgba(28, 25, 23, 0.1);
   margin-bottom: 0.35rem;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
 }
 
 .swatch-circle-img {
@@ -1671,11 +1889,27 @@ function addToCart(product) {
   gap: 0.75rem;
 }
 
+.article-link-card {
+  text-decoration: none;
+  color: inherit;
+  cursor: pointer;
+  transition: transform 0.2s ease;
+}
+
+.article-link-card:hover {
+  transform: translateX(3px);
+}
+
+.article-link-card:hover .article-title {
+  color: #7A2E22;
+}
+
 .article-thumb {
   width: 58px;
   height: 46px;
   border-radius: 6px;
   object-fit: cover;
+  flex-shrink: 0;
 }
 
 .article-info {
@@ -1689,6 +1923,7 @@ function addToCart(product) {
   color: #1C1917;
   line-height: 1.3;
   margin-bottom: 2px;
+  transition: color 0.18s ease;
 }
 
 .article-time {

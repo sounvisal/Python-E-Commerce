@@ -2,6 +2,7 @@ import { createRouter, createWebHistory } from 'vue-router'
 import { privateStorageKey } from '@/utils/orderAccess'
 import { useAuthStore } from '@/stores/auth'
 import { useCartStore } from '@/stores/cart'
+import { useAtelierNotificationStore } from '@/stores/atelierNotifications'
 import HomeView from '@/views/home/HomeView.vue'
 import ShopView from '@/views/shop/ShopView.vue'
 import CategoryView from '@/views/category/CategoryView.vue'
@@ -239,7 +240,7 @@ const routes = [
   },
   {
     path: '/journal',
-    redirect: '/account/journal',
+    redirect: '/articles',
   },
   // Phase 4: Customer Account, Auth & Orders Suite
   {
@@ -365,6 +366,8 @@ router.afterEach(() => {
   try {
     const cart = useCartStore()
     if (cart.isDrawerOpen) cart.closeDrawer()
+    const notif = useAtelierNotificationStore()
+    if (notif.isDrawerOpen) notif.closeDrawer()
   } catch {}
 })
 

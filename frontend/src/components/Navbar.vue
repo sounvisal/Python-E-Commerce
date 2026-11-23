@@ -185,32 +185,23 @@
           </router-link>
         </nav>
 
-        <!-- Center-Right: Compact Pill Search Bar with Icon on the Right -->
-        <div class="search-pill-container">
-          <form class="search-pill-form" @submit.prevent="handleSearch">
-            <input
-              type="text"
-              v-model="searchQuery"
-              :placeholder="localeStore.t('nav.search_placeholder')"
-              class="search-pill-input"
-            />
-            <button
-              v-if="searchQuery"
-              type="button"
-              @click="searchQuery = ''"
-              class="clear-search-btn"
-              aria-label="Clear Search"
-            >
-              <X :size="13" />
-            </button>
-            <button type="submit" class="search-submit-btn" aria-label="Submit Search">
-              <Search :size="16" class="search-icon" />
-            </button>
-          </form>
-        </div>
-
-        <!-- Far Right: Format Minimal Icons (Language & Currency, Wishlist, Cart with Badge, Account) -->
+        <!-- Far Right: Format Minimal Icons (Language & Currency, Notifications, Wishlist, Cart with Badge, Account) -->
         <div class="header-action-icons">
+          <!-- Notification Bell Icon with Badge -->
+          <button
+            type="button"
+            class="header-icon-btn notif-icon-btn"
+            @click="notifStore.toggleDrawer"
+            title="Atelier Feed & Notifications"
+            aria-label="Atelier Feed & Notifications"
+          >
+            <Bell :size="20" :stroke-width="1.8" />
+            <span v-if="notifStore.unreadCount > 0" class="notif-circle-badge">
+              {{ notifStore.unreadCount }}
+            </span>
+            <span v-if="notifStore.unreadCount > 0" class="notif-pulse-dot"></span>
+          </button>
+
           <!-- Language & Currency Switcher Pill -->
           <div class="locale-switcher-wrap" ref="localeDropdownRef">
             <button
@@ -443,13 +434,30 @@
             <input
               type="text"
               v-model="searchQuery"
-              placeholder="Search products, brands..."
+              placeholder="Search products in shop..."
               class="search-pill-input"
             />
             <button type="submit" class="search-submit-btn" aria-label="Search">
               <Search :size="16" />
             </button>
           </form>
+        </div>
+
+        <!-- Mobile Notification Bar -->
+        <div class="mobile-notif-shortcut-wrap">
+          <button
+            type="button"
+            class="mobile-notif-shortcut-btn"
+            @click="openNotifFromMobile"
+          >
+            <div class="m-notif-row">
+              <Bell :size="17" class="m-notif-bell" />
+              <span>Atelier Live Feed &amp; Updates</span>
+            </div>
+            <span v-if="notifStore.unreadCount > 0" class="m-notif-badge">
+              {{ notifStore.unreadCount }} new
+            </span>
+          </button>
         </div>
 
         <nav class="mobile-nav-list">
@@ -626,8 +634,10 @@ import { useProductStore } from '@/stores/products'
 import { useWishlistStore } from '@/stores/wishlist'
 import { useLocaleStore } from '@/stores/locale'
 import { useAuthStore } from '@/stores/auth'
+import { useAtelierNotificationStore } from '@/stores/atelierNotifications'
 import FlagIcon from '@/components/common/FlagIcon.vue'
 import {
+  Bell,
   ChevronDown,
   Heart,
   Menu,
@@ -655,6 +665,7 @@ const productStore = useProductStore()
 const wishlistStore = useWishlistStore()
 const localeStore = useLocaleStore()
 const authStore = useAuthStore()
+const notifStore = useAtelierNotificationStore()
 
 const headerRef = ref(null)
 const mobileMenuOpen = ref(false)
@@ -745,9 +756,15 @@ function handleSearch() {
   if (searchQuery.value.trim()) {
     const q = searchQuery.value.trim()
     productStore.filters.search = q
-    router.push({ path: '/search', query: { q } })
+    router.push({ path: '/shop', query: { q } })
     mobileMenuOpen.value = false
+    searchQuery.value = ''
   }
+}
+
+function openNotifFromMobile() {
+  mobileMenuOpen.value = false
+  notifStore.openDrawer()
 }
 
 function closeMenu() {
@@ -1119,6 +1136,84 @@ function handleAccountSubmit() {
   justify-content: center;
   line-height: 1;
   border: 1.5px solid #FAF8F5;
+}
+
+/* Notification Button & Badge */
+.notif-icon-btn {
+  position: relative;
+}
+
+.notif-circle-badge {
+  position: absolute;
+  top: -3px;
+  right: -7px;
+  width: 17px;
+  height: 17px;
+  border-radius: 50%;
+  background: #7A2E22;
+  color: #FFFFFF;
+  font-size: 0.65rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+  border: 1.5px solid #FAF8F5;
+}
+
+.notif-pulse-dot {
+  position: absolute;
+  top: 1px;
+  right: 1px;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #D97706;
+  pointer-events: none;
+}
+
+.mobile-notif-shortcut-wrap {
+  padding: 0 1.25rem 0.75rem;
+}
+
+.mobile-notif-shortcut-btn {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: #FAF7F2;
+  border: 1px solid #EFEAE4;
+  border-radius: 10px;
+  padding: 0.75rem 1rem;
+  font-size: 0.84rem;
+  font-weight: 600;
+  color: #1C1917;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.mobile-notif-shortcut-btn:hover {
+  background: #F5EFEB;
+  border-color: #7A2E22;
+}
+
+.m-notif-row {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+}
+
+.m-notif-bell {
+  color: #7A2E22;
+}
+
+.m-notif-badge {
+  background: #7A2E22;
+  color: #FFFFFF;
+  font-size: 0.7rem;
+  font-weight: 700;
+  padding: 0.15rem 0.5rem;
+  border-radius: 9999px;
 }
 
 /* ==========================================================================

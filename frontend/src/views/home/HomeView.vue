@@ -339,20 +339,20 @@
             <p class="edit-desc">
               Learn, explore, and make informed choices for your skin.
             </p>
-            <button class="btn btn-pill-dark edit-journal-btn" @click="activeArticle = articlesList[0]">
+            <router-link to="/articles" class="btn btn-pill-dark edit-journal-btn">
               <span>Read Our Journal</span>
               <ArrowRight :size="16" />
-            </button>
+            </router-link>
           </div>
 
           <!-- 3 Editorial Article Cards -->
           <div class="edit-articles-col">
-            <div
+            <router-link
               v-for="(article, idx) in articlesList"
               :key="article.title"
+              :to="'/articles/' + article.slug"
               class="article-card stagger-item"
               :style="{ transitionDelay: `${idx * 100}ms` }"
-              @click="activeArticle = article"
             >
               <div class="article-image-box">
                 <img :src="article.image" :alt="article.title" class="article-img" />
@@ -361,11 +361,11 @@
                 <span class="article-tag">{{ article.tag }}</span>
                 <h4 class="article-title">{{ article.title }}</h4>
                 <span class="article-read-more">
-                  <span>Read More</span>
+                  <span>Read In-Depth</span>
                   <ArrowRight :size="13" />
                 </span>
               </div>
-            </div>
+            </router-link>
           </div>
         </div>
       </div>
@@ -642,18 +642,21 @@ const articlesList = [
   {
     tag: 'SKINCARE 101',
     title: "How to Build a Skincare Routine (Beginner's Guide)",
+    slug: 'how-to-build-a-skincare-routine-for-your-skin-type',
     image: '/images/article-routine.jpg',
     summary: 'A step-by-step foundation covering gentle cleansing, hydration layering, active antioxidants, and daily SPF defense.',
   },
   {
     tag: 'INGREDIENTS',
-    title: '5 Ingredients Your Skin Will Love',
+    title: 'The Science of Skin Barrier Repair & Ceramides',
+    slug: 'the-science-of-skin-barrier-repair-ceramides-lipids',
     image: '/images/article-ingredients.jpg',
     summary: 'From hyaluronic acid to ceramides, niacinamide, and centella asiatica—discover the powerhouse molecules transforming everyday complexions.',
   },
   {
-    tag: 'TIPS',
-    title: "Morning vs Night Skincare: What's the Difference?",
+    tag: 'SUN CARE',
+    title: 'Mineral vs. Chemical Sunscreen Comparison Guide',
+    slug: 'mineral-vs-chemical-sunscreen-the-ultimate-dermatology-guide',
     image: '/images/article-daynight.jpg',
     summary: 'Daytime is for antioxidant defense and UV shielding; nighttime is reserved for cellular repair, gentle peeling, and barrier replenishment.',
   },
