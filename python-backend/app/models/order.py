@@ -41,6 +41,7 @@ class Order(Base):
     expires_at = Column(DateTime, nullable=True)
     delivered_at = Column(DateTime, nullable=True)
     stock_reserved = Column(Boolean, default=False, nullable=False)
+    promo_claimed = Column(Boolean, default=False, nullable=False)
     rewards_credited = Column(Boolean, default=False, nullable=False)
     events = Column(JSON, default=list)
 

@@ -80,7 +80,7 @@
 
       <!-- Slogan (from checkout.html) -->
       <p class="khqr-text-desc">
-        {{ demoMode ? 'Demo QR for internal testing' : 'Scan with ABA Mobile, or other Mobile Banking App supporting KHQR' }}
+        Scan with ABA Mobile, or other Mobile Banking App supporting KHQR
       </p>
 
       <!-- Action buttons -->
@@ -115,21 +115,6 @@
           </span>
         </button>
       </div>
-
-      <!-- Demo Simulation for Presentation / Grading -->
-      <button
-        v-if="demoMode && !paymentApproved && !qrError && !closing"
-        type="button"
-        class="btn-demo-sim"
-        :disabled="simulating"
-        @click="handleSimulateApproval"
-      >
-        <span v-if="!simulating" class="demo-btn-inner">
-          <Zap :size="13" class="demo-icon-svg" />
-          <span>Demo Mode: Simulate Instant Bank Approval</span>
-        </span>
-        <span v-else>Clearing bank transaction…</span>
-      </button>
     </div>
   </div>
 </template>
@@ -139,7 +124,7 @@ import { ref, computed, onMounted, onUnmounted, nextTick } from 'vue'
 import QRCode from 'qrcode'
 import axios from 'axios'
 import { orderRequest } from '@/utils/orderAccess'
-import { Copy, Check, Zap } from 'lucide-vue-next'
+import { Copy, Check } from 'lucide-vue-next'
 
 const props = defineProps({
   orderNumber: { type: String, required: true },
@@ -154,8 +139,6 @@ const canvasEl = ref(null)
 const loadingQr = ref(true)
 const qrError = ref('')
 const paymentApproved = ref(false)
-const demoMode = ref(false)
-const simulating = ref(false)
 const closing = ref(false)
 const reviewRequired = ref(false)
 const paywayUrl = ref('')
@@ -253,8 +236,7 @@ async function fetchAndRenderKHQR() {
     }, request)
     const payment = data.data
     if (!payment?.qr_string) throw new Error('Missing payment code')
-    demoMode.value = payment.demo === true
-    if (payment.source === 'payway_api' || payment.source === 'live_aba_payway') {
+    if (payment.qr_string) {
       const deeplink = new URL('abamobilebank://ababank.com')
       deeplink.searchParams.set('type', 'payway')
       deeplink.searchParams.set('qrcode', payment.qr_string)
@@ -323,19 +305,6 @@ async function poll(reschedule = true) {
     return
   }
   if (reschedule) pollTimeout = setTimeout(poll, 5000)
-}
-
-async function handleSimulateApproval() {
-  if (!demoMode.value || simulating.value || paymentApproved.value || closing.value) return
-  simulating.value = true
-  try {
-    const { data } = await axios.post('/api/payments/khqr/simulate-approve', { order_number: props.orderNumber }, request)
-    if (!controller.signal.aborted) applyStatus(data)
-  } catch (error) {
-    if (!controller.signal.aborted) qrError.value = message(error, 'Demo approval failed. Please retry.')
-  } finally {
-    simulating.value = false
-  }
 }
 
 function onSuccess() {

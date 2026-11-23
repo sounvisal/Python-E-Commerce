@@ -134,6 +134,8 @@ def format_order(order: Order) -> dict:
         "shipping_fee": order.shipping_fee,
         "total": order.total,
         "status": order.status,
+        "stock_reserved": bool(order.stock_reserved),
+        "expires_at": order.expires_at.isoformat() if order.expires_at else None,
         "payment_method": order.payment_method,
         "payment_status": order.payment_status,
         "transaction_ref": order.transaction_ref,
@@ -296,6 +298,35 @@ def update_order_status(
     return {
         "status": "success",
         "message": f"Order #{order.order_number} status updated to {order.status}",
+        "data": format_order(order)
+    }
+
+@router.post("/orders/{order_id}/confirm-cod")
+def admin_confirm_cod(
+    order_id: int,
+    db: Session = Depends(get_db)
+):
+    """
+    Staff confirmation endpoint for Cash on Delivery orders after phone and address verification.
+    Atomically checks stock and claims reservation in a single transaction.
+    """
+    order = db.query(Order).filter(Order.id == order_id).first()
+    if not order:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Order #{order_id} not found"
+        )
+    if order.status != "Awaiting Confirmation":
+        if order.status == "Confirmed" and order.stock_reserved:
+            return {"status": "success", "message": f"Order #{order.order_number} is already confirmed", "data": format_order(order)}
+        raise HTTPException(409, f"Order #{order.order_number} is in '{order.status}' status, cannot confirm")
+    
+    transition_order(db, order, "Confirmed")
+    db.commit()
+    db.refresh(order)
+    return {
+        "status": "success",
+        "message": f"Order #{order.order_number} verified and confirmed. Stock has been reserved.",
         "data": format_order(order)
     }
 

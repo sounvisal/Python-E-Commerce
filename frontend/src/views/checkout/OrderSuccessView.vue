@@ -47,11 +47,18 @@
         <div v-if="isConfirmed" class="icon-wrap">
           <CheckCircle2 :size="48" class="check-icon" />
         </div>
+        <div v-else-if="isAwaitingConfirmation" class="icon-wrap icon-awaiting">
+          <Clock :size="48" class="clock-icon" />
+        </div>
 
         <span v-if="isConfirmed" class="confirmed-badge">Order Confirmed</span>
-        <h1>{{ isConfirmed ? `Thank you, ${order.customer_name}` : 'Order Summary' }}</h1>
+        <span v-else-if="isAwaitingConfirmation" class="confirmed-badge badge-amber">Awaiting Staff Confirmation</span>
+        <h1>{{ isConfirmed || isAwaitingConfirmation ? `Thank you, ${order.customer_name}` : 'Order Summary' }}</h1>
         <p v-if="isConfirmed" class="order-sub">
           Save your order reference and use the tracking link below for delivery updates.
+        </p>
+        <p v-else-if="isAwaitingConfirmation" class="order-sub text-amber-sub">
+          Your Cash-on-Delivery order is awaiting telephone verification. <strong>Stock will be secured once our atelier team confirms your delivery address and phone number.</strong>
         </p>
 
         <div class="order-meta-box">
@@ -146,14 +153,17 @@ import { computed, onMounted, ref } from 'vue'
 import { useRoute } from 'vue-router'
 import axios from 'axios'
 import { orderRequest } from '@/utils/orderAccess'
-import { CheckCircle2, Check, MapPin, ExternalLink } from 'lucide-vue-next'
+import { useCartStore } from '@/stores/cart'
+import { CheckCircle2, Check, MapPin, ExternalLink, Clock } from 'lucide-vue-next'
 
 const route = useRoute()
+const cartStore = useCartStore()
 const order = ref(null)
 const loading = ref(true)
 const isConfirmed = computed(() =>
   ['Confirmed', 'Processing', 'Shipped', 'Out for Delivery', 'Delivered'].includes(order.value?.status)
 )
+const isAwaitingConfirmation = computed(() => order.value?.status === 'Awaiting Confirmation')
 
 const formatPaymentMethod = (method) => {
   switch (method) {
@@ -162,7 +172,7 @@ const formatPaymentMethod = (method) => {
     case 'apple_pay':
       return 'Apple Pay Express'
     case 'cod':
-      return 'Pay on White-Glove Delivery'
+      return 'Cash on Delivery (COD)'
     case 'card':
     default:
       return 'Credit Card'
@@ -174,18 +184,21 @@ function formatCarrier(c) {
     vet_express: 'Vireak Buntham (VET Logistics)',
     jt_express: 'J&T Express Cambodia',
     grab_express: 'GrabExpress On-Demand',
-    lumea_concierge: 'Luméa Atelier Concierge',
+    lumea_concierge: 'Luméa Shop Direct Delivery',
   }
   return map[c] || 'Vireak Buntham Express (VET)'
 }
 
 onMounted(async () => {
+  // Always guarantee cart is emptied upon reaching order success
+  cartStore.clearCart()
   const orderNumber = route.params.orderNumber
   if (orderNumber) {
     try {
       const res = await axios.get(`/api/orders/${orderNumber}`, orderRequest(orderNumber))
       if (res.data?.data) {
         order.value = res.data.data
+        cartStore.clearCart()
       }
     } catch (err) {
       console.error('Failed to load order:', err)

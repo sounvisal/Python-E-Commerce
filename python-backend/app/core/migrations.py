@@ -13,6 +13,7 @@ ADDITIONS = {
         "expires_at": "DATETIME",
         "delivered_at": "DATETIME",
         "stock_reserved": "BOOLEAN NOT NULL DEFAULT 0",
+        "promo_claimed": "BOOLEAN NOT NULL DEFAULT 0",
         "rewards_credited": "BOOLEAN NOT NULL DEFAULT 0",
         "events": "JSON",
         "discount_code": "VARCHAR(64)",
@@ -45,6 +46,16 @@ def migrate_schema(engine, *, seed_demo_promotions=True):
                     connection.execute(text(f'ALTER TABLE "{table}" ADD COLUMN "{name}" {sql_type}'))
         if inspector.has_table("orders"):
             connection.execute(text('CREATE UNIQUE INDEX IF NOT EXISTS ix_orders_checkout_key ON orders (checkout_key)'))
+            connection.execute(text("""
+                CREATE UNIQUE INDEX IF NOT EXISTS ix_orders_user_awaiting_cod 
+                ON orders (user_id) 
+                WHERE status = 'Awaiting Confirmation' AND payment_method = 'cod'
+            """))
+            connection.execute(text("""
+                UPDATE orders 
+                SET promo_claimed = 1 
+                WHERE discount_code IS NOT NULL AND status NOT IN ('Cancelled', 'Expired') AND promo_claimed = 0
+            """))
         if inspector.has_table('articles'):
             connection.execute(text("UPDATE articles SET tags='[]' WHERE tags IS NULL"))
         if inspector.has_table('order_items') and inspector.has_table('return_requests'):

@@ -114,7 +114,12 @@ def test_production_without_merchant_only_exposes_cod(client, monkeypatch, admin
     monkeypatch.setattr(settings, "PRODUCTION", True)
     monkeypatch.setattr(settings, "ENABLE_DEMO_PAYMENTS", True)
     monkeypatch.setattr(settings, "PAYWAY_MERCHANT_ID", "")
-    monkeypatch.setenv("ABA_PAYWAY_URL", "https://link.payway.com.kh")
+    monkeypatch.delenv("ABA_PAYWAY_URL", raising=False)
+    monkeypatch.delenv("BAKONG_ACCOUNT_ID", raising=False)
     assert client.get("/api/payments/methods", headers=admin_headers).json() == {"khqr": False, "demo": False}
     assert client.post("/api/payments/khqr/simulate-approve", json={"order_number": "example"},
                        headers=admin_headers).status_code == 403
+    
+    # When live ABA PayWay link or Bakong account is configured in production, KHQR is enabled with demo: False
+    monkeypatch.setenv("ABA_PAYWAY_URL", "https://link.payway.com.kh/ABAPAYaC455755m")
+    assert client.get("/api/payments/methods", headers=admin_headers).json() == {"khqr": True, "demo": False}

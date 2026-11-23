@@ -102,7 +102,7 @@ def run_tests():
         "customer_email": "sreynich.chan@example.com",
         "customer_phone": "+855 12 345 678",
         "shipping_address": "Norodom Blvd #45",
-        "shipping_city": "Phnom Penh",
+        "shipping_city": "Krong Kampot (Kampot Town)",
         "shipping_postal_code": "12000",
         "payment_method": "cod",
         "discount_code": "LUMEA10",
@@ -137,9 +137,17 @@ def run_tests():
     res = client.get(f"/api/orders/{ord_num}", headers=headers)
     assert res.status_code == 200
     tracked = res.json()["data"]
-    assert tracked["status"] == "Confirmed"
+    assert tracked["status"] == "Awaiting Confirmation"
+    assert tracked["stock_reserved"] is False
     assert len(tracked["items"]) == 2
-    print(f"[PASS] 10. GET /api/orders/{ord_num} -> Order status: {tracked['status']} with {len(tracked['items'])} items")
+    print(f"[PASS] 10. GET /api/orders/{ord_num} -> Order status: {tracked['status']} (Stock unreserved awaiting confirmation)")
+
+    # 10b. Admin Atelier Confirms COD Order (Reserves Stock)
+    confirm_res = client.post(f"/api/orders/{ord_num}/confirm-cod", headers={"Authorization": f"Bearer {admin_token}"})
+    assert confirm_res.status_code == 200
+    assert confirm_res.json()["data"]["status"] == "Confirmed"
+    assert confirm_res.json()["data"]["stock_reserved"] is True
+    print(f"[PASS] 10b. POST /api/orders/{ord_num}/confirm-cod -> Confirmed by staff & stock reserved!")
 
     # 11. Banners List
     res = client.get("/api/banners")

@@ -11,15 +11,18 @@ function mapOrder(o) {
     vet_express: 'Vireak Buntham (VET Logistics)',
     jt_express: 'J&T Express Cambodia',
     grab_express: 'GrabExpress On-Demand',
-    lumea_concierge: 'Luméa Atelier Concierge',
+    lumea_concierge: 'Luméa Shop Direct Delivery',
   }
   const carrierName = carrierNames[o.shipping_carrier] || 'Vireak Buntham (VET Logistics)'
   const mapUrl = o.map_url || (o.delivery_lat && o.delivery_lng ? `https://www.google.com/maps?q=${o.delivery_lat},${o.delivery_lng}` : null)
+  const calcShipping = (typeof o.shipping_fee === 'number' && o.shipping_fee > 0)
+    ? o.shipping_fee
+    : Math.max(0, Math.round(((o.total || 0) - (o.subtotal || 0) + (o.discount || 0)) * 100) / 100)
   return {
     userId: o.user_id, orderNumber: o.order_number, placedAt: new Date(o.created_at).toLocaleString(),
     date: o.created_at, status: o.status, statusType: o.status.toLowerCase(), paymentStatus: o.payment_status,
     statusText: `${o.status} · ${o.payment_status}`, total: o.total, subtotal: o.subtotal, discount: o.discount,
-    shippingFee: o.shipping_fee, tax: 0, rewardPointsEarned: o.payment_status === 'Paid' ? Math.floor(o.total) : 0,
+    shippingFee: calcShipping, tax: 0, rewardPointsEarned: o.payment_status === 'Paid' ? Math.floor(o.total) : 0,
     shippingCarrier: o.shipping_carrier || 'vet_express',
     deliveryMethod: carrierName,
     deliveredAt: o.delivered_at || '',
@@ -28,7 +31,7 @@ function mapOrder(o) {
     deliveryNotes: o.delivery_notes,
     mapUrl: mapUrl,
     shippingAddress: { name: o.customer_name, address: o.shipping_address, city: o.shipping_city, phone: o.customer_phone },
-    paymentMethod: { provider: o.payment_method.toUpperCase(), details: o.payment_status, amount: o.total },
+    paymentMethod: { provider: (o.payment_method || 'card').toUpperCase(), details: o.payment_status, amount: o.total },
     timeline: events.map(event => ({ step: event.status, date: event.at ? new Date(event.at).toLocaleDateString() : '', time: event.at ? new Date(event.at).toLocaleTimeString() : '', completed: true })),
     items: (o.items || []).map(item => ({ id: item.product_id, orderItemId: item.id, name: item.product_name,
       volume: 'Standard size', price: item.price, qty: item.quantity, total: item.total, image_url: item.image_url,

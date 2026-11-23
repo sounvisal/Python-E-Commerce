@@ -16,6 +16,12 @@ def initialize_test_database():
     with SessionLocal() as db:
         seed_database(db)
 
+@pytest.fixture
+def db():
+    """Provides a transactional database session for tests."""
+    with SessionLocal() as session:
+        yield session
+
 @pytest.fixture(scope="session")
 def client():
     """
@@ -66,7 +72,7 @@ def place_guest_order(client):
             "customer_name": "Test Buyer",
             "customer_email": "buyer@example.com",
             "shipping_address": "123 Norodom Blvd",
-            "shipping_city": "Kampot",
+            "shipping_city": "Krong Kampot (Kampot Town)",
             "payment_method": payment_method,
             "items": [{"product_id": 201, "quantity": 1}],
         }

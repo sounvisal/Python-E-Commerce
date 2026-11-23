@@ -30,22 +30,59 @@ def add_event(order, status):
     order.events = [*(order.events or []), {"status": status, "at": utcnow().isoformat() + "Z"}]
 
 def release_stock(db, order):
-    """A conditional flag ensures cancelling/expiring twice cannot restock twice."""
-    changed = db.execute(update(Order).where(Order.id == order.id, Order.stock_reserved.is_(True))
-                         .values(stock_reserved=False).execution_options(synchronize_session=False)).rowcount
+    """
+    Safely releases inventory and promotional usage exactly once.
+    - If stock_reserved is True: restores stock to Product inventory and resets stock_reserved.
+    - If stock_reserved is False: does NOT touch product stock.
+    - If promo_claimed is True: decrements Promotion.used and resets promo_claimed.
+    A conditional update ensures cancelling/expiring twice cannot restock twice.
+    """
+    changed = db.execute(
+        update(Order)
+        .where(Order.id == order.id, Order.stock_reserved.is_(True))
+        .values(stock_reserved=False)
+        .execution_options(synchronize_session=False)
+    ).rowcount
     if changed:
         for line in order.items:
-            db.execute(update(Product).where(Product.id == line.product_id)
-                       .values(stock=Product.stock + line.quantity))
+            if line.product_id:
+                db.execute(
+                    update(Product)
+                    .where(Product.id == line.product_id)
+                    .values(stock=Product.stock + line.quantity)
+                )
         order.stock_reserved = False
-        if order.discount_code:
-            db.execute(update(Promotion).where(Promotion.code == order.discount_code, Promotion.used > 0).values(used=Promotion.used - 1))
+
+    if order.discount_code:
+        promo_changed = db.execute(
+            update(Order)
+            .where(Order.id == order.id, Order.promo_claimed.is_(True))
+            .values(promo_claimed=False)
+            .execution_options(synchronize_session=False)
+        ).rowcount
+        if promo_changed:
+            db.execute(
+                update(Promotion)
+                .where(Promotion.code == order.discount_code, Promotion.used > 0)
+                .values(used=Promotion.used - 1)
+            )
+            order.promo_claimed = False
 
 def expire_pending_orders(db):
-    for order in db.query(Order).filter(Order.status == "Pending", Order.expires_at <= utcnow()).all():
-        changed = db.execute(update(Order).where(Order.id == order.id, Order.status == 'Pending',
-            Order.payment_status == 'Pending', Order.expires_at <= utcnow())
-            .values(status='Expired', payment_status='Expired').execution_options(synchronize_session=False)).rowcount
+    """
+    Expires orders past their deadline:
+    - KHQR orders (status == 'Pending', expires in 5m)
+    - Unconfirmed COD orders (status == 'Awaiting Confirmation', expires in 24h)
+    """
+    now = utcnow()
+    expirable = ["Pending", "Awaiting Confirmation"]
+    for order in db.query(Order).filter(Order.status.in_(expirable), Order.expires_at.isnot(None), Order.expires_at <= now).all():
+        changed = db.execute(
+            update(Order)
+            .where(Order.id == order.id, Order.status.in_(expirable), Order.expires_at <= now)
+            .values(status='Expired', payment_status='Expired')
+            .execution_options(synchronize_session=False)
+        ).rowcount
         db.refresh(order)
         if changed:
             add_event(order, "Expired")
@@ -55,15 +92,24 @@ def expire_pending_orders(db):
 def cancel_order(db, order):
     if order.status in ("Cancelled", "Expired"):
         return order
-    if order.status not in ("Pending", "Confirmed", "Processing"):
+    if order.status not in ("Pending", "Awaiting Confirmation", "Confirmed", "Processing"):
         raise HTTPException(409, "This order has already been dispatched")
     if order.payment_status == "Paid":
         raise HTTPException(409, "A paid order needs a refund review. Contact support before cancellation.")
-    changed = db.execute(update(Order).where(Order.id == order.id, Order.status.in_(['Pending', 'Confirmed', 'Processing']),
-        Order.payment_status != 'Paid').values(status='Cancelled', payment_status='Cancelled')
-        .execution_options(synchronize_session=False)).rowcount
+    changed = db.execute(
+        update(Order)
+        .where(
+            Order.id == order.id,
+            Order.status.in_(['Pending', 'Awaiting Confirmation', 'Confirmed', 'Processing']),
+            Order.payment_status != 'Paid'
+        )
+        .values(status='Cancelled', payment_status='Cancelled')
+        .execution_options(synchronize_session=False)
+    ).rowcount
     db.refresh(order)
     if not changed:
+        if order.status == "Cancelled":
+            return order
         raise HTTPException(409, 'The order changed. Reload before cancelling.')
     add_event(order, "Cancelled")
     release_stock(db, order)
@@ -152,6 +198,77 @@ def transition_order(db, order, target):
             return order
         else:
             raise HTTPException(409, "Payment Review orders can only be reconciled to Confirmed or Cancelled")
+
+    # Handle staff verification and stock reservation for Cash on Delivery orders
+    if order.status == "Awaiting Confirmation":
+        if target == "Confirmed":
+            if order.payment_method != "cod":
+                raise HTTPException(409, "Only Cash-on-Delivery orders can be confirmed from Awaiting Confirmation")
+            
+            # 1. Aggregate required quantities across line items by product_id
+            from collections import defaultdict
+            required_by_product = defaultdict(int)
+            line_names = {}
+            for line in order.items:
+                if line.product_id:
+                    required_by_product[line.product_id] += (line.quantity or 1)
+                    line_names[line.product_id] = line.product_name
+
+            # 2. Lock products in consistent sorted order and verify sufficient stock
+            sorted_product_ids = sorted(required_by_product.keys())
+            insufficient = []
+            for pid in sorted_product_ids:
+                req_qty = required_by_product[pid]
+                product = db.query(Product).filter(Product.id == pid).with_for_update().first()
+                if not product or product.stock < req_qty:
+                    avail = product.stock if product else 0
+                    pname = line_names.get(pid, f"#{pid}")
+                    insufficient.append(f"'{pname}' (available: {avail}, required: {req_qty})")
+
+            if insufficient:
+                # Rollback uncommitted queries and abort without reserving stock
+                db.rollback()
+                raise HTTPException(
+                    409,
+                    f"Cannot confirm COD order: insufficient stock for {', '.join(insufficient)}. Restock items or contact customer."
+                )
+
+            # 3. Conditional order-state claim: ensure only one thread can transition the order and reserve stock
+            claim = db.execute(
+                update(Order)
+                .where(
+                    Order.id == order.id,
+                    Order.status == "Awaiting Confirmation",
+                    Order.stock_reserved == False
+                )
+                .values(stock_reserved=True, status="Confirmed", expires_at=None)
+                .execution_options(synchronize_session=False)
+            ).rowcount
+
+            db.refresh(order)
+            if not claim:
+                # Repeat or stale invocation: return existing confirmed order if already reconciled, else conflict
+                if order.status == "Confirmed" and order.stock_reserved:
+                    return order
+                raise HTTPException(409, f"Order is already '{order.status}', cannot confirm")
+
+            # 4. Deduct aggregated stock only once
+            for pid, req_qty in required_by_product.items():
+                count = db.execute(
+                    update(Product)
+                    .where(Product.id == pid, Product.stock >= req_qty)
+                    .values(stock=Product.stock - req_qty)
+                ).rowcount
+                if count != 1:
+                    db.rollback()
+                    raise HTTPException(409, f"Stock changed concurrently for item #{pid}. Cannot confirm COD order.")
+
+            add_event(order, "Confirmed by Staff (COD)")
+            return order
+        elif target == "Cancelled":
+            return cancel_order(db, order)
+        else:
+            raise HTTPException(409, "Awaiting Confirmation orders can only be confirmed or cancelled")
 
     allowed = {"Confirmed": "Processing", "Processing": "Shipped", "Shipped": "Out for Delivery", "Out for Delivery": "Delivered"}
     if target == "Cancelled":

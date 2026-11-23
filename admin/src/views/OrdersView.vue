@@ -29,7 +29,8 @@ import {
   CreditCard,
   MapPin,
   Check,
-  Navigation
+  Navigation,
+  Phone
 } from 'lucide-vue-next'
 
 const adminStore = useAdminStore()
@@ -128,7 +129,8 @@ const orderKpis = computed(() => {
 
 const orderTab = (order) => {
   const status = order.status?.toLowerCase()
-  return status === 'confirmed' ? 'pending' : status
+  if (status === 'confirmed' || status === 'awaiting confirmation' || status === 'awaiting_confirmation') return 'pending'
+  return status
 }
 
 const formatCarrierName = (c) => {
@@ -224,6 +226,7 @@ const getStatusBadgeClass = (status) => {
   if (s === 'processing') return 'badge-processing'
   if (s === 'shipped') return 'badge-shipped'
   if (s === 'confirmed' || s === 'pending') return 'badge-confirmed'
+  if (s === 'awaiting confirmation' || s === 'awaiting_confirmation') return 'badge-awaiting'
   if (s === 'cancelled') return 'badge-cancelled'
   if (s === 'returned') return 'badge-returned'
   return 'badge-processing'
@@ -277,8 +280,16 @@ const currentStageIndex = computed(() => {
 
 const nextAction = computed(() => {
   if (!activeOrder.value) return null
-  if (activeOrder.value.payment_method !== 'cod' && activeOrder.value.payment_status !== 'Paid') return null
   const s = (activeOrder.value.status || '').toLowerCase()
+  if (s === 'awaiting confirmation' || s === 'awaiting_confirmation') {
+    return {
+      label: 'Verify Phone/Address & Confirm COD (Reserve Stock)',
+      nextStatus: 'Confirmed',
+      icon: CheckCircle2,
+      btnClass: 'btn-advance-processing'
+    }
+  }
+  if (activeOrder.value.payment_method !== 'cod' && activeOrder.value.payment_status !== 'Paid') return null
   if (s === 'pending') {
     return null
   }
@@ -303,7 +314,7 @@ const nextAction = computed(() => {
 const canCancelOrder = computed(() => {
   if (!activeOrder.value) return false
   const status = activeOrder.value.status
-  if (status === 'Payment Review') return true
+  if (status === 'Payment Review' || status === 'Awaiting Confirmation') return true
   return ['Pending', 'Confirmed', 'Processing'].includes(status) && activeOrder.value.payment_status !== 'Paid'
 })
 
@@ -774,6 +785,23 @@ const exportOrders = () => {
             >
               Cancel Order
             </button>
+          </div>
+        </div>
+
+        <!-- Staff Verification Callout for Local COD Orders -->
+        <div v-if="activeOrder.status === 'Awaiting Confirmation'" class="card cod-verify-box">
+          <div class="verify-banner-header">
+            <Phone :size="16" class="verify-banner-icon" />
+            <strong>Staff Action Required: Verify Local COD Order (Krong Kampot)</strong>
+          </div>
+          <p class="verify-banner-text">
+            Customer selected Cash on Delivery for Krong Kampot. Please telephone customer at
+            <strong>{{ activeOrder.customer_phone }}</strong> to confirm delivery address:
+            <strong>{{ activeOrder.shipping_address }}, {{ activeOrder.shipping_city }}</strong>.
+          </p>
+          <div class="verify-stock-note">
+            <Package :size="14" class="callout-icon" />
+            <span><strong>Stock Status:</strong> Stock is currently unreserved. Clicking <em>Verify Phone/Address & Confirm COD</em> will atomically check catalog inventory and reserve stock for all line items. If any item is out of stock, confirmation will be blocked with a clear conflict alert.</span>
           </div>
         </div>
 
@@ -1575,8 +1603,49 @@ const exportOrders = () => {
 .badge-processing { background: #E0F2FE; color: #0369A1; }
 .badge-shipped { background: #F3E8FF; color: #6B21A8; }
 .badge-confirmed { background: #EAF4FA; color: #1E6091; }
+.badge-awaiting { background: #FEF3C7; color: #92400E; border: 1px solid #FDE68A; }
 .badge-cancelled { background: #FDF0EE; color: #D97768; }
 .badge-returned { background: #FAF0E8; color: #C4623C; }
+
+.cod-verify-box {
+  background: #FFFDF5;
+  border: 1px solid #FDE68A;
+  border-radius: 12px;
+  padding: 16px 20px;
+  margin-bottom: 20px;
+}
+
+.verify-banner-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  color: #92400E;
+  margin-bottom: 6px;
+}
+
+.verify-banner-icon {
+  color: #D97706;
+}
+
+.verify-banner-text {
+  font-size: 13px;
+  color: #78350F;
+  margin: 0 0 10px;
+  line-height: 1.45;
+}
+
+.verify-stock-note {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  font-size: 12px;
+  background: #FEF3C7;
+  padding: 10px 14px;
+  border-radius: 8px;
+  color: #92400E;
+  line-height: 1.4;
+}
 
 .date-cell {
   display: flex;

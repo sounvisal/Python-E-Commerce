@@ -11,7 +11,19 @@ function trustedUrl(value) {
 
 async function main() {
   const [amount, orderNumber] = process.argv.slice(2)
-  const url = process.env.ABA_PAYWAY_URL
+  let url = process.env.ABA_PAYWAY_URL
+  if (!url) {
+    try {
+      const fs = require('fs')
+      const path = require('path')
+      const envPath = path.resolve(__dirname, '../../.env')
+      if (fs.existsSync(envPath)) {
+        const content = fs.readFileSync(envPath, 'utf8')
+        const match = content.match(/ABA_PAYWAY_URL=["']?([^"'\r\n]+)/)
+        if (match) url = match[1]
+      }
+    } catch {}
+  }
   if (!url || !trustedUrl(url) || !/^\d+\.\d{2}$/.test(amount) || Number(amount) <= 0 || !orderNumber) {
     throw new Error('The local bridge requires a valid PayWay link and order.')
   }

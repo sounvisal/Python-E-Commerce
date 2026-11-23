@@ -6,7 +6,7 @@ def test_order_creation_and_calculation(place_guest_order):
     assert order["order_number"].startswith("LUM-")
     assert order["subtotal"] == 99.00
     assert order["total"] == 99.00
-    assert order["status"] == "Confirmed"
+    assert order["status"] == "Awaiting Confirmation"
     assert order["payment_status"] == "Unpaid"
 
 

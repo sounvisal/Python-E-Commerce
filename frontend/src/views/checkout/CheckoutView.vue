@@ -198,13 +198,13 @@
                     <label class="field-label" for="sCity">
                       {{ localeStore.t('checkout.province_city') || 'Province / City' }} <span class="req-star">*</span>
                     </label>
-                    <select id="sCity" v-model="form.shipping_city" required autocomplete="address-level2" class="form-select-input">
-                      <option value="Kampot">Kampot (Atelier Location)</option>
+                    <select id="sCity" v-model="form.shipping_city" required autocomplete="address-level2" class="form-select-input" @change="handleCityChange">
+                      <option value="Krong Kampot (Kampot Town)">Krong Kampot (Kampot Town - Local Atelier)</option>
+                      <option value="Kampot Province (Other Districts)">Kampot Province (Other Districts - Rural)</option>
                       <option value="Phnom Penh">Phnom Penh (Capital)</option>
                       <option value="Siem Reap">Siem Reap</option>
                       <option value="Battambang">Battambang</option>
                       <option value="Sihanoukville">Sihanoukville (Preah Sihanouk)</option>
-                      <option value="Kampot">Kampot</option>
                       <option value="Kandal">Kandal</option>
                       <option value="Banteay Meanchey">Banteay Meanchey</option>
                       <option value="Kampong Cham">Kampong Cham</option>
@@ -502,28 +502,44 @@
               <!-- Method 2: Cash on Delivery (COD) -->
               <label
                 class="payment-option-card"
-                :class="{ selected: form.payment_method === 'cod' }"
+                :class="{
+                  selected: form.payment_method === 'cod',
+                  disabled: !isLocalCodEligible
+                }"
               >
                 <input
                   type="radio"
                   name="payment_method"
                   value="cod"
+                  :disabled="!isLocalCodEligible"
                   :checked="form.payment_method === 'cod'"
-                  @change="form.payment_method = 'cod'"
+                  @change="isLocalCodEligible && (form.payment_method = 'cod')"
                   class="sr-only-radio"
                 />
                 <div class="payment-card-header">
                   <div class="payment-radio-wrap">
-                    <span class="payment-radio-circle" :class="{ active: form.payment_method === 'cod' }"></span>
+                    <span class="payment-radio-circle" :class="{ active: form.payment_method === 'cod', disabled: !isLocalCodEligible }"></span>
                     <Package :size="18" class="cod-box-icon-clean" />
                     <strong class="payment-title">{{ localeStore.t('checkout.cod_name') || 'Cash on Delivery (COD)' }}</strong>
                   </div>
-                  <span class="payment-badge-tag tag-cod">{{ localeStore.t('checkout.doorstep_handover') || 'DOORSTEP HANDOVER' }}</span>
+                  <span v-if="isLocalCodEligible" class="payment-badge-tag tag-cod">{{ localeStore.t('checkout.doorstep_handover') || 'DOORSTEP HANDOVER' }}</span>
+                  <span v-else class="payment-badge-tag tag-restricted">TOWN ONLY</span>
                 </div>
 
                 <p class="payment-card-desc">
-                  {{ localeStore.t('checkout.cod_desc') || 'Pay in cash (USD $ or KHR ៛) directly to the delivery driver upon receiving your package.' }}
+                  <span v-if="isLocalCodEligible">
+                    {{ localeStore.t('checkout.cod_desc') || 'Pay in cash (USD $ or KHR ៛) directly to the delivery driver upon receiving your package.' }}
+                  </span>
+                  <span v-else class="text-restricted-warning">
+                    Cash on delivery is available exclusively for <strong>Krong Kampot (Kampot town)</strong>. Delivery outside town requires prepayment via Bakong KHQR.
+                  </span>
                 </p>
+
+                <!-- Stock reservation notice for local COD -->
+                <div v-if="isLocalCodEligible" class="cod-stock-clarification-banner">
+                  <Clock :size="12" class="banner-clock-icon" />
+                  <span><strong>Awaiting Confirmation:</strong> Stock is secured once staff calls to verify your phone & delivery address.</span>
+                </div>
 
                 <div class="bank-pill-row">
                   <span class="bank-chip">
@@ -540,6 +556,12 @@
                   </span>
                 </div>
               </label>
+
+              <!-- Unavailable fallback state when remote delivery and KHQR unavailable -->
+              <div v-if="!isLocalCodEligible && !khqrAvailable" class="remote-payment-blocked-banner">
+                <AlertCircle :size="16" class="warn-svg" />
+                <span>Prepaid delivery via KHQR is temporarily unavailable for remote delivery destinations. Please contact atelier concierge support.</span>
+              </div>
             </fieldset>
           </section>
 
@@ -724,7 +746,7 @@
       :order-number="pendingKhqrOrder.order_number"
       :amount="pendingKhqrOrder.total"
       :expires-at="pendingKhqrOrder.expires_at"
-      merchant-name="LUMÉA ATELIER"
+      merchant-name="SUON VISAL"
       @approved="handleKHQRApproved"
       @cancelled="handleKHQRCancelled"
     />
@@ -762,7 +784,8 @@ import {
   Package,
   Banknote,
   Tag,
-  MessageSquare
+  MessageSquare,
+  AlertCircle
 } from 'lucide-vue-next'
 
 const router = useRouter()
@@ -781,7 +804,7 @@ const form = reactive({
   customer_phone: '',
   customer_email: '',
   shipping_address: '',
-  shipping_city: 'Kampot',
+  shipping_city: 'Krong Kampot (Kampot Town)',
   shipping_carrier: 'lumea_concierge',
   payment_method: 'cod',
   delivery_lat: null,
@@ -789,6 +812,21 @@ const form = reactive({
   delivery_notes: '',
   marketing_opt_in: true
 })
+
+// Canonical town check for Cash on Delivery (Krong Kampot only)
+const CANONICAL_LOCAL_TOWNS = ['krong kampot', 'krong kampot (kampot town)', 'kampot town', 'kampot city']
+const isLocalCodEligible = computed(() => {
+  if (!form.shipping_city) return false
+  return CANONICAL_LOCAL_TOWNS.includes(form.shipping_city.trim().toLowerCase())
+})
+
+function handleCityChange() {
+  if (!isLocalCodEligible.value) {
+    if (form.payment_method === 'cod') {
+      form.payment_method = khqrAvailable.value ? 'khqr' : ''
+    }
+  }
+}
 
 // Keep cartStore delivery destination in sync with form
 watch(
@@ -799,8 +837,12 @@ watch(
       lat: form.delivery_lat,
       lng: form.delivery_lng
     })
-    // Auto-switch away from GrabExpress if user selects non-Kampot province
-    const isLocal = (newCity || '').toLowerCase().includes('kampot')
+    // Enforce canonical COD destination rule: clear COD if remote
+    if (!isLocalCodEligible.value && form.payment_method === 'cod') {
+      form.payment_method = khqrAvailable.value ? 'khqr' : ''
+    }
+    // Auto-switch away from GrabExpress if user selects non-Kampot destination
+    const isLocal = isLocalCodEligible.value
     if (form.shipping_carrier === 'grab_express' && !isLocal) {
       form.shipping_carrier = 'lumea_concierge'
     }
@@ -913,9 +955,15 @@ function selectAddressMode(mode) {
     defaultAddressText.value = [saved.street, saved.city].filter(Boolean).join(', ')
     isEditingAddress.value = false
     cartStore.setDeliveryDestination({ city: form.shipping_city, lat: null, lng: null })
+    if (!isLocalCodEligible.value && form.payment_method === 'cod') {
+      form.payment_method = khqrAvailable.value ? 'khqr' : ''
+    }
   } else {
     addressSelectionMode.value = 'new'
     isEditingAddress.value = true
+    if (!isLocalCodEligible.value && form.payment_method === 'cod') {
+      form.payment_method = khqrAvailable.value ? 'khqr' : ''
+    }
   }
 }
 
@@ -2027,6 +2075,64 @@ function handleKHQRCancelled({ closed, message } = {}) {
 .tag-cod {
   background: #FDF1EC;
   color: #9C4135;
+}
+
+.payment-option-card.disabled {
+  opacity: 0.65;
+  background: #FAFAF9;
+  border-color: #E7E5E4;
+  cursor: not-allowed;
+}
+
+.payment-radio-circle.disabled {
+  border-color: #E5E7EB;
+  background: #F3F4F6;
+}
+
+.tag-restricted {
+  background: #F5F5F4;
+  color: #78716C;
+  border: 1px solid #E7E5E4;
+}
+
+.text-restricted-warning {
+  color: #B45309;
+  font-size: 11px;
+  line-height: 1.35;
+  display: block;
+}
+
+.cod-stock-clarification-banner {
+  background: #FFFBEB;
+  border: 1px solid #FDE68A;
+  border-radius: 6px;
+  padding: 6px 9px;
+  margin-bottom: 9px;
+  font-size: 11px;
+  color: #92400E;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  line-height: 1.3;
+}
+
+.banner-clock-icon {
+  color: #D97706;
+  flex-shrink: 0;
+}
+
+.remote-payment-blocked-banner {
+  grid-column: 1 / -1;
+  background: #FEF2F2;
+  border: 1px solid #FECACA;
+  border-radius: 8px;
+  padding: 10px 14px;
+  color: #991B1B;
+  font-size: 12px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 6px;
 }
 
 .payment-card-desc {

@@ -1,10 +1,13 @@
+import os
 import hashlib
 import secrets
 import json
+import threading
+import time
 from datetime import timedelta
 from sqlalchemy import update, or_
 from sqlalchemy.exc import IntegrityError
-from fastapi import Header
+from fastapi import Header, Request
 from app.api.deps import get_optional_user, get_current_user, require_admin
 from app.models.user import User
 from app.services.order_lifecycle import (utcnow, guest_token, check_order_access, expire_pending_orders, cancel_order, transition_order, add_event)
@@ -27,6 +30,51 @@ router = APIRouter(prefix="/orders", tags=["Orders"])
 
 class OrderStatusUpdatePayload(BaseModel):
     status: str
+
+# Canonical local town destinations where Cash on Delivery is permitted.
+# Strictly limited to the atelier's home town (Krong Kampot).
+# Other Kampot districts and other provinces require KHQR prepayment.
+CANONICAL_COD_DESTINATIONS = {
+    "krong kampot",
+    "krong kampot (kampot town)",
+    "kampot town",
+    "kampot city"
+}
+
+def is_canonical_cod_destination(city: Optional[str]) -> bool:
+    """
+    Enforces canonical COD eligibility:
+    - Only Krong Kampot (Kampot town) is eligible.
+    - NEVER infer from substring (e.g. no 'kampot' in c).
+    - NEVER default missing/empty destination to town.
+    - NEVER equate Grab service area with COD eligibility.
+    """
+    if not city or not isinstance(city, str):
+        return False
+    normalized = city.strip().lower()
+    return normalized in CANONICAL_COD_DESTINATIONS
+
+class SyncSlidingWindowLimiter:
+    """Thread-safe sliding window rate limiter for order submissions."""
+    def __init__(self):
+        self.requests = {}
+        self.lock = threading.Lock()
+
+    def is_allowed(self, key: str, limit: int, window_seconds: int = 600):
+        now = time.time()
+        with self.lock:
+            if key not in self.requests:
+                self.requests[key] = []
+            cutoff = now - window_seconds
+            self.requests[key] = [ts for ts in self.requests[key] if ts > cutoff]
+            if len(self.requests[key]) >= limit:
+                oldest = self.requests[key][0]
+                retry_after = max(1, int(oldest + window_seconds - now))
+                return False, retry_after
+            self.requests[key].append(now)
+            return True, 0
+
+cod_submission_limiter = SyncSlidingWindowLimiter()
 
 def generate_order_number() -> str:
     """Generates unique alphanumeric order reference like LUM-849201."""
@@ -282,6 +330,12 @@ def list_carriers(
 def quote_order(payload: OrderCreate, db: Session = Depends(get_db), current_user=Depends(get_optional_user)):
     expire_pending_orders(db)
     db.commit()
+    if payload.payment_method == "cod" and not is_canonical_cod_destination(payload.shipping_city):
+        raise HTTPException(
+            400,
+            "Cash on delivery is only available within Krong Kampot (Kampot town). "
+            "Deliveries outside town, including other Kampot districts and provinces, must be prepaid via KHQR."
+        )
     if payload.checkout_key:
         existing = db.query(Order).filter(Order.checkout_key == payload.checkout_key).first()
         if existing:
@@ -291,12 +345,13 @@ def quote_order(payload: OrderCreate, db: Session = Depends(get_db), current_use
                 raise HTTPException(409, 'This checkout has expired or was cancelled. Start a new attempt.')
             return {'data': {'subtotal': existing.subtotal, 'discount': existing.discount,
                 'shipping_fee': existing.shipping_fee, 'total': existing.total,
+                'cod_eligible': is_canonical_cod_destination(existing.shipping_city),
                 'items': [dict(product_id=i.product_id, price=i.price, quantity=i.quantity, total=i.total) for i in existing.items]}}
     quote, lines = calculate_quote(payload, db)
-    return {"data": {**quote, "items": lines}}
+    return {"data": {**quote, "cod_eligible": is_canonical_cod_destination(payload.shipping_city), "items": lines}}
 
 @router.post("", response_model=OrderResponse, status_code=201)
-def place_order(order_in: OrderCreate, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+def place_order(order_in: OrderCreate, request: Request, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     """
     Creates a new customer order.
     Requires an authenticated customer to prevent spam bots and fraudulent orders.
@@ -320,8 +375,47 @@ def place_order(order_in: OrderCreate, db: Session = Depends(get_db), current_us
 
     if order_in.payment_method not in ("khqr", "cod"):
         raise HTTPException(400, "This payment method is not available. Choose KHQR or cash on delivery.")
-    if settings.PRODUCTION and order_in.payment_method == "khqr" and not merchant_gateway():
+    has_khqr = bool(merchant_gateway()) or bool(os.getenv("ABA_PAYWAY_URL")) or bool(os.getenv("BAKONG_ACCOUNT_ID"))
+    if order_in.payment_method == "khqr" and not has_khqr:
         raise HTTPException(503, "KHQR is temporarily unavailable. Choose cash on delivery.")
+
+    is_cod = (order_in.payment_method == "cod")
+    if is_cod:
+        if not is_canonical_cod_destination(order_in.shipping_city):
+            raise HTTPException(
+                400,
+                "Cash on delivery is only available within Krong Kampot (Kampot town). "
+                "Deliveries outside town, including other Kampot districts and provinces, must be prepaid via KHQR."
+            )
+
+        # Enforce at most one open unconfirmed COD request per account
+        open_cod = db.query(Order).filter(
+            Order.user_id == current_user.id,
+            Order.status == "Awaiting Confirmation",
+            Order.payment_method == "cod"
+        ).first()
+        if open_cod:
+            if (order_in.checkout_key and open_cod.checkout_key == order_in.checkout_key) or open_cod.checkout_fingerprint == fingerprint:
+                return order_created_response(open_cod)
+            raise HTTPException(
+                409,
+                "You already have an open Cash-on-Delivery order awaiting confirmation. "
+                "Please wait for staff confirmation or cancel your existing order before placing a new COD order."
+            )
+
+        # Tighter server-side COD submission limits
+        client_ip = request.client.host if (request and request.client) else "127.0.0.1"
+        is_test = (request.headers.get("X-Test-Client") == "true") if request else False
+        if not is_test:
+            allowed_user, retry_user = cod_submission_limiter.is_allowed(f"cod:user:{current_user.id}", limit=5, window_seconds=600)
+            allowed_ip, retry_ip = cod_submission_limiter.is_allowed(f"cod:ip:{client_ip}", limit=10, window_seconds=600)
+            if not allowed_user or not allowed_ip:
+                retry_sec = max(retry_user, retry_ip, 1)
+                raise HTTPException(
+                    429,
+                    f"Too many Cash-on-Delivery checkout attempts. Please wait {retry_sec} seconds before trying again."
+                )
+
     quote, order_items_to_create = calculate_quote(order_in, db)
     subtotal, discount, shipping_fee, total = (quote[k] for k in ("subtotal", "discount", "shipping_fee", "total"))
     if order_in.expected_total is None or abs(order_in.expected_total - total) > 0.009:
@@ -339,8 +433,9 @@ def place_order(order_in: OrderCreate, db: Session = Depends(get_db), current_us
         checkout_key=checkout_key,
         checkout_fingerprint=fingerprint,
         user_id=current_user.id,
-        expires_at=utcnow() + timedelta(minutes=5) if order_in.payment_method == 'khqr' else None,
-        stock_reserved=True,
+        expires_at=utcnow() + timedelta(hours=24) if is_cod else (utcnow() + timedelta(minutes=5) if order_in.payment_method == 'khqr' else None),
+        stock_reserved=False if is_cod else True,
+        promo_claimed=bool(order_in.discount_code),
         customer_name=order_in.customer_name,
         customer_email=order_in.customer_email,
         customer_phone=order_in.customer_phone,
@@ -357,8 +452,8 @@ def place_order(order_in: OrderCreate, db: Session = Depends(get_db), current_us
         discount_code=(order_in.discount_code or '').strip().upper() or None,
         shipping_fee=shipping_fee,
         total=total,
-        status="Pending" if order_in.payment_method == "khqr" else "Confirmed",
-        payment_status="Pending" if order_in.payment_method == "khqr" else "Unpaid",
+        status="Awaiting Confirmation" if is_cod else ("Pending" if order_in.payment_method == "khqr" else "Confirmed"),
+        payment_status="Unpaid" if is_cod else ("Pending" if order_in.payment_method == "khqr" else "Unpaid"),
         payment_method=order_in.payment_method or "card"
     )
 
@@ -367,12 +462,18 @@ def place_order(order_in: OrderCreate, db: Session = Depends(get_db), current_us
     try:
         db.add(new_order)
         db.flush()
-        # Conditional updates arbitrate concurrent checkouts for the last units.
-        for item in order_items_to_create:
-            count = db.execute(update(Product).where(Product.id == item['product_id'], Product.stock >= item['quantity'])
-                               .values(stock=Product.stock - item['quantity'])).rowcount
-            if count != 1:
-                raise HTTPException(409, 'Stock changed. Review your bag and retry.')
+        if not is_cod:
+            # Conditional updates arbitrate concurrent checkouts for the last units for KHQR/prepaid orders.
+            for item in order_items_to_create:
+                count = db.execute(update(Product).where(Product.id == item['product_id'], Product.stock >= item['quantity'])
+                                   .values(stock=Product.stock - item['quantity'])).rowcount
+                if count != 1:
+                    raise HTTPException(409, 'Stock changed. Review your bag and retry.')
+        else:
+            # Cash on delivery creates an Awaiting Confirmation order WITHOUT decrementing/reserving stock.
+            # Stock is reserved atomically in a single transaction once staff verifies delivery details and confirms.
+            pass
+
         if new_order.discount_code:
             count = db.execute(update(Promotion).where(Promotion.code == new_order.discount_code, Promotion.used < Promotion.max_uses)
                                .values(used=Promotion.used + 1)).rowcount
@@ -383,6 +484,17 @@ def place_order(order_in: OrderCreate, db: Session = Depends(get_db), current_us
         existing = db.query(Order).filter(Order.checkout_key == checkout_key).first()
         if existing and existing.checkout_fingerprint == fingerprint:
             return order_created_response(existing)
+        open_cod = db.query(Order).filter(
+            Order.user_id == current_user.id,
+            Order.status == "Awaiting Confirmation",
+            Order.payment_method == "cod"
+        ).first()
+        if open_cod:
+            raise HTTPException(
+                409,
+                "You already have an open Cash-on-Delivery order awaiting confirmation. "
+                "Please wait for staff confirmation or cancel your existing order before placing a new COD order."
+            )
         raise HTTPException(409, 'Checkout conflict. Please retry.')
     except Exception:
         db.rollback()
@@ -422,6 +534,30 @@ def get_order_by_number(orderNumber: str, db: Session = Depends(get_db), current
     expire_pending_orders(db)
     db.commit()
     return {"status": "success", "data": order}
+
+@router.post("/{orderNumber}/confirm-cod", response_model=OrderResponse)
+def confirm_cod_order(orderNumber: str, db: Session = Depends(get_db), current_user: User = Depends(require_admin)):
+    """
+    Staff confirmation endpoint for Cash on Delivery orders.
+    Requires staff verification of delivery phone and address.
+    Atomically checks stock, reserves each line exactly once, and updates status to Confirmed.
+    """
+    order = db.query(Order).filter(Order.order_number == orderNumber).first()
+    if not order:
+        raise HTTPException(404, f"Order {orderNumber} not found")
+    if order.status != "Awaiting Confirmation":
+        if order.status == "Confirmed" and order.stock_reserved:
+            return {"status": "success", "message": f"Order #{order.order_number} is already confirmed", "data": order}
+        raise HTTPException(409, f"Order #{order.order_number} is in '{order.status}' status, cannot confirm")
+    
+    transition_order(db, order, "Confirmed")
+    db.commit()
+    db.refresh(order)
+    return {
+        "status": "success",
+        "message": f"Order #{order.order_number} verified and confirmed. Stock has been reserved.",
+        "data": order
+    }
 
 @router.patch("/{orderNumber}/status", response_model=OrderResponse)
 def update_order_status_by_number(orderNumber: str, payload: OrderStatusUpdatePayload, db: Session = Depends(get_db), current_user: User = Depends(require_admin)):

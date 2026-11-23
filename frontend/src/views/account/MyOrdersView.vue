@@ -174,7 +174,10 @@
                   <span class="status-dot" :class="order.statusType"></span>
                   <strong class="status-label-name">{{ order.status }}</strong>
                 </div>
-                <span class="status-detail-desc">{{ order.statusText }}</span>
+                <span v-if="order.status === 'Awaiting Confirmation'" class="status-detail-desc cod-unconfirmed-sub">
+                  Awaiting staff confirmation · Stock secured once confirmed
+                </span>
+                <span v-else class="status-detail-desc">{{ order.statusText }}</span>
                 <div class="status-items-price-row">
                   <span>{{ order.items.length }} items</span>
                   <span class="price-sep">|</span>
@@ -202,7 +205,7 @@
                   </template>
 
                   <!-- If confirmed, processing or pending, show View Details + Track + Cancel -->
-                  <template v-else-if="['processing', 'confirmed', 'pending'].includes(order.statusType)">
+                  <template v-else-if="['processing', 'confirmed', 'pending', 'awaiting-confirmation', 'awaiting_confirmation'].includes(order.statusType)">
                     <router-link
                       :to="`/account/orders/${order.orderNumber}`"
                       class="btn-order-outline"

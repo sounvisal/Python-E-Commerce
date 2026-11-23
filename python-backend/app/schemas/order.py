@@ -62,6 +62,8 @@ class OrderOut(BaseModel):
     payment_status: Optional[str] = "Paid"
     transaction_ref: Optional[str] = None
     access_token: Optional[str] = None
+    stock_reserved: Optional[bool] = False
+    promo_claimed: Optional[bool] = False
     expires_at: Optional[datetime] = None
     delivered_at: Optional[datetime] = None
     events: Optional[list] = []

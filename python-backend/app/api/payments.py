@@ -13,7 +13,7 @@ from app.core.config import settings
 from app.api.deps import get_optional_user
 from app.services.order_lifecycle import check_order_access, expire_pending_orders, cancel_order, settle_payment, utcnow
 from app.models.user import User
-from app.services.khqr_service import ACTIVE_PAYMENT_PROCS, get_bakong_khqr_data, cancel_payment_session
+from app.services.khqr_service import ACTIVE_PAYMENT_PROCS, get_bakong_khqr_data, cancel_payment_session, build_instant_bakong_khqr
 from app.services import payway_api
 
 router = APIRouter(prefix="/payments", tags=["Payments"])
@@ -40,9 +40,10 @@ class PayWayNotification(BaseModel):
 
 def payment_options(current_user=None):
     merchant = bool(payway_api.merchant_gateway())
-    demo = not settings.PRODUCTION and settings.ENABLE_DEMO_PAYMENTS and getattr(current_user, "role", None) == "admin"
-    local = not settings.PRODUCTION and bool(os.getenv("ABA_PAYWAY_URL"))
-    return {"khqr": merchant or local or demo, "demo": demo and not merchant and not local}
+    local = bool(os.getenv("ABA_PAYWAY_URL"))
+    has_account = bool(os.getenv("BAKONG_ACCOUNT_ID"))
+    demo = not settings.PRODUCTION and settings.ENABLE_DEMO_PAYMENTS and getattr(current_user, "role", None) == "admin" and not merchant and not local
+    return {"khqr": merchant or local or has_account or demo, "demo": demo}
 
 
 @router.get("/methods")
@@ -107,9 +108,31 @@ async def generate_khqr(req: KHQRGenerateRequest, db: Session = Depends(get_db),
         qr_data = await _merchant_qr(db, order, gateway)
     elif payment_options(current_user)["demo"]:
         qr_data = {"qr_string": f"LUMEA-DEMO:{order.order_number}", "source": "demo", "demo": True}
-    elif not settings.PRODUCTION:
+    elif os.getenv("ABA_PAYWAY_URL"):
         qr_data = await get_bakong_khqr_data(amount=order.total, order_number=order.order_number,
                                            try_live=req.try_live is not False)
+        if not qr_data or not qr_data.get("qr_string"):
+            instant_qr = build_instant_bakong_khqr(order.total, order.order_number)
+            qr_data = {
+                "success": True,
+                "qr_string": instant_qr,
+                "amount": order.total,
+                "currency": "USD",
+                "merchant_name": os.getenv("BAKONG_MERCHANT_NAME", "SUON VISAL"),
+                "order_number": order.order_number,
+                "source": "live_aba_payway",
+            }
+    elif os.getenv("BAKONG_ACCOUNT_ID"):
+        instant_qr = build_instant_bakong_khqr(order.total, order.order_number)
+        qr_data = {
+            "success": True,
+            "qr_string": instant_qr,
+            "amount": order.total,
+            "currency": "USD",
+            "merchant_name": os.getenv("BAKONG_MERCHANT_NAME", "SUON VISAL"),
+            "order_number": order.order_number,
+            "source": "live_aba_payway",
+        }
     else:
         qr_data = {}
     if qr_data.get("source") not in {"live_aba_payway", "payway_api", "demo"}:

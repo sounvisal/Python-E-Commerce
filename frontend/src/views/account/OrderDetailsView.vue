@@ -17,7 +17,7 @@
       </nav>
 
       <!-- 3-Column Layout: Account Sidebar + Main Details + Aside Summary -->
-      <div class="order-details-grid">
+      <div class="order-details-grid" :class="{ 'has-sidebar': authStore.isAuthenticated }">
         <!-- ========================================================= -->
         <!-- LEFT: ACCOUNT SIDEBAR                                     -->
         <!-- ========================================================= -->
@@ -53,6 +53,17 @@
               <button class="btn-track-order-action" @click="showTrackingModal = true">
                 Track Order
               </button>
+            </div>
+
+            <!-- Notice for COD orders awaiting staff confirmation -->
+            <div v-if="order.status === 'Awaiting Confirmation'" class="cod-confirmation-alert">
+              <Clock :size="18" class="alert-clock-icon" />
+              <div class="alert-content">
+                <strong class="alert-title">Awaiting Staff Confirmation (Cash on Delivery)</strong>
+                <p class="alert-desc">
+                  Your order has been recorded. Our atelier staff will call you to verify your delivery address ({{ order.shippingAddress.address }}, {{ order.shippingAddress.city }}) and phone number ({{ order.shippingAddress.phone }}). <strong>Stock is officially secured once staff confirms your order.</strong>
+                </p>
+              </div>
             </div>
           </div>
 
@@ -95,7 +106,7 @@
                 <div class="address-text-col">
                   <strong class="address-recipient">{{ order.shippingAddress.name }}</strong>
                   <p class="address-line">{{ order.shippingAddress.address }}</p>
-                  <p class="address-city-line">{{ order.shippingAddress.city }}</p>
+                  <p v-if="order.shippingAddress.city && order.shippingAddress.city.toLowerCase() !== (order.shippingAddress.address || '').toLowerCase()" class="address-city-line">{{ order.shippingAddress.city }}</p>
                   <span class="address-contact-phone">{{ order.shippingAddress.phone }}</span>
                 </div>
               </div>
@@ -211,9 +222,9 @@
                 <span class="summary-value">${{ order.subtotal.toFixed(2) }}</span>
               </div>
               <div class="summary-line">
-                <span class="summary-label">Shipping (Standard Delivery)</span>
-                <span class="summary-value" :class="{ 'free-text': !order.shippingFee || order.shippingFee === 0 }">
-                  {{ (!order.shippingFee || order.shippingFee === 0) ? 'Free' : '$' + order.shippingFee.toFixed(2) }}
+                <span class="summary-label">Shipping ({{ order.deliveryMethod || 'Standard Delivery' }})</span>
+                <span class="summary-value" :class="{ 'free-text': displayShippingFee === 0 }">
+                  {{ displayShippingFee === 0 ? 'Free' : '$' + displayShippingFee.toFixed(2) }}
                 </span>
               </div>
               <div class="summary-line">
@@ -242,11 +253,19 @@
             <h3 class="aside-card-title">Payment Information</h3>
 
             <div class="payment-info-content">
-              <div class="aba-badge-square">
-                <span>ABA</span>
+              <div
+                class="pay-method-badge"
+                :class="{
+                  'badge-cod': order.paymentMethod.provider === 'COD',
+                  'badge-khqr': order.paymentMethod.provider === 'KHQR',
+                  'badge-aba': order.paymentMethod.provider !== 'COD' && order.paymentMethod.provider !== 'KHQR'
+                }"
+              >
+                <Truck v-if="order.paymentMethod.provider === 'COD'" :size="16" />
+                <span v-else>{{ order.paymentMethod.provider }}</span>
               </div>
               <div class="payment-method-text">
-                <strong class="pay-provider-title">{{ order.paymentMethod.provider }}</strong>
+                <strong class="pay-provider-title">{{ order.paymentMethod.provider === 'COD' ? 'Cash on Delivery (COD)' : order.paymentMethod.provider }}</strong>
                 <span class="pay-details-date">{{ order.paymentMethod.details }}</span>
               </div>
               <span class="pay-amount-val">${{ order.paymentMethod.amount.toFixed(2) }}</span>
@@ -433,6 +452,15 @@ const order = computed(() => {
   return ordersStore.getOrderById(param)
 })
 
+const displayShippingFee = computed(() => {
+  if (!order.value) return 0
+  if (typeof order.value.shippingFee === 'number' && order.value.shippingFee > 0) {
+    return order.value.shippingFee
+  }
+  const calc = (order.value.total || 0) - (order.value.subtotal || 0) + (order.value.discount || 0)
+  return Math.max(0, Math.round(calc * 100) / 100)
+})
+
 const activeStepIndex = computed(() => {
   if (!order.value?.timeline) return 0
   const index = order.value.timeline.findIndex((s) => !s.completed)
@@ -500,9 +528,13 @@ function openReviewFor(item) {
 /* 3-Column Grid Layout */
 .order-details-grid {
   display: grid;
-  grid-template-columns: 260px 1fr 340px;
+  grid-template-columns: minmax(0, 1fr) 340px;
   gap: 2rem;
   align-items: start;
+}
+
+.order-details-grid.has-sidebar {
+  grid-template-columns: 260px minmax(0, 1fr) 340px;
 }
 
 /* ================= CENTER COLUMN ================= */
@@ -571,6 +603,48 @@ function openReviewFor(item) {
 .order-status-banner.cancelled {
   background-color: #FDE8E8;
   border: 1px solid #F8B4B4;
+}
+
+.order-status-banner.awaiting-confirmation,
+.order-status-banner.awaiting_confirmation {
+  background-color: #FFFBEB;
+  border: 1px solid #FDE68A;
+}
+
+.cod-confirmation-alert {
+  margin-top: 12px;
+  background: #FFFDF5;
+  border: 1px solid #FDE68A;
+  border-radius: 10px;
+  padding: 14px 16px;
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.alert-clock-icon {
+  color: #D97706;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.alert-content {
+  font-size: 13px;
+  line-height: 1.45;
+  color: #451A03;
+}
+
+.alert-title {
+  display: block;
+  font-size: 13.5px;
+  font-weight: 700;
+  margin-bottom: 3px;
+  color: #92400E;
+}
+
+.alert-desc {
+  margin: 0;
+  color: #78350F;
 }
 
 .status-banner-left {
@@ -822,24 +896,30 @@ function openReviewFor(item) {
 .order-items-table {
   display: flex;
   flex-direction: column;
+  overflow-x: auto;
+  min-width: 0;
 }
 
 .table-head-row {
   display: grid;
-  grid-template-columns: 2fr 100px 60px 100px 130px;
+  grid-template-columns: minmax(180px, 2fr) 90px 60px 90px 130px;
+  gap: 0.75rem;
   padding-bottom: 0.75rem;
   border-bottom: 1px solid #EFE6DD;
   font-size: 0.78rem;
   font-weight: 600;
   color: #78716C;
+  min-width: 540px;
 }
 
 .table-body-row {
   display: grid;
-  grid-template-columns: 2fr 100px 60px 100px 130px;
+  grid-template-columns: minmax(180px, 2fr) 90px 60px 90px 130px;
+  gap: 0.75rem;
   align-items: center;
   padding: 1.15rem 0;
   border-bottom: 1px solid #F5EFEB;
+  min-width: 540px;
 }
 
 .table-body-row:last-child {
@@ -1017,6 +1097,7 @@ function openReviewFor(item) {
   gap: 0.75rem;
 }
 
+.pay-method-badge,
 .aba-badge-square {
   width: 38px;
   height: 38px;
@@ -1029,6 +1110,21 @@ function openReviewFor(item) {
   font-size: 0.75rem;
   font-weight: 700;
   flex-shrink: 0;
+}
+
+.pay-method-badge.badge-cod {
+  background: #7A2E22;
+  color: #FFFFFF;
+}
+
+.pay-method-badge.badge-khqr {
+  background: #E1251B;
+  color: #FFFFFF;
+}
+
+.pay-method-badge.badge-aba {
+  background: #005D8E;
+  color: #FFFFFF;
 }
 
 .payment-method-text {
@@ -1157,13 +1253,15 @@ function openReviewFor(item) {
 
 /* Responsive */
 @media (max-width: 1200px) {
-  .order-details-grid {
-    grid-template-columns: 240px 1fr;
+  .order-details-grid,
+  .order-details-grid.has-sidebar {
+    grid-template-columns: 1fr;
   }
   .order-aside-column {
-    grid-column: span 2;
+    grid-column: span 1;
     display: grid;
     grid-template-columns: 1fr 1fr;
+    gap: 1.5rem;
   }
   .promo-brand-box {
     grid-column: span 2;

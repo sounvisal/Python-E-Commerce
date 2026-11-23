@@ -173,7 +173,7 @@ def cancel_payment_session(order_number: str):
 async def get_bakong_khqr_data(amount: float, order_number: str = "LUM-000000", try_live: bool = True) -> Dict[str, Any]:
     """Local PayWay link integration. Hosted checkout uses the merchant API."""
     payway_url = os.getenv("ABA_PAYWAY_URL", "")
-    if settings.PRODUCTION or not try_live or not payway_url:
+    if not try_live or not payway_url:
         return {"success": False, "source": "unavailable"}
     if order_number in LOCAL_PAYMENT_QRS:
         return LOCAL_PAYMENT_QRS[order_number]
