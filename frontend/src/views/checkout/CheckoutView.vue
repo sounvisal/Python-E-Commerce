@@ -199,6 +199,7 @@
                       {{ localeStore.t('checkout.province_city') || 'Province / City' }} <span class="req-star">*</span>
                     </label>
                     <select id="sCity" v-model="form.shipping_city" required autocomplete="address-level2" class="form-select-input">
+                      <option value="Kampot">Kampot (Atelier Location)</option>
                       <option value="Phnom Penh">Phnom Penh (Capital)</option>
                       <option value="Siem Reap">Siem Reap</option>
                       <option value="Battambang">Battambang</option>
@@ -297,7 +298,40 @@
               <fieldset class="couriers-four-grid" role="radiogroup" aria-labelledby="courier-heading">
                 <legend id="courier-heading" class="sr-only">{{ localeStore.t('checkout.select_courier') || 'Select Cambodia Courier' }}</legend>
 
-                <!-- 1. VET Logistics (Vireak Buntham) -->
+                <!-- 1. Luméa Shop Direct Delivery (Atelier Courier) -->
+                <label
+                  class="courier-card"
+                  :class="{ selected: form.shipping_carrier === 'lumea_concierge' }"
+                >
+                  <input
+                    type="radio"
+                    name="shipping_carrier"
+                    value="lumea_concierge"
+                    :checked="form.shipping_carrier === 'lumea_concierge'"
+                    @change="setCarrier('lumea_concierge')"
+                    class="sr-only-radio"
+                  />
+                  <div class="courier-top-row">
+                    <span class="courier-tag tag-concierge">SHOP BEST VALUE • $1.00</span>
+                    <span class="courier-price" :class="{ 'free-price': cartStore.carrierQuoteMap.lumea_concierge.isFree }">
+                      <span v-if="cartStore.carrierQuoteMap.lumea_concierge.isFree" class="strike-original">{{ localeStore.formatPrice(cartStore.carrierQuoteMap.lumea_concierge.baseFee) }}</span>
+                      {{ cartStore.carrierQuoteMap.lumea_concierge.isFree ? localeStore.t('common.free') : localeStore.formatPrice(cartStore.carrierQuoteMap.lumea_concierge.fee) }}
+                    </span>
+                  </div>
+                  <div class="courier-title-line">
+                    <span class="courier-radio-circle" :class="{ active: form.shipping_carrier === 'lumea_concierge' }"></span>
+                    <div class="courier-names-wrap" style="padding-left: 2px;">
+                      <span class="courier-brand-name">{{ localeStore.t('checkout.concierge_name') || 'Luméa Direct' }}</span>
+                      <span class="courier-sub-name">Shop Courier</span>
+                    </div>
+                  </div>
+                  <div class="courier-eta">
+                    <Clock :size="11" class="eta-icon" />
+                    <span>{{ cartStore.carrierQuoteMap.lumea_concierge.transit }}</span>
+                  </div>
+                </label>
+
+                <!-- 2. VET Logistics (Vireak Buntham) -->
                 <label
                   class="courier-card"
                   :class="{ selected: form.shipping_carrier === 'vet_express' }"
@@ -333,7 +367,7 @@
                   </div>
                 </label>
 
-                <!-- 2. J&T Express Cambodia -->
+                <!-- 3. J&T Express Cambodia -->
                 <label
                   class="courier-card"
                   :class="{ selected: form.shipping_carrier === 'jt_express' }"
@@ -369,7 +403,7 @@
                   </div>
                 </label>
 
-                <!-- 3. GrabExpress On-Demand (Distance-Based Fare) -->
+                <!-- 4. GrabExpress On-Demand (Distance-Based Fare) -->
                 <label
                   class="courier-card"
                   :class="{
@@ -392,7 +426,7 @@
                       <span v-if="cartStore.isFreeDeliveryActive && cartStore.grabSubsidyEnabled" class="strike-original">{{ localeStore.formatPrice(cartStore.carrierQuoteMap.grab_express.baseFee) }}</span>
                       {{ localeStore.formatPrice(cartStore.carrierQuoteMap.grab_express.fee) }}
                     </span>
-                    <span v-else class="courier-tag tag-pp-only">PP ONLY</span>
+                    <span v-else class="courier-tag tag-pp-only">SAME CITY ONLY</span>
                   </div>
                   <div class="courier-title-line">
                     <span class="courier-radio-circle" :class="{ active: form.shipping_carrier === 'grab_express' }"></span>
@@ -407,39 +441,6 @@
                   <div class="courier-eta" :class="{ 'eta-warn': !cartStore.carrierQuoteMap.grab_express.available }">
                     <Clock :size="11" class="eta-icon" />
                     <span>{{ cartStore.carrierQuoteMap.grab_express.transit }}</span>
-                  </div>
-                </label>
-
-                <!-- 4. Luméa Atelier Concierge -->
-                <label
-                  class="courier-card"
-                  :class="{ selected: form.shipping_carrier === 'lumea_concierge' }"
-                >
-                  <input
-                    type="radio"
-                    name="shipping_carrier"
-                    value="lumea_concierge"
-                    :checked="form.shipping_carrier === 'lumea_concierge'"
-                    @change="setCarrier('lumea_concierge')"
-                    class="sr-only-radio"
-                  />
-                  <div class="courier-top-row">
-                    <span class="courier-tag tag-concierge">ATELIER SIGNATURE</span>
-                    <span class="courier-price" :class="{ 'free-price': cartStore.carrierQuoteMap.lumea_concierge.isFree }">
-                      <span v-if="cartStore.carrierQuoteMap.lumea_concierge.isFree" class="strike-original">{{ localeStore.formatPrice(cartStore.carrierQuoteMap.lumea_concierge.baseFee) }}</span>
-                      {{ cartStore.carrierQuoteMap.lumea_concierge.isFree ? localeStore.t('common.free') : localeStore.formatPrice(cartStore.carrierQuoteMap.lumea_concierge.fee) }}
-                    </span>
-                  </div>
-                  <div class="courier-title-line">
-                    <span class="courier-radio-circle" :class="{ active: form.shipping_carrier === 'lumea_concierge' }"></span>
-                    <div class="courier-names-wrap" style="padding-left: 2px;">
-                      <span class="courier-brand-name">{{ localeStore.t('checkout.concierge_name') || 'Luméa Atelier' }}</span>
-                      <span class="courier-sub-name">{{ localeStore.t('checkout.concierge_sub') || 'Concierge' }}</span>
-                    </div>
-                  </div>
-                  <div class="courier-eta">
-                    <Clock :size="11" class="eta-icon" />
-                    <span>{{ cartStore.carrierQuoteMap.lumea_concierge.transit }}</span>
                   </div>
                 </label>
               </fieldset>
@@ -780,8 +781,8 @@ const form = reactive({
   customer_phone: '',
   customer_email: '',
   shipping_address: '',
-  shipping_city: 'Phnom Penh',
-  shipping_carrier: 'vet_express',
+  shipping_city: 'Kampot',
+  shipping_carrier: 'lumea_concierge',
   payment_method: 'cod',
   delivery_lat: null,
   delivery_lng: null,
@@ -798,9 +799,10 @@ watch(
       lat: form.delivery_lat,
       lng: form.delivery_lng
     })
-    // Auto-switch away from GrabExpress if user selects non-PP province
-    if (form.shipping_carrier === 'grab_express' && (newCity || '').toLowerCase() !== 'phnom penh') {
-      form.shipping_carrier = 'vet_express'
+    // Auto-switch away from GrabExpress if user selects non-Kampot province
+    const isLocal = (newCity || '').toLowerCase().includes('kampot')
+    if (form.shipping_carrier === 'grab_express' && !isLocal) {
+      form.shipping_carrier = 'lumea_concierge'
     }
   }
 )
@@ -928,7 +930,7 @@ function clearAddressToNew() {
 
 function setCarrier(carrierId) {
   if (carrierId === 'grab_express' && !cartStore.carrierQuoteMap.grab_express.available) {
-    notificationStore.addToast('GrabExpress motorbike delivery is available within Phnom Penh only. For provincial delivery, please select Vireak Buntham (VET) or J&T Express.', 'info')
+    notificationStore.addToast('GrabExpress motorbike delivery is available within Kampot province only. For other provinces, please select Luméa Shop Direct ($1.00), Vireak Buntham (VET), or J&T Express.', 'info')
     return
   }
   form.shipping_carrier = carrierId
@@ -955,10 +957,10 @@ function handleLocationUpdate({ lat, lng, notes, auto_address, auto_city }) {
 
 const selectedCarrierName = computed(() => {
   const map = {
-    vet_express: 'VET Logistics',
-    jt_express: 'J&T Express',
-    grab_express: 'GrabExpress',
-    lumea_concierge: 'Luméa Concierge'
+    lumea_concierge: 'Luméa Shop Direct ($1.00)',
+    vet_express: 'VET Logistics ($1.50)',
+    jt_express: 'J&T Express ($1.75)',
+    grab_express: 'GrabExpress'
   }
   return map[form.shipping_carrier] || 'Domestic Courier'
 })

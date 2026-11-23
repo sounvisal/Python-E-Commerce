@@ -22,7 +22,7 @@ DEFAULT_SETTINGS = {
     "store_description": "Contemporary Skincare & Beauty Atelier. Natural beauty, clinically proven results.",
     "company_name": "Luméa Co., Ltd.",
     "business_reg_number": "KH-123456789",
-    "business_address": "#123, Norodom Blvd, Phnom Penh, Cambodia",
+    "business_address": "Krong Kampot, Kampot Province, Cambodia",
     "time_zone": "(UTC+07:00) Phnom Penh",
     "currency": "USD ($)",
     "currency_symbol": "$",
@@ -30,7 +30,7 @@ DEFAULT_SETTINGS = {
     "free_shipping_mode": "threshold",  # "threshold" | "all_orders" | "disabled"
     "free_shipping_threshold": 50.0,
     "free_shipping_promo_text": "Complimentary nationwide shipping on orders over $50",
-    "free_shipping_carriers": ["vet_express", "jt_express", "lumea_concierge"],
+    "free_shipping_carriers": ["lumea_concierge", "vet_express", "jt_express"],
     "grab_subsidy_enabled": True,
     "tax_rate": 10.0,
     "online_status": "Online",

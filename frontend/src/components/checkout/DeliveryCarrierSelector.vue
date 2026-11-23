@@ -51,7 +51,7 @@ import { Clock } from 'lucide-vue-next'
 const props = defineProps({
   modelValue: {
     type: String,
-    default: 'vet_express'
+    default: 'lumea_concierge'
   },
   subtotal: {
     type: Number,
@@ -66,6 +66,15 @@ const props = defineProps({
 const emit = defineEmits(['update:modelValue', 'change'])
 
 const carriers = [
+  {
+    id: 'lumea_concierge',
+    name: 'Luméa Shop Direct Delivery',
+    description: 'Direct shop messenger delivery from our Krong Kampot atelier. Most affordable & reliable.',
+    fee: 1.00,
+    transit: 'Same-Day / 1-Day Direct',
+    badge: 'Shop Best Value',
+    freeOverThreshold: true
+  },
   {
     id: 'vet_express',
     name: 'Vireak Buntham (VET Logistics)',
@@ -87,20 +96,11 @@ const carriers = [
   {
     id: 'grab_express',
     name: 'GrabExpress On-Demand',
-    description: 'Direct instant motorbike dispatch for urgent beauty rituals within Phnom Penh city limits.',
-    fee: 3.50,
-    transit: '60–90 Mins (Phnom Penh)',
+    description: 'Direct instant motorbike dispatch for urgent beauty rituals within the atelier city/province.',
+    fee: 2.50,
+    transit: '30–60 Mins (Same City Only)',
     badge: 'Instant Express',
     freeOverThreshold: false
-  },
-  {
-    id: 'lumea_concierge',
-    name: 'Luméa Atelier Concierge',
-    description: 'White-glove luxury delivery in signature silk-ribbon boxes with complimentary deluxe samples.',
-    fee: 3.00,
-    transit: 'White-Glove Scheduled',
-    badge: 'Atelier Signature',
-    freeOverThreshold: true
   }
 ]
 

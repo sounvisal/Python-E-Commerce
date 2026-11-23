@@ -41,8 +41,8 @@ def checkout_fingerprint(payload, user):
 
 import math
 
-ATELIER_LAT = 11.5564
-ATELIER_LNG = 104.9282
+ATELIER_LAT = 10.6106068
+ATELIER_LNG = 104.1815019
 
 def calculate_haversine_km(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
     """Calculates distance between two GPS coordinates using Haversine formula in kilometers."""
@@ -63,17 +63,17 @@ def calculate_carrier_shipping_fee(
 ) -> dict:
     """
     Authentic Cambodian Delivery Pricing & Admin-Configurable Free Delivery System:
-    - Admin can toggle free delivery ON/OFF, switch modes ('threshold', 'all_orders', 'disabled'),
-      and customize threshold amounts ($0, $25, $50, etc.) whenever they want.
-    1. VET Logistics (Vireak Buntham): Flat $1.50 Nationwide. Free when qualified.
-    2. J&T Express Cambodia: Flat $1.75 Nationwide. Free when qualified.
-    3. GrabExpress (Grab): Phnom Penh Only. GPS distance-based fare ($2.00 base + $0.40/km).
-       Receives $1.50 delivery credit when free shipping is earned.
-    4. Luméa Atelier Concierge: Flat $3.00. Free when qualified.
+    - Atelier shop located in Krong Kampot (Google Maps verified).
+    - Shop direct delivery is prioritized as the cheapest ($1.00) to reflect realistic shop logistics.
+    - GrabExpress on-demand is restricted to the same province/city (Kampot).
+    1. Luméa Shop Direct: Flat $1.00 from atelier. Free when qualified.
+    2. VET Logistics (Vireak Buntham): Flat $1.50 Nationwide. Free when qualified.
+    3. J&T Express Cambodia: Flat $1.75 Nationwide. Free when qualified.
+    4. GrabExpress (Grab): Same Province/City Only (Kampot). GPS distance-based fare ($1.50 base + $0.35/km).
     """
-    carrier_key = (carrier_key or "vet_express").lower()
-    c = (city or "Phnom Penh").strip().lower()
-    is_phnom_penh = ("phnom penh" in c) or ("khan" in c) or ("bkk" in c) or ("chamkarmon" in c) or ("daun penh" in c) or ("toul kork" in c)
+    carrier_key = (carrier_key or "lumea_concierge").lower()
+    c = (city or "Kampot").strip().lower()
+    is_same_city = ("kampot" in c) or ("krong kampot" in c) or ("teuk chhou" in c) or ("chhouk" in c)
 
     # Resolve settings configuration
     if isinstance(free_threshold, dict):
@@ -86,7 +86,7 @@ def calculate_carrier_shipping_fee(
     free_enabled = cfg.get("free_shipping_enabled", True)
     free_mode = cfg.get("free_shipping_mode", "threshold")  # "threshold" | "all_orders" | "disabled"
     threshold = float(cfg.get("free_shipping_threshold", 50.0))
-    eligible_carriers = cfg.get("free_shipping_carriers", ["vet_express", "jt_express", "lumea_concierge"])
+    eligible_carriers = cfg.get("free_shipping_carriers", ["lumea_concierge", "vet_express", "jt_express"])
     grab_subsidy = cfg.get("grab_subsidy_enabled", True)
 
     is_free_qualified = False
@@ -96,8 +96,22 @@ def calculate_carrier_shipping_fee(
         elif free_mode == "threshold":
             is_free_qualified = (subtotal >= threshold)
 
-    # 1. Vireak Buntham (VET Logistics) - Flat $1.50 Nationwide
-    if carrier_key == "vet_express":
+    # 1. Luméa Shop Direct Delivery (Atelier Courier) - Flat $1.00 (Cheapest & Best Value)
+    if carrier_key == "lumea_concierge":
+        base_fee = 1.00
+        is_free = is_free_qualified and ("lumea_concierge" in eligible_carriers)
+        fee = 0.0 if is_free else base_fee
+        return {
+            "fee": fee,
+            "base_fee": base_fee,
+            "transit": "Same-Day Direct Delivery" if is_same_city else "1–2 Business Days Direct",
+            "is_free": is_free,
+            "available": True,
+            "policy": "Luméa Shop Direct Delivery: Flat $1.00 from our Krong Kampot atelier"
+        }
+
+    # 2. Vireak Buntham (VET Logistics) - Flat $1.50 Nationwide
+    elif carrier_key == "vet_express":
         base_fee = 1.50
         is_free = is_free_qualified and ("vet_express" in eligible_carriers)
         fee = 0.0 if is_free else base_fee
@@ -110,7 +124,7 @@ def calculate_carrier_shipping_fee(
             "policy": "Flat nationwide courier: $1.50 to all 25 provinces and Phnom Penh"
         }
 
-    # 2. J&T Express Cambodia - Flat $1.75 Nationwide
+    # 3. J&T Express Cambodia - Flat $1.75 Nationwide
     elif carrier_key == "jt_express":
         base_fee = 1.75
         is_free = is_free_qualified and ("jt_express" in eligible_carriers)
@@ -124,73 +138,59 @@ def calculate_carrier_shipping_fee(
             "policy": "Flat domestic parcel network: $1.75 nationwide"
         }
 
-    # 3. GrabExpress (Grab) - Special distance & Phnom Penh only policy
+    # 4. GrabExpress (Grab) - Special distance & same city/province only policy
     elif carrier_key == "grab_express":
-        if not is_phnom_penh:
+        if not is_same_city:
             return {
                 "fee": 0.0,
                 "base_fee": 0.0,
-                "transit": "Phnom Penh Only",
+                "transit": "Same City/Province Only (Kampot)",
                 "is_free": False,
                 "available": False,
-                "policy": "GrabExpress on-demand motorbike dispatch is available within Phnom Penh only"
+                "policy": "GrabExpress on-demand dispatch is available within the atelier's province/city (Kampot) only"
             }
 
         # Dynamic GPS Distance Calculation
         if lat is not None and lng is not None and abs(lat) > 0.001 and abs(lng) > 0.001:
             distance_km = calculate_haversine_km(ATELIER_LAT, ATELIER_LNG, lat, lng)
         else:
-            distance_km = 6.5  # Typical Phnom Penh metropolitan radius
+            distance_km = 4.5  # Typical Kampot radius
 
-        # Base $2.00 up to 3 km, then $0.40 per additional km
-        raw_fee = 2.00 + max(0.0, distance_km - 3.0) * 0.40
+        # Base $1.50 up to 3 km, then $0.35 per additional km
+        raw_fee = 1.50 + max(0.0, distance_km - 3.0) * 0.35
         base_fee = round(raw_fee, 2)
 
         # On-demand rush delivery subsidy on qualified orders
         if is_free_qualified and grab_subsidy:
-            fee = max(1.50, round(base_fee - 1.50, 2))
+            fee = max(1.00, round(base_fee - 1.00, 2))
             is_free = False
-            note = f"Distance: {distance_km} km ($1.50 Free Delivery credit applied)"
+            note = f"Distance: {distance_km} km ($1.00 Free Delivery credit applied)"
         else:
             fee = base_fee
             is_free = False
-            note = f"Distance: {distance_km} km (Base $2.00 + $0.40/km)"
+            note = f"Distance: {distance_km} km (Base $1.50 + $0.35/km)"
 
         return {
             "fee": fee,
             "base_fee": base_fee,
-            "transit": f"60–90 Mins ({distance_km} km)",
+            "transit": f"30–60 Mins ({distance_km} km)",
             "is_free": is_free,
             "available": True,
             "distance_km": distance_km,
             "policy": note
         }
 
-    # 4. Luméa Atelier Concierge - Flat $3.00
-    elif carrier_key == "lumea_concierge":
-        base_fee = 3.00
-        is_free = is_free_qualified and ("lumea_concierge" in eligible_carriers)
-        fee = 0.0 if is_free else base_fee
-        return {
-            "fee": fee,
-            "base_fee": base_fee,
-            "transit": "White-Glove Scheduled",
-            "is_free": is_free,
-            "available": True,
-            "policy": "Signature silk-ribbon presentation"
-        }
-
     else:
-        base_fee = 1.50
+        base_fee = 1.00
         is_free = is_free_qualified
         fee = 0.0 if is_free else base_fee
         return {"fee": fee, "base_fee": base_fee, "transit": "1–2 Business Days", "is_free": is_free, "available": True}
 
 CARRIER_RATES = {
+    "lumea_concierge": {"name": "Luméa Shop Direct Delivery", "fee": 1.00, "transit": "Same-Day Direct Delivery", "free_over_threshold": True, "logo": None},
     "vet_express": {"name": "Vireak Buntham (VET Logistics)", "fee": 1.50, "transit": "1–2 Business Days", "free_over_threshold": True, "logo": "/images/couriers/vet_express.png"},
     "jt_express": {"name": "J&T Express Cambodia", "fee": 1.75, "transit": "Next-Day Delivery", "free_over_threshold": True, "logo": "/images/couriers/jt_express.png"},
-    "grab_express": {"name": "GrabExpress On-Demand", "fee": 3.50, "transit": "60–90 Mins (Phnom Penh)", "free_over_threshold": False, "logo": "/images/couriers/grab_express.png"},
-    "lumea_concierge": {"name": "Luméa Atelier Concierge", "fee": 3.00, "transit": "White-Glove Scheduled", "free_over_threshold": True, "logo": None},
+    "grab_express": {"name": "GrabExpress On-Demand", "fee": 2.50, "transit": "30–60 Mins (Kampot On-Demand)", "free_over_threshold": False, "logo": "/images/couriers/grab_express.png"},
 }
 
 def money(value):
@@ -217,8 +217,8 @@ def calculate_quote(order_in: OrderCreate, db: Session):
     discount = money(subtotal * (promotion.percent / 100 if promotion else 0))
     settings_data = load_settings()
     
-    carrier_key = (getattr(order_in, "shipping_carrier", None) or "vet_express").lower()
-    city = getattr(order_in, "shipping_city", "Phnom Penh") or "Phnom Penh"
+    carrier_key = (getattr(order_in, "shipping_carrier", None) or "lumea_concierge").lower()
+    city = getattr(order_in, "shipping_city", "Kampot") or "Kampot"
     lat = getattr(order_in, "delivery_lat", None)
     lng = getattr(order_in, "delivery_lng", None)
 

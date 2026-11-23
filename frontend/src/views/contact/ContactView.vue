@@ -80,7 +80,7 @@
                 </div>
                 <div class="channel-info">
                   <h4>Visit Us</h4>
-                  <p class="channel-time">Phnom Penh, Cambodia</p>
+                  <p class="channel-time">Krong Kampot, Cambodia</p>
                   <p class="channel-hint">(By appointment only)</p>
                 </div>
               </div>

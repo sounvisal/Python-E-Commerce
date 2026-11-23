@@ -246,17 +246,17 @@ const shippingFaqs = [
   {
     question: 'How long does delivery take?',
     answer:
-      'Within Phnom Penh, deliveries typically take 24–48 hours. For provinces across Cambodia, standard shipping takes 2–4 business days. Same-day delivery is available in Phnom Penh for orders placed before 11:00 AM.'
+      'Luméa Shop Direct delivery from our Krong Kampot atelier delivers same-day locally, and within 1–2 business days nationwide. GrabExpress offers instant 30–60 minute dispatch within the atelier city, while VET Logistics and J&T Express provide 1–2 day door-to-door delivery across all 25 provinces.'
   },
   {
     question: 'How much is the shipping fee?',
     answer:
-      'We offer complimentary standard shipping on all orders over $35 in Phnom Penh, and over $50 nationwide. For orders under the minimum threshold, shipping is a flat rate of $1.50 in Phnom Penh and $2.50 for other provinces.'
+      'Our exclusive Luméa Shop Direct delivery is our most economical option at a flat $1.00. VET Logistics is $1.50 nationwide, and J&T Express is $1.75 nationwide. We also offer complimentary shipping on all orders over $50.'
   },
   {
-    question: 'Do you deliver outside Phnom Penh?',
+    question: 'Do you deliver outside Kampot across all provinces?',
     answer:
-      'Yes! We ship across all 24 provinces in Cambodia using trusted express logistics partners including J&T Express and Virak Buntham.'
+      'Yes! We ship across all 25 provinces and Phnom Penh using our own shop dispatch as well as trusted logistics partners including Vireak Buntham (VET) and J&T Express.'
   },
   {
     question: 'How can I track my order?',

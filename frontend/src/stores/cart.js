@@ -17,8 +17,8 @@ function calculateHaversineKm(lat1, lon1, lat2, lon2) {
   return Math.round(R * c * 10) / 10
 }
 
-const ATELIER_LAT = 11.5564
-const ATELIER_LNG = 104.9282
+const ATELIER_LAT = 10.6106068
+const ATELIER_LNG = 104.1815019
 
 export const useCartStore = defineStore('cart', {
   state: () => ({
@@ -30,14 +30,14 @@ export const useCartStore = defineStore('cart', {
     freeShippingMode: 'threshold', // 'threshold' | 'all_orders' | 'disabled'
     freeShippingThreshold: 50.0,
     freeShippingPromoText: 'Complimentary nationwide shipping on orders over $50',
-    freeShippingCarriers: ['vet_express', 'jt_express', 'lumea_concierge'],
+    freeShippingCarriers: ['lumea_concierge', 'vet_express', 'jt_express'],
     grabSubsidyEnabled: true,
     taxRate: 10.0,
-    standardShippingFee: 1.50,
-    shippingCity: 'Phnom Penh',
+    standardShippingFee: 1.00,
+    shippingCity: 'Kampot',
     deliveryLat: null,
     deliveryLng: null,
-    selectedCarrier: 'vet_express',
+    selectedCarrier: 'lumea_concierge',
     settingsLoaded: false,
   }),
 
@@ -54,13 +54,13 @@ export const useCartStore = defineStore('cart', {
       return Math.round(sub * state.discountRate * 100) / 100
     },
 
-    isPhnomPenh: (state) => {
-      const c = (state.shippingCity || 'Phnom Penh').trim().toLowerCase()
-      return c.includes('phnom penh') || c.includes('khan') || c.includes('bkk') || c.includes('chamkarmon') || c.includes('daun penh') || c.includes('toul kork') || c.includes('sen sok') || c.includes('pou senchey')
+    isSameCity: (state) => {
+      const c = (state.shippingCity || 'Kampot').trim().toLowerCase()
+      return c.includes('kampot') || c.includes('krong kampot') || c.includes('teuk chhou') || c.includes('chhouk')
     },
 
     grabDistanceKm: (state) => {
-      if (!state.deliveryLat || !state.deliveryLng) return 6.5
+      if (!state.deliveryLat || !state.deliveryLng) return 4.5
       return calculateHaversineKm(ATELIER_LAT, ATELIER_LNG, state.deliveryLat, state.deliveryLng)
     },
 
@@ -84,56 +84,67 @@ export const useCartStore = defineStore('cart', {
 
     // Authentic dynamic tariffs for all 4 couriers
     carrierQuoteMap: (state) => {
-      const c = (state.shippingCity || 'Phnom Penh').trim().toLowerCase()
-      const isPP = c.includes('phnom penh') || c.includes('khan') || c.includes('bkk') || c.includes('chamkarmon') || c.includes('daun penh') || c.includes('toul kork') || c.includes('sen sok') || c.includes('pou senchey')
+      const c = (state.shippingCity || 'Kampot').trim().toLowerCase()
+      const isLocal = c.includes('kampot') || c.includes('krong kampot') || c.includes('teuk chhou') || c.includes('chhouk')
 
       const isEligible = (carrierId) => {
         if (!state.isFreeDeliveryActive) return false
         return (state.freeShippingCarriers || []).includes(carrierId)
       }
 
-      // 1. Vireak Buntham (VET Logistics) - Flat $1.50 Nationwide
+      // 1. Luméa Shop Direct Delivery (Atelier Messenger) - Flat $1.00 (Cheapest, Most Realistic Shop Delivery!)
+      const conciergeBase = 1.00
+      const conciergeIsFree = isEligible('lumea_concierge')
+      const conciergeFee = conciergeIsFree ? 0.0 : conciergeBase
+
+      // 2. Vireak Buntham (VET Logistics) - Flat $1.50 Nationwide
       const vetBase = 1.50
       const vetIsFree = isEligible('vet_express')
       const vetFee = vetIsFree ? 0.0 : vetBase
 
-      // 2. J&T Express Cambodia - Flat $1.75 Nationwide
+      // 3. J&T Express Cambodia - Flat $1.75 Nationwide
       const jtBase = 1.75
       const jtIsFree = isEligible('jt_express')
       const jtFee = jtIsFree ? 0.0 : jtBase
 
-      // 3. GrabExpress (Grab) - Phnom Penh Only & Distance-Based
-      let grabAvailable = isPP
-      let grabDistance = 6.5
-      let grabBase = 3.50
-      let grabFee = 3.50
-      let grabTransit = '60–90 Mins (Phnom Penh)'
+      // 4. GrabExpress (Grab) - Same Province / City Only (Kampot) & GPS Distance-Based
+      let grabAvailable = isLocal
+      let grabDistance = 4.5
+      let grabBase = 2.50
+      let grabFee = 2.50
+      let grabTransit = '30–60 Mins (Kampot On-Demand)'
 
-      if (isPP) {
+      if (isLocal) {
         grabDistance = calculateHaversineKm(ATELIER_LAT, ATELIER_LNG, state.deliveryLat, state.deliveryLng)
-        grabBase = Math.round((2.00 + Math.max(0, grabDistance - 3.0) * 0.40) * 100) / 100
+        // Base $1.50 for first 3km, then $0.35 per additional km
+        grabBase = Math.round((1.50 + Math.max(0, grabDistance - 3.0) * 0.35) * 100) / 100
         const hasSubsidy = state.isFreeDeliveryActive && state.grabSubsidyEnabled
-        grabFee = hasSubsidy ? Math.max(1.50, Math.round((grabBase - 1.50) * 100) / 100) : grabBase
-        grabTransit = `60–90 Mins (${grabDistance} km)`
+        grabFee = hasSubsidy ? Math.max(1.00, Math.round((grabBase - 1.00) * 100) / 100) : grabBase
+        grabTransit = `30–60 Mins (${grabDistance} km)`
       } else {
         grabAvailable = false
         grabBase = 0.0
         grabFee = 0.0
-        grabTransit = 'Phnom Penh Only'
+        grabTransit = 'Same City/Province Only (Kampot)'
       }
 
-      // 4. Luméa Atelier Concierge - Flat $3.00
-      const conciergeBase = 3.00
-      const conciergeIsFree = isEligible('lumea_concierge')
-      const conciergeFee = conciergeIsFree ? 0.0 : conciergeBase
-
       return {
+        lumea_concierge: {
+          fee: conciergeFee,
+          baseFee: conciergeBase,
+          transit: isLocal ? 'Same-Day Direct Delivery' : '1–2 Business Days Direct',
+          available: true,
+          isFree: conciergeIsFree,
+          badge: 'Shop Best Value',
+          logo: null
+        },
         vet_express: {
           fee: vetFee,
           baseFee: vetBase,
-          transit: isPP ? '1 Business Day' : '1–2 Business Days',
+          transit: isLocal ? '1 Business Day' : '1–2 Business Days',
           available: true,
           isFree: vetIsFree,
+          badge: 'Nationwide #1',
           logo: '/images/couriers/vet_express.png'
         },
         jt_express: {
@@ -142,6 +153,7 @@ export const useCartStore = defineStore('cart', {
           transit: 'Next-Day Delivery',
           available: true,
           isFree: jtIsFree,
+          badge: 'Fast Domestic',
           logo: '/images/couriers/jt_express.png'
         },
         grab_express: {
@@ -150,16 +162,9 @@ export const useCartStore = defineStore('cart', {
           transit: grabTransit,
           available: grabAvailable,
           isFree: false,
+          badge: 'Instant Express',
           distanceKm: grabDistance,
           logo: '/images/couriers/grab_express.png'
-        },
-        lumea_concierge: {
-          fee: conciergeFee,
-          baseFee: conciergeBase,
-          transit: 'White-Glove Scheduled',
-          available: true,
-          isFree: conciergeIsFree,
-          logo: null
         }
       }
     },
@@ -171,7 +176,7 @@ export const useCartStore = defineStore('cart', {
       if (quote && quote.available) {
         return quote.fee
       }
-      return state.carrierQuoteMap['vet_express'].fee
+      return state.carrierQuoteMap['lumea_concierge'].fee
     },
 
     taxAmount: (state) => {
@@ -184,7 +189,7 @@ export const useCartStore = defineStore('cart', {
     grandTotal: (state) => {
       const sub = state.items.reduce((acc, item) => acc + item.price * item.quantity, 0)
       const discount = Math.round(sub * state.discountRate * 100) / 100
-      const shipping = sub === 0 ? 0 : state.carrierQuoteMap[state.selectedCarrier]?.fee ?? 1.50
+      const shipping = sub === 0 ? 0 : state.carrierQuoteMap[state.selectedCarrier]?.fee ?? 1.00
       return Math.max(0, Math.round((sub - discount + shipping) * 100) / 100)
     },
   },
@@ -200,9 +205,10 @@ export const useCartStore = defineStore('cart', {
       if (city) this.shippingCity = city
       if (lat !== undefined) this.deliveryLat = lat
       if (lng !== undefined) this.deliveryLng = lng
-      // If GrabExpress was selected but destination is provincial, switch to VET Logistics
-      if (this.selectedCarrier === 'grab_express' && (this.shippingCity || '').toLowerCase() !== 'phnom penh') {
-        this.selectedCarrier = 'vet_express'
+      // If GrabExpress was selected but destination is not in same city/province, switch to Luméa Shop Direct ($1.00)
+      const isLocal = (this.shippingCity || '').toLowerCase().includes('kampot')
+      if (this.selectedCarrier === 'grab_express' && !isLocal) {
+        this.selectedCarrier = 'lumea_concierge'
       }
     },
 

@@ -169,11 +169,11 @@ import {
 const props = defineProps({
   initialLat: {
     type: Number,
-    default: 11.5564
+    default: 10.6106068
   },
   initialLng: {
     type: Number,
-    default: 104.9282
+    default: 104.1815019
   },
   initialNotes: {
     type: String,
@@ -192,11 +192,11 @@ const mapContainer = ref(null)
 let mapInstance = null
 let markerInstance = null
 
-const selectedLat = ref(props.initialLat || 11.5564)
-const selectedLng = ref(props.initialLng || 104.9282)
+const selectedLat = ref(props.initialLat || 10.6106068)
+const selectedLng = ref(props.initialLng || 104.1815019)
 const landmarkNotes = ref(props.initialNotes || '')
 const isLocating = ref(false)
-const currentPreset = ref('BKK1 / Chamkarmon')
+const currentPreset = ref('Luméa Atelier (Krong Kampot)')
 
 // Reverse geocode states
 const reverseGeoAddress = ref('')
@@ -216,6 +216,8 @@ let currentSearchId = 0
 const pasteGmapsInput = ref('')
 
 const presets = [
+  { name: 'Luméa Atelier (Krong Kampot)', lat: 10.6106, lng: 104.1815, zoom: 16 },
+  { name: 'Kampot Riverfront / Old Market', lat: 10.5975, lng: 104.1780, zoom: 16 },
   { name: 'BKK1 / Chamkarmon', lat: 11.5524, lng: 104.9282, zoom: 15 },
   { name: 'Daun Penh / Wat Phnom', lat: 11.5714, lng: 104.9282, zoom: 15 },
   { name: 'Toul Kork', lat: 11.5732, lng: 104.8967, zoom: 15 },
