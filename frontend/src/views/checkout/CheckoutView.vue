@@ -457,7 +457,7 @@
               </div>
             </div>
 
-            <fieldset class="payment-two-grid" role="radiogroup" aria-labelledby="payment-heading">
+            <fieldset class="payment-two-grid" :class="{ 'single-option': !khqrAvailable }" role="radiogroup" aria-labelledby="payment-heading">
               <legend id="payment-heading" class="sr-only">{{ localeStore.t('checkout.payment_selection') || 'Payment Selection' }}</legend>
 
               <!-- Method 1: Bakong KHQR - ABA Mobile -->
@@ -1980,6 +1980,10 @@ function handleKHQRCancelled({ closed, message } = {}) {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 14px;
+}
+
+.payment-two-grid.single-option {
+  grid-template-columns: 1fr;
 }
 
 @media (max-width: 680px) {
