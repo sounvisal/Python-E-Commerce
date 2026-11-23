@@ -13,10 +13,10 @@ class User(Base):
     email = Column(String(150), unique=True, index=True, nullable=False)
     hashed_password = Column(String(255), nullable=False)
     phone = Column(String(50), nullable=True)
-    avatar = Column(String(255), nullable=True, default="/images/avatar-sreynich.jpg")
+    avatar = Column(String(255), nullable=True, default="/images/avatars/avatar-default.png")
     role = Column(String(30), default="customer")  # customer, admin
-    tier = Column(String(50), default="Luméa Radiant Gold")
-    reward_points = Column(Integer, default=100)
+    tier = Column(String(50), default="Member")
+    reward_points = Column(Integer, default=0)
     profile_data = Column(JSON, default=dict)
     token_version = Column(Integer, default=1, nullable=False)
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))

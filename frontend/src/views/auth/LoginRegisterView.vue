@@ -176,8 +176,9 @@
                   <span v-else>Signing in...</span>
                 </button>
 
-                <!-- 1-Click Instant Demo Login Helper -->
+                <!-- 1-Click Instant Demo Login Helper (Available via ?demo=true) -->
                 <button
+                  v-if="route.query.demo === 'true'"
                   type="button"
                   class="btn-demo-quick-login"
                   @click="fillDemoAccount"
@@ -397,8 +398,8 @@ const showPassword = ref(false)
 const isSubmitting = ref(false)
 
 const loginForm = ref({
-  email: 'sreynich.chan@example.com',
-  password: 'password123',
+  email: '',
+  password: '',
   rememberMe: true
 })
 
@@ -407,8 +408,8 @@ const registerForm = ref({
   email: '',
   phone: '',
   password: '',
-  newsletter: true,
-  agreeTerms: true
+  newsletter: false,
+  agreeTerms: false
 })
 
 function fillDemoAccount() {
@@ -435,6 +436,10 @@ async function handleLogin() {
 }
 
 async function handleRegister() {
+  if (!registerForm.value.agreeTerms) {
+    notificationStore.addToast('Please agree to the Terms of Service & Privacy Policy to continue.', 'error')
+    return
+  }
   isSubmitting.value = true
   try {
     const success = await authStore.register({

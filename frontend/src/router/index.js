@@ -1,6 +1,7 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import { privateStorageKey } from '@/utils/orderAccess'
 import { useAuthStore } from '@/stores/auth'
+import { useCartStore } from '@/stores/cart'
 import HomeView from '@/views/home/HomeView.vue'
 import ShopView from '@/views/shop/ShopView.vue'
 import CategoryView from '@/views/category/CategoryView.vue'
@@ -358,6 +359,13 @@ router.beforeEach(async (to, from, next) => {
     }
   }
   next()
+})
+
+router.afterEach(() => {
+  try {
+    const cart = useCartStore()
+    if (cart.isDrawerOpen) cart.closeDrawer()
+  } catch {}
 })
 
 export default router

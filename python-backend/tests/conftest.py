@@ -6,6 +6,7 @@ from app.core.migrations import migrate_schema
 from app.seed.seed_data import seed_database
 from app.core.security import create_access_token
 from app.models.user import User
+from app.models.product import Product
 
 @pytest.fixture(scope="session", autouse=True)
 def initialize_test_database():
@@ -48,6 +49,10 @@ def admin_headers(client):
 
 @pytest.fixture
 def place_guest_order(client):
+    with SessionLocal.begin() as db:
+        prod = db.query(Product).filter(Product.id == 201).first()
+        if prod and prod.stock < 10:
+            prod.stock = 50
     def place(payment_method="cod"):
         payload = {
             "customer_name": "Test Buyer",

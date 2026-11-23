@@ -2,15 +2,30 @@
   <aside class="account-sidebar-component">
     <!-- User Profile Header Card -->
     <div class="user-profile-badge">
-      <div class="user-avatar-wrap">
-        <img :src="authStore.userAvatar" :alt="authStore.userName" class="user-avatar-img" />
-        <span class="user-tier-dot" title="Gold Member"></span>
+      <div class="user-avatar-wrap" @click="emit('pick-avatar')" title="Click to choose your profile picture">
+        <img :src="authStore.userAvatar || '/images/avatars/avatar-default.png'" :alt="authStore.userName" class="user-avatar-img" />
+        <span class="user-tier-dot" :class="{ 'gold-tier': isGoldMember }" :title="authStore.user?.tier || 'Member'"></span>
+        <div class="avatar-camera-overlay">
+          <Camera :size="13" />
+        </div>
       </div>
-      <h3 class="user-name">{{ authStore.userName }}</h3>
-      <span class="user-email">{{ authStore.userEmail }}</span>
-      <button class="btn-edit-profile" @click="emit('edit-profile')">
-        Edit Profile
-      </button>
+      <div class="user-badge-meta">
+        <h3 class="user-name">{{ authStore.userName }}</h3>
+        <span class="user-email">{{ authStore.userEmail }}</span>
+        <div class="user-tier-tag" :class="{ 'gold-tag': isGoldMember }">
+          <Crown v-if="isGoldMember" :size="12" />
+          <UserCheck v-else :size="12" />
+          <span>{{ authStore.user?.tier || 'Member' }}</span>
+        </div>
+      </div>
+      <div class="profile-action-btns">
+        <button type="button" class="btn-edit-profile" @click="emit('edit-profile')">
+          Edit Profile
+        </button>
+        <button type="button" class="btn-avatar-picker-trigger" @click="emit('pick-avatar')" title="Change avatar photo">
+          Change Photo
+        </button>
+      </div>
     </div>
 
     <!-- Account Navigation Menu -->
@@ -128,6 +143,18 @@
         <Settings :size="18" class="nav-icon" />
         <span>Account Settings</span>
       </button>
+
+      <div class="nav-sidebar-divider"></div>
+
+      <!-- Log Out Button -->
+      <button
+        type="button"
+        class="nav-item btn-nav-logout"
+        @click="handleLogout"
+      >
+        <LogOut :size="18" class="nav-icon logout-icon" />
+        <span>Log Out</span>
+      </button>
     </nav>
 
     <!-- Support / Need Help Card -->
@@ -147,7 +174,8 @@
 </template>
 
 <script setup>
-import { useRoute } from 'vue-router'
+import { computed } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { useOrdersStore } from '@/stores/orders'
 import { useWishlistStore } from '@/stores/wishlist'
@@ -164,7 +192,11 @@ import {
   Settings,
   Headphones,
   RotateCcw,
-  Smile
+  Smile,
+  LogOut,
+  Camera,
+  Crown,
+  UserCheck
 } from 'lucide-vue-next'
 
 const props = defineProps({
@@ -176,6 +208,7 @@ const props = defineProps({
 
 const emit = defineEmits([
   'edit-profile',
+  'pick-avatar',
   'open-addresses',
   'open-payments',
   'open-notifications',
@@ -183,9 +216,20 @@ const emit = defineEmits([
 ])
 
 const route = useRoute()
+const router = useRouter()
 const authStore = useAuthStore()
 const ordersStore = useOrdersStore()
 const wishlistStore = useWishlistStore()
+
+const isGoldMember = computed(() => {
+  const t = (authStore.user?.tier || '').toLowerCase()
+  return t.includes('gold') || t.includes('vip') || t.includes('radiant')
+})
+
+function handleLogout() {
+  authStore.logout(true)
+  router.push('/login')
+}
 </script>
 
 <style scoped>
@@ -213,6 +257,24 @@ const wishlistStore = useWishlistStore()
   width: 76px;
   height: 76px;
   margin-bottom: 12px;
+  cursor: pointer;
+}
+
+.avatar-camera-overlay {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: rgba(28, 25, 23, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #FFFFFF;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+.user-avatar-wrap:hover .avatar-camera-overlay {
+  opacity: 1;
 }
 
 .user-avatar-img {
@@ -231,8 +293,12 @@ const wishlistStore = useWishlistStore()
   width: 14px;
   height: 14px;
   border-radius: 50%;
-  background: #D4AF37;
+  background: #A8A29E;
   border: 2px solid #FFFFFF;
+}
+
+.user-tier-dot.gold-tier {
+  background: #D4AF37;
 }
 
 .user-name {
@@ -246,22 +312,55 @@ const wishlistStore = useWishlistStore()
 .user-email {
   font-size: 12.5px;
   color: #78716C;
-  margin-bottom: 16px;
+  margin-bottom: 8px;
   word-break: break-all;
 }
 
-.btn-edit-profile {
-  display: inline-block;
+.user-tier-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 600;
+  background: #F5EFEB;
+  color: #78716C;
+  margin-bottom: 12px;
+}
+
+.user-tier-tag.gold-tag {
+  background: #FEF9EE;
+  color: #B45309;
+  border: 1px solid #FDE68A;
+}
+
+.profile-action-btns {
+  display: flex;
+  gap: 8px;
   width: 100%;
-  padding: 8px 16px;
+}
+
+.btn-edit-profile,
+.btn-avatar-picker-trigger {
+  flex: 1;
+  padding: 7px 10px;
   background: #F8F3ED;
   border: 1px solid #EADBCF;
   border-radius: 999px;
-  font-size: 12px;
+  font-size: 11.5px;
   font-weight: 600;
   color: #8E4A3E;
   cursor: pointer;
   transition: all 0.2s ease;
+  text-align: center;
+}
+
+.btn-edit-profile:hover,
+.btn-avatar-picker-trigger:hover {
+  background: #8E4A3E;
+  color: #FFFFFF;
+  border-color: #8E4A3E;
 }
 
 .btn-edit-profile:hover {
@@ -398,5 +497,86 @@ const wishlistStore = useWishlistStore()
 .btn-sidebar-contact:hover {
   background: #8E4A3E;
   color: #FFFFFF;
+}
+
+.nav-sidebar-divider {
+  height: 1px;
+  background: #EFE6DD;
+  margin: 6px 4px;
+}
+
+.btn-nav-logout {
+  color: #DC2626;
+}
+
+.btn-nav-logout .nav-icon {
+  color: #DC2626;
+}
+
+.btn-nav-logout:hover {
+  background: #FEF2F2;
+  color: #991B1B;
+}
+
+.btn-nav-logout:hover .nav-icon {
+  color: #991B1B;
+}
+
+@media (max-width: 900px) {
+  .account-sidebar-component {
+    gap: 12px;
+    margin-bottom: 1.25rem;
+  }
+  .user-profile-badge {
+    flex-direction: row;
+    align-items: center;
+    text-align: left;
+    padding: 14px 16px;
+    gap: 14px;
+    flex-wrap: wrap;
+  }
+  .user-avatar-wrap {
+    width: 56px;
+    height: 56px;
+    margin-bottom: 0;
+    flex-shrink: 0;
+  }
+  .user-badge-meta {
+    flex: 1;
+    min-width: 160px;
+  }
+  .user-name {
+    font-size: 16px;
+  }
+  .user-email {
+    margin-bottom: 4px;
+  }
+  .profile-action-btns {
+    width: 100%;
+    margin-top: 4px;
+  }
+  .account-nav-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+    gap: 6px;
+    padding: 8px;
+  }
+  .nav-item {
+    padding: 8px 10px;
+    font-size: 12px;
+    gap: 8px;
+  }
+  .nav-sidebar-divider {
+    display: none;
+  }
+  .btn-nav-logout {
+    grid-column: 1 / -1;
+    justify-content: center;
+    background: #FEF2F2;
+    border: 1px solid #FEE2E2;
+  }
+  .sidebar-help-card {
+    display: none;
+  }
 }
 </style>

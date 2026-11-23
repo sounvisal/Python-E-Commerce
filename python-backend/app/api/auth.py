@@ -33,9 +33,9 @@ def register(user_in: UserCreate, db: Session = Depends(get_db)):
         hashed_password=get_password_hash(user_in.password),
         phone=user_in.phone or "",
         role="customer",
-        tier="Luméa Member",
-        reward_points=50,
-        avatar="/images/avatar-sreynich.jpg"
+        tier="Member",
+        reward_points=0,
+        avatar="/images/avatars/avatar-default.png"
     )
 
     db.add(new_user)
@@ -131,6 +131,10 @@ def update_profile(payload: ProfileUpdate, db: Session = Depends(get_db), curren
         allowed = {'id', 'name', 'tag', 'street', 'commune', 'district', 'city', 'postalCode', 'country', 'phone', 'isDefault'}
         addresses = [{k: v for k, v in address.items() if k in allowed} for address in payload.addresses]
         current_user.profile_data = {**(current_user.profile_data or {}), 'addresses': addresses}
+    if payload.avatar is not None:
+        clean_avatar = payload.avatar.strip()
+        if clean_avatar.startswith(("/images/", "http://", "https://", "/avatars/")):
+            current_user.avatar = clean_avatar[:255]
     db.commit()
     db.refresh(current_user)
     return current_user

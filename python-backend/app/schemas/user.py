@@ -13,7 +13,7 @@ class UserBase(BaseModel):
     name: str
     email: EmailStr
     phone: Optional[str] = None
-    avatar: Optional[str] = "/images/avatar-sreynich.jpg"
+    avatar: Optional[str] = "/images/avatars/avatar-default.png"
 
     @field_validator("name")
     @classmethod
@@ -74,6 +74,7 @@ class ProfileUpdate(BaseModel):
     name: Optional[str] = None
     phone: Optional[str] = None
     addresses: Optional[List[Dict[str, Any]]] = None
+    avatar: Optional[str] = None
 
 class UserOut(UserBase):
     profile_data: Optional[Dict[str, Any]] = None

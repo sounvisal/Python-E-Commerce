@@ -16,14 +16,26 @@ function errorMessage(error, fallback) {
   const detail = error.response?.data?.detail
   return typeof detail === 'string' ? detail : Array.isArray(detail) ? detail.map(d => d.msg).join('. ') : fallback
 }
-function clearPrivateState() {
+function clearPrivateState(clearCart = false) {
   for (const key of ['lumea_orders', 'lumea_skin_profile', 'lumea_journal_entries', 'lumea_wishlist']) localStorage.removeItem(key)
+  if (clearCart) {
+    localStorage.removeItem('lumea_cart')
+    localStorage.removeItem('lumea_discount_code')
+    localStorage.removeItem('lumea_discount_rate')
+  }
   const stores = getActivePinia()?._s
   if (!stores) return
   if (stores.has('orders')) stores.get('orders').orders = []
   if (stores.has('wishlist')) stores.get('wishlist').loadProfile?.()
   if (stores.has('quiz')) stores.get('quiz').loadProfile?.()
   if (stores.has('journal')) stores.get('journal').loadProfile?.()
+  if (clearCart && stores.has('cart')) {
+    const cart = stores.get('cart')
+    cart.items = []
+    cart.isDrawerOpen = false
+    cart.discountCode = ''
+    cart.discountRate = 0
+  }
 }
 
 export const useAuthStore = defineStore('auth', {
@@ -83,6 +95,7 @@ export const useAuthStore = defineStore('auth', {
       try {
         const { data } = await axios.post('/api/auth/register', { name, email, phone, password })
         if (!data.data?.access_token) throw new Error('Missing session')
+        clearPrivateState(true)
         this.setSession(data.data)
         useNotificationStore().addToast(`Welcome to Luméa, ${this.user.firstName}!`, 'success')
         return true
@@ -95,7 +108,7 @@ export const useAuthStore = defineStore('auth', {
       if (this.token) {
         axios.post('/api/auth/logout').catch(() => {})
       }
-      this.token = null; this.user = null; this.isAuthenticated = false; this.validated = false; this.persist(); clearPrivateState()
+      this.token = null; this.user = null; this.isAuthenticated = false; this.validated = false; this.persist(); clearPrivateState(true)
       for (const key of Object.keys(sessionStorage)) if (key.startsWith('lumea_order_access_')) sessionStorage.removeItem(key)
       sessionStorage.removeItem('lumea_pending_khqr')
       sessionStorage.removeItem('lumea_checkout_attempt')

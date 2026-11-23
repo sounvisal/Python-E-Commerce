@@ -368,16 +368,62 @@
             </span>
           </button>
 
-          <!-- Account User Icon -->
-          <router-link
-            to="/account"
-            class="header-icon-btn account-icon-btn"
-            :class="{ 'is-active': route.path.startsWith('/account') || route.path === '/login' }"
-            title="My Account"
-            aria-label="My Account"
-          >
-            <User :size="20" :stroke-width="1.8" />
-          </router-link>
+          <!-- Account User Dropdown / Icon -->
+          <div class="header-account-wrap" ref="accountDropdownRef">
+            <button
+              v-if="authStore.isAuthenticated"
+              type="button"
+              class="header-icon-btn account-icon-btn user-logged-in-btn"
+              :class="{ 'is-active': accountMenuOpen || route.path.startsWith('/account') }"
+              @click="toggleAccountMenu"
+              title="My Account Menu"
+              aria-label="My Account Menu"
+            >
+              <img v-if="authStore.userAvatar" :src="authStore.userAvatar" class="navbar-avatar-thumb" alt="Profile" />
+              <UserCheck v-else :size="20" :stroke-width="1.8" />
+            </button>
+            <router-link
+              v-else
+              to="/login"
+              class="header-icon-btn account-icon-btn"
+              :class="{ 'is-active': route.path === '/login' }"
+              title="Sign In"
+              aria-label="Sign In"
+            >
+              <User :size="20" :stroke-width="1.8" />
+            </router-link>
+
+            <!-- Authenticated User Dropdown Menu -->
+            <div v-if="accountMenuOpen && authStore.isAuthenticated" class="navbar-account-dropdown">
+              <div class="dropdown-user-header">
+                <strong>{{ authStore.userName }}</strong>
+                <span>{{ authStore.userEmail }}</span>
+                <span class="user-tier-pill-small">{{ authStore.user?.tier || 'Member' }}</span>
+              </div>
+              <div class="dropdown-divider"></div>
+              <router-link to="/account" class="dropdown-menu-link" @click="accountMenuOpen = false">
+                <Home :size="16" />
+                <span>My Account</span>
+              </router-link>
+              <router-link to="/account/orders" class="dropdown-menu-link" @click="accountMenuOpen = false">
+                <Package :size="16" />
+                <span>Orders</span>
+              </router-link>
+              <router-link to="/account/profile" class="dropdown-menu-link" @click="accountMenuOpen = false">
+                <Smile :size="16" />
+                <span>Beauty Profile</span>
+              </router-link>
+              <router-link to="/routine" class="dropdown-menu-link" @click="accountMenuOpen = false">
+                <Sparkles :size="16" />
+                <span>Skincare Routine</span>
+              </router-link>
+              <div class="dropdown-divider"></div>
+              <button type="button" class="dropdown-menu-link logout-link" @click="handleNavbarLogout">
+                <LogOut :size="16" />
+                <span>Log Out</span>
+              </button>
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -508,10 +554,32 @@
         </div>
 
         <div class="mobile-actions-footer">
-          <button class="mobile-account-btn" @click="openAccountModal">
-            <User :size="18" />
-            <span>Sign In / My Account</span>
-          </button>
+          <template v-if="authStore.isAuthenticated">
+            <div class="mobile-user-card">
+              <img :src="authStore.userAvatar || '/images/avatars/avatar-default.png'" class="m-user-avatar" />
+              <div class="m-user-info">
+                <strong>{{ authStore.userName }}</strong>
+                <span>{{ authStore.userEmail }}</span>
+                <span class="m-user-tier">{{ authStore.user?.tier || 'Member' }}</span>
+              </div>
+            </div>
+            <div class="mobile-user-action-row">
+              <router-link to="/account" class="btn-m-account" @click="mobileMenuOpen = false">
+                <Home :size="15" />
+                <span>My Account</span>
+              </router-link>
+              <button type="button" class="btn-m-logout" @click="handleMobileLogout">
+                <LogOut :size="15" />
+                <span>Log Out</span>
+              </button>
+            </div>
+          </template>
+          <template v-else>
+            <router-link to="/login" class="mobile-account-btn" @click="mobileMenuOpen = false">
+              <User :size="18" />
+              <span>Sign In / Create Account</span>
+            </router-link>
+          </template>
         </div>
       </div>
     </div>
@@ -557,6 +625,7 @@ import { useCartStore } from '@/stores/cart'
 import { useProductStore } from '@/stores/products'
 import { useWishlistStore } from '@/stores/wishlist'
 import { useLocaleStore } from '@/stores/locale'
+import { useAuthStore } from '@/stores/auth'
 import FlagIcon from '@/components/common/FlagIcon.vue'
 import {
   ChevronDown,
@@ -568,7 +637,12 @@ import {
   User,
   X,
   Globe,
-  Check
+  Check,
+  UserCheck,
+  Home,
+  Package,
+  Smile,
+  LogOut
 } from 'lucide-vue-next'
 import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
@@ -580,6 +654,7 @@ const cartStore = useCartStore()
 const productStore = useProductStore()
 const wishlistStore = useWishlistStore()
 const localeStore = useLocaleStore()
+const authStore = useAuthStore()
 
 const headerRef = ref(null)
 const mobileMenuOpen = ref(false)
@@ -588,6 +663,26 @@ const activeDropdown = ref(null)
 const showAccountModal = ref(false)
 const accountEmail = ref('customer@lumea.com')
 const accountPassword = ref('password123')
+
+// Account dropdown state
+const accountMenuOpen = ref(false)
+const accountDropdownRef = ref(null)
+
+function toggleAccountMenu() {
+  accountMenuOpen.value = !accountMenuOpen.value
+}
+
+function handleNavbarLogout() {
+  accountMenuOpen.value = false
+  authStore.logout(true)
+  router.push('/login')
+}
+
+function handleMobileLogout() {
+  mobileMenuOpen.value = false
+  authStore.logout(true)
+  router.push('/login')
+}
 
 // Language & Currency Atelier Dropdown State
 const localeMenuOpen = ref(false)
@@ -611,9 +706,12 @@ function selectCurrency(curr) {
   localeStore.setCurrency(curr, true)
 }
 
-function handleGlobalLocaleClick(e) {
+function handleGlobalDropdownClick(e) {
   if (localeDropdownRef.value && !localeDropdownRef.value.contains(e.target)) {
     localeMenuOpen.value = false
+  }
+  if (accountDropdownRef.value && !accountDropdownRef.value.contains(e.target)) {
+    accountMenuOpen.value = false
   }
 }
 
@@ -635,12 +733,12 @@ function updateHeaderHeight() {
 onMounted(() => {
   updateHeaderHeight()
   window.addEventListener('resize', updateHeaderHeight)
-  document.addEventListener('click', handleGlobalLocaleClick)
+  document.addEventListener('click', handleGlobalDropdownClick)
 })
 
 onUnmounted(() => {
   window.removeEventListener('resize', updateHeaderHeight)
-  document.removeEventListener('click', handleGlobalLocaleClick)
+  document.removeEventListener('click', handleGlobalDropdownClick)
 })
 
 function handleSearch() {
@@ -1220,11 +1318,185 @@ function handleAccountSubmit() {
   background: #242721;
   color: #FFFFFF;
   padding: 0.75rem;
-  border-radius: 6px;
+  border-radius: 8px;
   font-size: 0.88rem;
   font-weight: 600;
   border: none;
   cursor: pointer;
+  text-decoration: none;
+}
+
+.mobile-user-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: #FAF8F5;
+  border: 1px solid #EFE6DD;
+  border-radius: 12px;
+  padding: 10px 14px;
+  margin-bottom: 10px;
+}
+
+.m-user-avatar {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 1.5px solid #EFE6DD;
+}
+
+.m-user-info {
+  display: flex;
+  flex-direction: column;
+}
+
+.m-user-info strong {
+  font-size: 0.9rem;
+  color: #1C1917;
+}
+
+.m-user-info span {
+  font-size: 0.78rem;
+  color: #78716C;
+}
+
+.m-user-tier {
+  font-size: 0.7rem !important;
+  color: #8E4A3E !important;
+  font-weight: 600;
+  margin-top: 2px;
+}
+
+.mobile-user-action-row {
+  display: flex;
+  gap: 8px;
+}
+
+.btn-m-account,
+.btn-m-logout {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 8px 12px;
+  border-radius: 8px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  text-decoration: none;
+}
+
+.btn-m-account {
+  background: #FAF8F5;
+  border: 1px solid #EFE6DD;
+  color: #1C1917;
+}
+
+.btn-m-logout {
+  background: #FEF2F2;
+  border: 1px solid #FEE2E2;
+  color: #DC2626;
+}
+
+/* Desktop Header Account Dropdown */
+.header-account-wrap {
+  position: relative;
+}
+
+.user-logged-in-btn {
+  padding: 2px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.navbar-avatar-thumb {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 1.5px solid #8E4A3E;
+}
+
+.navbar-account-dropdown {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  width: 240px;
+  background: #FFFFFF;
+  border: 1px solid #EFE6DD;
+  border-radius: 14px;
+  box-shadow: 0 10px 30px rgba(28, 25, 23, 0.12);
+  padding: 8px;
+  z-index: 1000;
+  display: flex;
+  flex-direction: column;
+}
+
+.dropdown-user-header {
+  padding: 8px 12px 10px;
+  display: flex;
+  flex-direction: column;
+}
+
+.dropdown-user-header strong {
+  font-size: 0.88rem;
+  color: #1C1917;
+}
+
+.dropdown-user-header span {
+  font-size: 0.76rem;
+  color: #78716C;
+}
+
+.user-tier-pill-small {
+  margin-top: 4px;
+  display: inline-block;
+  padding: 2px 7px;
+  background: #F5EAE7;
+  color: #8E4A3E;
+  border-radius: 999px;
+  font-size: 0.68rem !important;
+  font-weight: 700;
+  width: fit-content;
+}
+
+.dropdown-divider {
+  height: 1px;
+  background: #F5EFEB;
+  margin: 4px 0;
+}
+
+.dropdown-menu-link {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  border-radius: 8px;
+  font-size: 0.82rem;
+  font-weight: 500;
+  color: #57534E;
+  text-decoration: none;
+  background: transparent;
+  border: none;
+  width: 100%;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.dropdown-menu-link:hover {
+  background: #FAF8F5;
+  color: #8E4A3E;
+}
+
+.dropdown-menu-link.logout-link {
+  color: #DC2626;
+}
+
+.dropdown-menu-link.logout-link:hover {
+  background: #FEF2F2;
+  color: #991B1B;
 }
 
 /* ==========================================================================

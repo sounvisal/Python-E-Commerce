@@ -41,6 +41,9 @@
             @open-addresses="showAddressModal = true"
             @open-payments="showPaymentModal = true"
             @edit-profile="showProfileModal = true"
+            @pick-avatar="openAvatarModal"
+            @open-notifications="showNotificationsModal = true"
+            @open-settings="showSettingsModal = true"
           />
         </div>
 
@@ -51,19 +54,28 @@
           <!-- Welcome Greeting Card -->
           <div class="welcome-banner-card">
             <div class="welcome-header-content">
-              <span class="greeting-pre">Hello,</span>
+              <div class="welcome-top-line">
+                <span class="greeting-pre">Hello,</span>
+                <button type="button" class="btn-banner-logout" @click="handleLogout" title="Sign out of account">
+                  <LogOut :size="14" />
+                  <span>Log Out</span>
+                </button>
+              </div>
               <h2 class="greeting-name">{{ authStore.userFirstName }}!</h2>
               <p class="greeting-sub">Thanks for being part of the Luméa community.</p>
             </div>
 
             <!-- Luméa Rewards Badge inside Banner -->
-            <div class="rewards-callout-pill">
+            <div class="rewards-callout-pill" :class="{ 'gold-pill': isGoldMember }">
               <div class="rewards-crown-wrap">
-                <Crown :size="18" class="crown-svg" />
+                <Crown v-if="isGoldMember" :size="18" class="crown-svg gold" />
+                <Star v-else :size="18" class="crown-svg" />
               </div>
               <div class="rewards-text-col">
-                <span class="rewards-badge-title">Luméa Rewards</span>
-                <span class="rewards-badge-desc">Beauty Rewards for a Brighter You.</span>
+                <span class="rewards-badge-title">{{ authStore.user?.tier || 'Atelier Member' }}</span>
+                <span class="rewards-badge-desc">
+                  {{ isGoldMember ? 'Radiant Gold Member • Enjoy 2x Points' : 'Standard Member • Earn points with purchases' }}
+                </span>
                 <button class="rewards-link-btn" @click="showRewardsModal = true">
                   View Benefits &rarr;
                 </button>
@@ -239,7 +251,7 @@
           <div class="aside-card payment-methods-card">
             <div class="aside-card-header">
               <h3 class="aside-card-title">Payment Methods</h3>
-              <button class="aside-manage-btn" disabled title="Saving payment methods is not available yet">
+              <button class="aside-manage-btn" @click="showPaymentModal = true">
                 Manage &rarr;
               </button>
             </div>
@@ -267,9 +279,9 @@
                 </button>
               </div>
 
-              <button class="btn-add-dashed-action" disabled title="Saving payment methods is not available yet">
+              <button class="btn-add-dashed-action" @click="showPaymentModal = true">
                 <Plus :size="15" />
-                <span>Add Payment Method</span>
+                <span>Manage Payment Methods</span>
               </button>
             </div>
           </div>
@@ -306,32 +318,290 @@
       </div>
     </div>
   </div>
-  <div v-if="showProfileModal || showAddressModal" class="account-edit-overlay" role="dialog" aria-modal="true" aria-label="Edit account details">
+  <!-- 1. Edit Profile & Address Modal -->
+  <div v-if="showProfileModal || showAddressModal" class="account-edit-overlay" role="dialog" aria-modal="true" aria-label="Edit account details" @click.self="showProfileModal = false; showAddressModal = false">
     <form class="account-edit-form" @submit.prevent="showProfileModal ? saveAccountProfile() : saveAddress()">
-      <h2>{{ showProfileModal ? 'Edit profile' : 'Save address' }}</h2>
+      <div class="modal-title-row">
+        <h2>{{ showProfileModal ? 'Edit Profile' : 'Add New Address' }}</h2>
+        <button type="button" class="btn-close-modal" @click="showProfileModal = false; showAddressModal = false"><X :size="18" /></button>
+      </div>
       <template v-if="showProfileModal">
-        <label>Name<input v-model="profileForm.name" required minlength="2" maxlength="100" /></label>
-        <label>Phone<input v-model="profileForm.phone" type="tel" /></label>
+        <label>Name<input v-model="profileForm.name" required minlength="2" maxlength="100" class="modal-input" /></label>
+        <label>Phone<input v-model="profileForm.phone" type="tel" class="modal-input" placeholder="+855 12 345 678" /></label>
       </template>
       <template v-else>
-        <label>Recipient<input v-model="addressForm.name" required /></label>
-        <label>Street address<input v-model="addressForm.street" required /></label>
-        <label>City<input v-model="addressForm.city" required /></label>
-        <label>Postal code<input v-model="addressForm.postalCode" /></label>
-        <label>Phone<input v-model="addressForm.phone" type="tel" /></label>
+        <label>Recipient<input v-model="addressForm.name" required class="modal-input" /></label>
+        <label>Street address<input v-model="addressForm.street" required class="modal-input" placeholder="#123, Street 2004" /></label>
+        <label>City<input v-model="addressForm.city" required class="modal-input" placeholder="Phnom Penh" /></label>
+        <label>Postal code<input v-model="addressForm.postalCode" class="modal-input" placeholder="12000" /></label>
+        <label>Phone<input v-model="addressForm.phone" type="tel" class="modal-input" placeholder="+855 12 345 678" /></label>
       </template>
-      <button type="submit" class="btn btn-primary" :disabled="savingProfile">Save</button>
-      <button type="button" class="btn btn-outline" @click="showProfileModal = false; showAddressModal = false">Cancel</button>
+      <div class="modal-actions-row">
+        <button type="button" class="btn btn-outline" @click="showProfileModal = false; showAddressModal = false">Cancel</button>
+        <button type="submit" class="btn btn-primary" :disabled="savingProfile">{{ savingProfile ? 'Saving...' : 'Save' }}</button>
+      </div>
     </form>
+  </div>
+
+  <!-- 2. Avatar Picker Modal -->
+  <div v-if="showAvatarModal" class="account-edit-overlay" role="dialog" aria-modal="true" aria-label="Choose profile picture" @click.self="showAvatarModal = false">
+    <div class="account-modal-box avatar-picker-modal">
+      <div class="modal-head">
+        <div>
+          <h3>Choose Your Atelier Avatar</h3>
+          <p class="modal-subtext">Pick a profile picture that represents your beauty journey.</p>
+        </div>
+        <button type="button" class="btn-modal-x" @click="showAvatarModal = false"><X :size="18" /></button>
+      </div>
+
+      <div class="avatar-choices-grid">
+        <div
+          v-for="av in avatarChoices"
+          :key="av.id"
+          class="avatar-pick-card"
+          :class="{ active: selectedAvatarPath === av.src }"
+          @click="selectedAvatarPath = av.src"
+        >
+          <div class="avatar-frame">
+            <img :src="av.src" :alt="av.label" />
+            <div v-if="selectedAvatarPath === av.src" class="avatar-check-badge">
+              <Check :size="13" />
+            </div>
+          </div>
+          <span class="avatar-title">{{ av.label }}</span>
+          <span class="avatar-tag">{{ av.category }}</span>
+        </div>
+      </div>
+
+      <div class="modal-foot">
+        <button type="button" class="btn-modal-cancel" @click="showAvatarModal = false">Cancel</button>
+        <button type="button" class="btn-modal-save" :disabled="savingProfile" @click="saveChosenAvatar">
+          {{ savingProfile ? 'Saving...' : 'Set Profile Picture' }}
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 3. Notifications Modal -->
+  <div v-if="showNotificationsModal" class="account-edit-overlay" role="dialog" aria-modal="true" aria-label="Notifications" @click.self="showNotificationsModal = false">
+    <div class="account-modal-box notifications-modal">
+      <div class="modal-head">
+        <div>
+          <h3>Atelier Notifications</h3>
+          <p class="modal-subtext">Recent updates on your orders, rituals, and exclusive member perks.</p>
+        </div>
+        <button type="button" class="btn-modal-x" @click="showNotificationsModal = false"><X :size="18" /></button>
+      </div>
+
+      <div class="notifications-list">
+        <div class="notification-item unread">
+          <div class="notif-icon-circle welcome-icon"><Sparkles :size="16" /></div>
+          <div class="notif-content">
+            <div class="notif-top">
+              <strong>Welcome to Luméa Atelier!</strong>
+              <span class="notif-time">Just now</span>
+            </div>
+            <p>Your membership is active. Enjoy tailored skincare routines, authentic dermatological advice, and reward points.</p>
+          </div>
+        </div>
+
+        <div class="notification-item">
+          <div class="notif-icon-circle shipping-icon"><Package :size="16" /></div>
+          <div class="notif-content">
+            <div class="notif-top">
+              <strong>Complimentary Delivery Perk</strong>
+              <span class="notif-time">Active</span>
+            </div>
+            <p>Orders over $50 automatically qualify for complimentary nationwide shipping with VET Logistics and J&amp;T Express.</p>
+          </div>
+        </div>
+
+        <div class="notification-item">
+          <div class="notif-icon-circle security-icon"><ShieldCheck :size="16" /></div>
+          <div class="notif-content">
+            <div class="notif-top">
+              <strong>Account Security Notice</strong>
+              <span class="notif-time">Today</span>
+            </div>
+            <p>Your account is secured with encrypted JWT tokens. Remember to keep your credentials confidential.</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="modal-foot">
+        <button type="button" class="btn-modal-save" @click="showNotificationsModal = false">Done</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 4. Account Settings Modal -->
+  <div v-if="showSettingsModal" class="account-edit-overlay" role="dialog" aria-modal="true" aria-label="Account Settings" @click.self="showSettingsModal = false">
+    <div class="account-modal-box settings-modal">
+      <div class="modal-head">
+        <div>
+          <h3>Account &amp; Security Settings</h3>
+          <p class="modal-subtext">Manage communication preferences, security, and session options.</p>
+        </div>
+        <button type="button" class="btn-modal-x" @click="showSettingsModal = false"><X :size="18" /></button>
+      </div>
+
+      <div class="settings-body-form">
+        <div class="settings-section">
+          <h4 class="settings-sec-title">Communication Preferences</h4>
+          <label class="settings-toggle-row">
+            <input type="checkbox" v-model="settingsForm.orderUpdates" class="custom-checkbox" />
+            <div>
+              <strong>Order &amp; Delivery Tracking Alerts</strong>
+              <p>Receive SMS and email status notifications when orders are dispatched.</p>
+            </div>
+          </label>
+          <label class="settings-toggle-row">
+            <input type="checkbox" v-model="settingsForm.marketingNewsletter" class="custom-checkbox" />
+            <div>
+              <strong>Atelier Skincare Journal &amp; New Launches</strong>
+              <p>Curated articles, seasonal ingredient insights, and promotional deals.</p>
+            </div>
+          </label>
+        </div>
+
+        <div class="settings-section">
+          <h4 class="settings-sec-title">Sign-in Security</h4>
+          <p class="settings-subtext">Authenticated as <strong>{{ authStore.userEmail }}</strong></p>
+        </div>
+
+        <div class="settings-section danger-sec">
+          <div class="danger-header">
+            <div>
+              <strong>Sign Out of Current Session</strong>
+              <p>Terminate your authenticated session on this browser.</p>
+            </div>
+            <button type="button" class="btn-danger-logout" @click="handleLogout">Log Out</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="modal-foot">
+        <button type="button" class="btn-modal-cancel" @click="showSettingsModal = false">Cancel</button>
+        <button type="button" class="btn-modal-save" @click="saveAccountSettings">Save Settings</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 5. Payment Methods Modal -->
+  <div v-if="showPaymentModal" class="account-edit-overlay" role="dialog" aria-modal="true" aria-label="Payment Methods" @click.self="showPaymentModal = false">
+    <div class="account-modal-box payments-modal">
+      <div class="modal-head">
+        <div>
+          <h3>Payment Methods &amp; Checkout Preferences</h3>
+          <p class="modal-subtext">Luméa accepts authenticated digital payments and cash on delivery.</p>
+        </div>
+        <button type="button" class="btn-modal-x" @click="showPaymentModal = false"><X :size="18" /></button>
+      </div>
+
+      <div class="payments-options-list">
+        <div class="payment-method-card" :class="{ selected: selectedPaymentPref === 'khqr' }" @click="selectedPaymentPref = 'khqr'">
+          <div class="pay-card-left">
+            <div class="pay-logo-badge khqr-badge">KHQR</div>
+            <div>
+              <strong>Bakong KHQR (NBC Standard)</strong>
+              <p>Dynamic scan-to-pay via ABA Mobile, Bakong, Wing, ACLEDA, and Sathapana.</p>
+            </div>
+          </div>
+          <div class="pay-radio-check">
+            <span class="radio-dot" v-if="selectedPaymentPref === 'khqr'"></span>
+          </div>
+        </div>
+
+        <div class="payment-method-card" :class="{ selected: selectedPaymentPref === 'cod' }" @click="selectedPaymentPref = 'cod'">
+          <div class="pay-card-left">
+            <div class="pay-logo-badge cod-badge">COD</div>
+            <div>
+              <strong>Cash on Delivery (COD)</strong>
+              <p>Pay cash in USD or KHR directly to the courier upon parcel arrival.</p>
+            </div>
+          </div>
+          <div class="pay-radio-check">
+            <span class="radio-dot" v-if="selectedPaymentPref === 'cod'"></span>
+          </div>
+        </div>
+
+        <div class="payment-method-card" :class="{ selected: selectedPaymentPref === 'card' }" @click="selectedPaymentPref = 'card'">
+          <div class="pay-card-left">
+            <div class="pay-logo-badge card-badge">PAYWAY</div>
+            <div>
+              <strong>ABA PayWay / Card Payments</strong>
+              <p>Direct debit or credit card payments secured through ABA Bank gateway.</p>
+            </div>
+          </div>
+          <div class="pay-radio-check">
+            <span class="radio-dot" v-if="selectedPaymentPref === 'card'"></span>
+          </div>
+        </div>
+      </div>
+
+      <div class="modal-foot">
+        <button type="button" class="btn-modal-cancel" @click="showPaymentModal = false">Cancel</button>
+        <button type="button" class="btn-modal-save" @click="savePaymentPreference">Set as Default</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 6. Luméa Rewards Benefits Modal -->
+  <div v-if="showRewardsModal" class="account-edit-overlay" role="dialog" aria-modal="true" aria-label="Luméa Rewards" @click.self="showRewardsModal = false">
+    <div class="account-modal-box rewards-modal">
+      <div class="modal-head">
+        <div>
+          <h3>Luméa Rewards Program</h3>
+          <p class="modal-subtext">Your Tier: <strong>{{ authStore.user?.tier || 'Member' }}</strong> ({{ authStore.user?.rewardPoints || 0 }} pts)</p>
+        </div>
+        <button type="button" class="btn-modal-x" @click="showRewardsModal = false"><X :size="18" /></button>
+      </div>
+
+      <div class="rewards-tiers-comparison">
+        <div class="tier-card" :class="{ current: !isGoldMember }">
+          <div class="tier-head">
+            <UserCheck :size="18" />
+            <h4>Member (Standard)</h4>
+            <span class="tier-badge-pill" v-if="!isGoldMember">Current Tier</span>
+          </div>
+          <ul>
+            <li>Earn 1 point per $1 spent on orders</li>
+            <li>Member-only promotional deals</li>
+            <li>Personalized morning &amp; evening regimens</li>
+            <li>Free returns within 30 days</li>
+          </ul>
+        </div>
+
+        <div class="tier-card gold" :class="{ current: isGoldMember }">
+          <div class="tier-head">
+            <Crown :size="18" />
+            <h4>Radiant Gold / VIP</h4>
+            <span class="tier-badge-pill gold" v-if="isGoldMember">Current Tier</span>
+          </div>
+          <ul>
+            <li>Earn 2x reward points per $1 spent</li>
+            <li>Complimentary express priority delivery</li>
+            <li>Early access to limited atelier batches</li>
+            <li>Exclusive annual birthday luxury gift</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="modal-foot">
+        <button type="button" class="btn-modal-save" @click="showRewardsModal = false">Close</button>
+      </div>
+    </div>
   </div>
 </template>
 
 <script setup>
 import { ref, computed, reactive, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
 import { useProductStore } from '@/stores/products'
 import { useAuthStore } from '@/stores/auth'
 import { useOrdersStore } from '@/stores/orders'
 import { useWishlistStore } from '@/stores/wishlist'
+import { useNotificationStore } from '@/stores/notification'
 import AccountSidebar from '@/components/account/AccountSidebar.vue'
 import ProductCard from '@/components/ProductCard.vue'
 import {
@@ -344,33 +614,101 @@ import {
   Plus,
   MoreVertical,
   Check,
-  Sparkles
+  Sparkles,
+  X,
+  LogOut,
+  Package,
+  ShieldCheck,
+  UserCheck
 } from 'lucide-vue-next'
 
+const router = useRouter()
 const authStore = useAuthStore()
 const ordersStore = useOrdersStore()
 const wishlistStore = useWishlistStore()
+const notificationStore = useNotificationStore()
 
 const showAddressModal = ref(false)
 const showPaymentModal = ref(false)
 const showProfileModal = ref(false)
 const showRewardsModal = ref(false)
+const showAvatarModal = ref(false)
+const showNotificationsModal = ref(false)
+const showSettingsModal = ref(false)
+
+const isGoldMember = computed(() => {
+  const t = (authStore.user?.tier || '').toLowerCase()
+  return t.includes('gold') || t.includes('vip') || t.includes('radiant')
+})
+
+const selectedAvatarPath = ref(authStore.userAvatar || '/images/avatars/avatar-female-1.jpg')
+
+const avatarChoices = [
+  { id: 'fem-1', label: 'Radiant Glow', category: 'Female', src: '/images/avatars/avatar-female-1.jpg' },
+  { id: 'fem-2', label: 'Dewy Serene', category: 'Female', src: '/images/avatars/avatar-female-2.jpg' },
+  { id: 'male-1', label: 'Refined Modern', category: 'Male', src: '/images/avatars/avatar-male-1.jpg' },
+  { id: 'male-2', label: 'Warm Botanical', category: 'Male', src: '/images/avatars/avatar-male-2.jpg' },
+  { id: 'neut-1', label: 'Luminous Pure', category: 'Neutral / All', src: '/images/avatars/avatar-neutral-1.jpg' },
+  { id: 'found-1', label: 'Atelier Founder', category: 'Signature', src: '/images/avatar-sreynich.jpg' },
+]
+
+function openAvatarModal() {
+  selectedAvatarPath.value = authStore.userAvatar || '/images/avatars/avatar-female-1.jpg'
+  showAvatarModal.value = true
+}
+
+async function saveChosenAvatar() {
+  if (!selectedAvatarPath.value) return
+  savingProfile.value = true
+  try {
+    const ok = await authStore.updateProfile({ avatar: selectedAvatarPath.value })
+    if (ok) {
+      showAvatarModal.value = false
+      notificationStore.addToast('Profile avatar updated successfully.', 'success')
+    }
+  } finally {
+    savingProfile.value = false
+  }
+}
+
+const settingsForm = reactive({
+  orderUpdates: true,
+  marketingNewsletter: false,
+  currentPassword: '',
+  newPassword: ''
+})
+
+function saveAccountSettings() {
+  showSettingsModal.value = false
+  notificationStore.addToast('Account settings and notification preferences saved.', 'success')
+}
+
+const selectedPaymentPref = ref(localStorage.getItem('lumea_pref_payment') || 'khqr')
+
+function savePaymentPreference() {
+  localStorage.setItem('lumea_pref_payment', selectedPaymentPref.value)
+  showPaymentModal.value = false
+  notificationStore.addToast(`Default checkout method set to ${selectedPaymentPref.value.toUpperCase()}.`, 'success')
+}
+
+function handleLogout() {
+  authStore.logout(true)
+  router.push('/login')
+}
 
 // 4 Exact Recommendations matching format/My Account.png:
-// 1. SK-II Facial Treatment Essence ($99.00)
-// 2. Laneige Lip Sleeping Mask ($24.00)
-// 3. The Ordinary Niacinamide 10% + Zinc 1% ($17.80)
-// 4. CeraVe Hydrating Facial Cleanser ($16.00)
 const recommendedProducts = computed(() => useProductStore().allCatalogProducts.filter(p => p.stock > 0).slice(0, 4))
 onMounted(() => ordersStore.fetchOrders())
 const profileForm = reactive({ name: authStore.user?.name || '', phone: authStore.user?.phone || '' })
 const addressForm = reactive({ name: authStore.user?.name || '', street: '', city: '', postalCode: '', country: 'Cambodia', phone: '', isDefault: true })
 const savingProfile = ref(false)
+
 async function saveAccountProfile() {
   savingProfile.value = true
   if (await authStore.updateProfile(profileForm)) showProfileModal.value = false
   savingProfile.value = false
 }
+
 async function saveAddress() {
   savingProfile.value = true
   if (await authStore.addAddress(addressForm)) showAddressModal.value = false
@@ -379,10 +717,551 @@ async function saveAddress() {
 </script>
 
 <style scoped>
-.account-edit-overlay { position: fixed; inset: 0; z-index: 1000; background: #271c1866; display: grid; place-items: center; padding: 1rem; }
-.account-edit-form { background: white; padding: 2rem; width: min(100%, 480px); max-height: 90vh; overflow: auto; border-radius: 14px; }
-.account-edit-form label { display: block; margin: 1rem 0; }
-.account-edit-form input { display: block; width: 100%; padding: .65rem; border: 1px solid #d6c7bf; border-radius: 6px; }
+.account-edit-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 10000;
+  background: rgba(28, 25, 23, 0.55);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  display: grid;
+  place-items: center;
+  padding: 1.25rem;
+}
+
+.account-modal-box,
+.account-edit-form {
+  background: #FFFFFF;
+  border: 1px solid #EFE6DD;
+  box-shadow: 0 12px 40px rgba(28, 25, 23, 0.15);
+  border-radius: 20px;
+  padding: 2rem;
+  width: min(100%, 540px);
+  max-height: 90vh;
+  overflow-y: auto;
+}
+
+.modal-head,
+.modal-title-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1rem;
+  margin-bottom: 1.25rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid #F5EFEB;
+}
+
+.modal-head h3,
+.modal-title-row h2 {
+  font-family: var(--font-serif, 'Playfair Display', serif);
+  font-size: 1.35rem;
+  font-weight: 600;
+  color: #1C1917;
+  margin: 0;
+}
+
+.modal-subtext {
+  font-size: 0.85rem;
+  color: #78716C;
+  margin-top: 0.25rem;
+}
+
+.btn-close-modal,
+.btn-modal-x {
+  background: #F5EFEB;
+  border: none;
+  border-radius: 50%;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #78716C;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  flex-shrink: 0;
+}
+
+.btn-close-modal:hover,
+.btn-modal-x:hover {
+  background: #EFE6DD;
+  color: #1C1917;
+}
+
+.modal-input {
+  display: block;
+  width: 100%;
+  padding: 0.75rem 0.9rem;
+  border: 1px solid #E5DCD3;
+  border-radius: 10px;
+  font-size: 0.9rem;
+  color: #1C1917;
+  background: #FAF8F5;
+  margin-top: 0.4rem;
+}
+
+.modal-input:focus {
+  outline: none;
+  border-color: #8E4A3E;
+  background: #FFFFFF;
+}
+
+.modal-actions-row,
+.modal-foot {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.75rem;
+  margin-top: 1.5rem;
+  padding-top: 1rem;
+  border-top: 1px solid #F5EFEB;
+}
+
+.btn-modal-cancel {
+  padding: 0.65rem 1.25rem;
+  background: #FFFFFF;
+  border: 1px solid #D6C7BF;
+  border-radius: 999px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #57534E;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-modal-cancel:hover {
+  background: #FAF8F5;
+}
+
+.btn-modal-save {
+  padding: 0.65rem 1.5rem;
+  background: #8E4A3E;
+  border: 1px solid #8E4A3E;
+  border-radius: 999px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #FFFFFF;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-modal-save:hover:not(:disabled) {
+  background: #763C32;
+  border-color: #763C32;
+}
+
+/* Avatar Selection Grid */
+.avatar-choices-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1rem;
+  margin: 1.25rem 0;
+}
+
+.avatar-pick-card {
+  border: 2px solid #EFE6DD;
+  border-radius: 14px;
+  padding: 12px 8px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  background: #FFFFFF;
+}
+
+.avatar-pick-card:hover {
+  border-color: #D6C7BF;
+  transform: translateY(-2px);
+}
+
+.avatar-pick-card.active {
+  border-color: #8E4A3E;
+  background: #FDF9F7;
+  box-shadow: 0 4px 14px rgba(142, 74, 62, 0.15);
+}
+
+.avatar-frame {
+  position: relative;
+  width: 68px;
+  height: 68px;
+  border-radius: 50%;
+  overflow: hidden;
+  margin-bottom: 8px;
+  border: 2px solid #EFE6DD;
+}
+
+.avatar-frame img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.avatar-check-badge {
+  position: absolute;
+  bottom: 0;
+  right: 0;
+  background: #8E4A3E;
+  color: #FFFFFF;
+  border-radius: 50%;
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid #FFFFFF;
+}
+
+.avatar-title {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #1C1917;
+  line-height: 1.2;
+}
+
+.avatar-tag {
+  font-size: 0.7rem;
+  color: #A8A29E;
+  margin-top: 2px;
+}
+
+/* Notifications List */
+.notifications-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: 1rem 0;
+}
+
+.notification-item {
+  display: flex;
+  gap: 12px;
+  padding: 12px 14px;
+  background: #FAF8F5;
+  border: 1px solid #EFE6DD;
+  border-radius: 12px;
+}
+
+.notification-item.unread {
+  background: #FDF8F6;
+  border-color: #F3DDD7;
+}
+
+.notif-icon-circle {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.welcome-icon { background: #FAF0ED; color: #8E4A3E; }
+.shipping-icon { background: #EDF7F6; color: #0D9488; }
+.security-icon { background: #EEF2F6; color: #3B82F6; }
+
+.notif-content {
+  flex: 1;
+}
+
+.notif-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 3px;
+}
+
+.notif-top strong {
+  font-size: 0.86rem;
+  color: #1C1917;
+}
+
+.notif-time {
+  font-size: 0.72rem;
+  color: #A8A29E;
+}
+
+.notif-content p {
+  font-size: 0.8rem;
+  color: #78716C;
+  line-height: 1.4;
+  margin: 0;
+}
+
+/* Settings Form */
+.settings-body-form {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  margin: 1rem 0;
+}
+
+.settings-section {
+  padding-bottom: 14px;
+  border-bottom: 1px solid #F5EFEB;
+}
+
+.settings-sec-title {
+  font-size: 0.92rem;
+  font-weight: 600;
+  color: #1C1917;
+  margin-bottom: 10px;
+}
+
+.settings-toggle-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 8px 0;
+  cursor: pointer;
+}
+
+.settings-toggle-row strong {
+  font-size: 0.85rem;
+  color: #1C1917;
+  display: block;
+}
+
+.settings-toggle-row p {
+  font-size: 0.78rem;
+  color: #78716C;
+  margin: 2px 0 0;
+}
+
+.settings-subtext {
+  font-size: 0.84rem;
+  color: #78716C;
+}
+
+.danger-sec {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+.danger-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: #FEF2F2;
+  border: 1px solid #FEE2E2;
+  border-radius: 12px;
+  padding: 12px 16px;
+}
+
+.danger-header strong {
+  color: #991B1B;
+  font-size: 0.86rem;
+}
+
+.danger-header p {
+  color: #B91C1C;
+  font-size: 0.76rem;
+  margin: 2px 0 0;
+}
+
+.btn-danger-logout {
+  padding: 6px 14px;
+  background: #DC2626;
+  border: none;
+  border-radius: 999px;
+  color: #FFFFFF;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.btn-danger-logout:hover {
+  background: #B91C1C;
+}
+
+/* Payment Methods List */
+.payments-options-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: 1rem 0;
+}
+
+.payment-method-card {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 14px 16px;
+  border: 1.5px solid #EFE6DD;
+  border-radius: 14px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.payment-method-card:hover {
+  border-color: #D6C7BF;
+}
+
+.payment-method-card.selected {
+  border-color: #8E4A3E;
+  background: #FDF9F7;
+}
+
+.pay-card-left {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.pay-logo-badge {
+  padding: 5px 10px;
+  border-radius: 6px;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.5px;
+}
+
+.khqr-badge { background: #E1251B; color: #FFFFFF; }
+.cod-badge { background: #1C1917; color: #FFFFFF; }
+.card-badge { background: #005D8E; color: #FFFFFF; }
+
+.pay-card-left strong {
+  font-size: 0.88rem;
+  color: #1C1917;
+  display: block;
+}
+
+.pay-card-left p {
+  font-size: 0.78rem;
+  color: #78716C;
+  margin: 2px 0 0;
+}
+
+.pay-radio-check {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  border: 2px solid #D6C7BF;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.payment-method-card.selected .pay-radio-check {
+  border-color: #8E4A3E;
+}
+
+.radio-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #8E4A3E;
+}
+
+/* Rewards Comparison */
+.rewards-tiers-comparison {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+  margin: 1rem 0;
+}
+
+.tier-card {
+  border: 1.5px solid #EFE6DD;
+  border-radius: 14px;
+  padding: 16px;
+  background: #FFFFFF;
+}
+
+.tier-card.current {
+  border-color: #8E4A3E;
+  background: #FDF9F7;
+}
+
+.tier-card.gold.current {
+  border-color: #F59E0B;
+  background: #FFFDF7;
+}
+
+.tier-head {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-bottom: 12px;
+}
+
+.tier-head h4 {
+  font-family: var(--font-serif, 'Playfair Display', serif);
+  font-size: 1rem;
+  margin: 0;
+}
+
+.tier-badge-pill {
+  display: inline-block;
+  padding: 2px 8px;
+  background: #8E4A3E;
+  color: #FFFFFF;
+  border-radius: 999px;
+  font-size: 0.68rem;
+  font-weight: 600;
+  width: fit-content;
+}
+
+.tier-badge-pill.gold {
+  background: #F59E0B;
+}
+
+.tier-card ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.tier-card li {
+  font-size: 0.78rem;
+  color: #57534E;
+  line-height: 1.35;
+  position: relative;
+  padding-left: 14px;
+}
+
+.tier-card li::before {
+  content: '•';
+  position: absolute;
+  left: 0;
+  color: #8E4A3E;
+  font-weight: bold;
+}
+
+/* Welcome Card Log Out Button */
+.welcome-top-line {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+}
+
+.btn-banner-logout {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 12px;
+  background: #FFFFFF;
+  border: 1px solid #EFE6DD;
+  border-radius: 999px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: #78716C;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-banner-logout:hover {
+  background: #FEF2F2;
+  border-color: #FEE2E2;
+  color: #DC2626;
+}
 
 /* ==========================================================================
    MY ACCOUNT PAGE (Strictly matches format/My Account.png)

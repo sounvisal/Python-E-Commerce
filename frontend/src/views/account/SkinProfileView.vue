@@ -48,7 +48,15 @@
         <!-- LEFT: ACCOUNT NAVIGATION SIDEBAR                          -->
         <!-- ========================================================= -->
         <aside class="sidebar-column">
-          <AccountSidebar currentActive="profile" />
+          <AccountSidebar
+            currentActive="profile"
+            @edit-profile="router.push('/account')"
+            @pick-avatar="router.push('/account')"
+            @open-addresses="router.push('/account')"
+            @open-payments="router.push('/account')"
+            @open-notifications="router.push('/account')"
+            @open-settings="router.push('/account')"
+          />
         </aside>
 
         <!-- ========================================================= -->
@@ -340,7 +348,9 @@ import {
   Wind
 } from 'lucide-vue-next'
 import { computed, ref } from 'vue'
+import { useRouter } from 'vue-router'
 
+const router = useRouter()
 const quizStore = useQuizStore()
 const activeRoutineTime = ref('morning')
 
@@ -351,8 +361,7 @@ const routineProducts = computed(() => {
 })
 
 function openEditModal(section) {
-  // Direct to questions for updating or modal
-  window.location.href = '/quiz/questions'
+  router.push('/quiz/questions')
 }
 </script>
 
