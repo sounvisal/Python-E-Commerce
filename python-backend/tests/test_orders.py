@@ -46,3 +46,19 @@ def test_order_without_login_rejected(client: TestClient):
     }
     res = client.post("/api/orders", json=payload)
     assert res.status_code == 401
+
+
+def test_real_notifications_endpoint(client: TestClient, place_guest_order):
+    """Verify GET /api/notifications returns real events and customer purchase feeds."""
+    place_guest_order()
+    res = client.get("/api/notifications")
+    assert res.status_code == 200
+    data = res.json()
+    assert data["status"] == "success"
+    assert isinstance(data["data"], list)
+    assert len(data["data"]) > 0
+    purchases = [n for n in data["data"] if n["type"] == "purchase"]
+    assert len(purchases) > 0
+    assert "Recent Purchase" in purchases[0]["title"]
+    events = [n for n in data["data"] if n["type"] == "event"]
+    assert len(events) > 0

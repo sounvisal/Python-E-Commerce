@@ -339,10 +339,11 @@
             :class="{ 'is-active': route.path === '/wishlist' }"
             title="Wishlist"
             aria-label="Wishlist"
+            @click="wishlistStore.markAllAsSeen()"
           >
             <Heart :size="20" :stroke-width="1.8" />
-            <span v-if="wishlistStore.totalItems > 0" class="wishlist-circle-badge">
-              {{ wishlistStore.totalItems }}
+            <span v-if="wishlistStore.unseenCount > 0 && route.path !== '/wishlist'" class="wishlist-circle-badge">
+              {{ wishlistStore.unseenCount }}
             </span>
           </router-link>
 
@@ -745,6 +746,7 @@ onMounted(() => {
   updateHeaderHeight()
   window.addEventListener('resize', updateHeaderHeight)
   document.addEventListener('click', handleGlobalDropdownClick)
+  notifStore.fetchNotifications()
 })
 
 onUnmounted(() => {

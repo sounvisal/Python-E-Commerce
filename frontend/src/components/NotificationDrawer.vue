@@ -194,6 +194,7 @@ const handleKeydown = (e) => {
 
 onMounted(() => {
   window.addEventListener('keydown', handleKeydown)
+  notifStore.fetchNotifications()
 })
 
 onUnmounted(() => {

@@ -5,13 +5,17 @@ import { useNotificationStore } from './notification'
 export const useWishlistStore = defineStore('wishlist', {
   state: () => {
     const stored = localStorage.getItem(privateStorageKey('wishlist'))
+    const seenStored = localStorage.getItem(privateStorageKey('wishlist_seen_ids'))
     return {
       items: (() => { try { return stored ? JSON.parse(stored) : [] } catch { return [] } })(),
+      seenItemIds: (() => { try { return seenStored ? JSON.parse(seenStored) : [] } catch { return [] } })(),
     }
   },
 
   getters: {
     totalItems: (state) => state.items.length,
+    unseenCount: (state) => state.items.filter((item) => !state.seenItemIds.includes(item.id)).length,
+    hasUnseen: (state) => state.items.some((item) => !state.seenItemIds.includes(item.id)),
     isInWishlist: (state) => (productId) => state.items.some((item) => item.id === productId),
     recentlyViewed: (state) => state.items.filter((item) => item.isRecent),
     priceDrops: (state) => state.items.filter((item) => item.isPriceDrop || (item.compare_at_price && item.compare_at_price > item.price)),
@@ -21,9 +25,16 @@ export const useWishlistStore = defineStore('wishlist', {
   actions: {
     loadProfile() {
       try { this.items = JSON.parse(localStorage.getItem(privateStorageKey('wishlist')) || '[]') } catch { this.items = [] }
+      try { this.seenItemIds = JSON.parse(localStorage.getItem(privateStorageKey('wishlist_seen_ids')) || '[]') } catch { this.seenItemIds = [] }
     },
     saveToStorage() {
       localStorage.setItem(privateStorageKey('wishlist'), JSON.stringify(this.items))
+      localStorage.setItem(privateStorageKey('wishlist_seen_ids'), JSON.stringify(this.seenItemIds))
+    },
+
+    markAllAsSeen() {
+      this.seenItemIds = this.items.map((i) => i.id)
+      this.saveToStorage()
     },
 
     toggleItem(product) {
@@ -31,6 +42,7 @@ export const useWishlistStore = defineStore('wishlist', {
       const index = this.items.findIndex((item) => item.id === product.id)
       if (index > -1) {
         this.items.splice(index, 1)
+        this.seenItemIds = this.seenItemIds.filter((id) => id !== product.id)
         this.saveToStorage()
         notificationStore.addToast(`Removed "${product.name}" from wishlist`, 'info')
         return false
@@ -66,6 +78,7 @@ export const useWishlistStore = defineStore('wishlist', {
     removeItem(productId) {
       const item = this.items.find((i) => i.id === productId)
       this.items = this.items.filter((i) => i.id !== productId)
+      this.seenItemIds = this.seenItemIds.filter((id) => id !== productId)
       this.saveToStorage()
       if (item) {
         const notificationStore = useNotificationStore()
@@ -75,6 +88,7 @@ export const useWishlistStore = defineStore('wishlist', {
 
     removeMultiple(ids) {
       this.items = this.items.filter((i) => !ids.includes(i.id))
+      this.seenItemIds = this.seenItemIds.filter((id) => !ids.includes(id))
       this.saveToStorage()
       const notificationStore = useNotificationStore()
       notificationStore.addToast(`Removed ${ids.length} items from wishlist`, 'info')
@@ -87,6 +101,7 @@ export const useWishlistStore = defineStore('wishlist', {
 
     clearAll() {
       this.items = []
+      this.seenItemIds = []
       this.saveToStorage()
     },
   },

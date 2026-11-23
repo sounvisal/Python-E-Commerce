@@ -30,7 +30,8 @@ from app.api import (
     reviews,
     quizzes,
     settings as settings_api,
-    payments
+    payments,
+    notifications
 )
 from app.seed.seed_data import seed_database
 from app.api import promotions, contact
@@ -142,6 +143,7 @@ app.include_router(settings_api.router, prefix=settings.API_V1_STR)
 app.include_router(payments.router, prefix=settings.API_V1_STR)
 app.include_router(promotions.router, prefix=settings.API_V1_STR)
 app.include_router(contact.router, prefix=settings.API_V1_STR)
+app.include_router(notifications.router, prefix=settings.API_V1_STR)
 
 class VueFiles(StaticFiles):
     async def get_response(self, path, scope):

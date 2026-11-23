@@ -322,12 +322,16 @@ import {
   Star,
   Trash2
 } from 'lucide-vue-next'
-import { computed, ref } from 'vue'
+import { computed, ref, onMounted } from 'vue'
 import ProductCard from '@/components/ProductCard.vue'
 
 const cartStore = useCartStore()
 const wishlistStore = useWishlistStore()
 const notificationStore = useNotificationStore()
+
+onMounted(() => {
+  wishlistStore.markAllAsSeen()
+})
 
 const currentTab = ref('wishlist')
 const sortBy = ref('newest')
