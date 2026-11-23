@@ -55,11 +55,18 @@ def migrate_schema(engine, *, seed_demo_promotions=True):
                     WHERE status = 'Awaiting Confirmation' AND payment_method = 'cod'
                 """))
             if {"discount_code", "status", "promo_claimed"}.issubset(order_cols):
-                connection.execute(text("""
-                    UPDATE orders 
-                    SET promo_claimed = 1 
-                    WHERE discount_code IS NOT NULL AND status NOT IN ('Cancelled', 'Expired') AND promo_claimed = 0
-                """))
+                if connection.dialect.name == "postgresql":
+                    connection.execute(text("""
+                        UPDATE orders 
+                        SET promo_claimed = TRUE 
+                        WHERE discount_code IS NOT NULL AND status NOT IN ('Cancelled', 'Expired') AND (promo_claimed IS FALSE OR promo_claimed IS NULL)
+                    """))
+                else:
+                    connection.execute(text("""
+                        UPDATE orders 
+                        SET promo_claimed = 1 
+                        WHERE discount_code IS NOT NULL AND status NOT IN ('Cancelled', 'Expired') AND (promo_claimed = 0 OR promo_claimed IS NULL)
+                    """))
         if inspector.has_table('articles'):
             connection.execute(text("UPDATE articles SET tags='[]' WHERE tags IS NULL"))
         if inspector.has_table('order_items') and inspector.has_table('return_requests'):
