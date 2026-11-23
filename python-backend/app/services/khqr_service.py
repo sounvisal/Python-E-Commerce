@@ -3,9 +3,13 @@ import json
 import asyncio
 import subprocess
 import logging
+import hashlib
+import datetime
+import re
 from typing import Optional, Dict, Any
 from decimal import Decimal, InvalidOperation
 from dotenv import load_dotenv
+import httpx
 from app.core.database import SessionLocal
 from app.models.order import Order
 from app.services.order_lifecycle import settle_payment
@@ -19,8 +23,9 @@ load_dotenv()
 DEFAULT_MERCHANT_NAME = os.getenv("BAKONG_MERCHANT_NAME", "LUMEA ATELIER")
 DEFAULT_MERCHANT_ID = os.getenv("BAKONG_ACCOUNT_ID", "000000000000000")
 
-# Registry for active live background monitoring processes: order_number -> subprocess.Popen
+# Registry for active live background monitoring processes and HTTP PayWay sessions
 ACTIVE_PAYMENT_PROCS: Dict[str, subprocess.Popen] = {}
+ACTIVE_PAYWAY_SESSIONS: Dict[str, Dict[str, Any]] = {}
 LOCAL_PAYMENT_QRS: Dict[str, Dict[str, Any]] = {}
 
 def crc16_emvco(data: str) -> str:
@@ -165,15 +170,129 @@ def _sync_watch_approval(proc: subprocess.Popen, order_number: str, client_id: s
             pass
 
 def cancel_payment_session(order_number: str):
-    """Cancels and terminates any running background browser session for this order."""
-    proc = ACTIVE_PAYMENT_PROCS.pop(order_number, None)
+    """Cancels and terminates any running background session for this order."""
+    ACTIVE_PAYWAY_SESSIONS.pop(order_number, None)
     LOCAL_PAYMENT_QRS.pop(order_number, None)
+    proc = ACTIVE_PAYMENT_PROCS.pop(order_number, None)
     if proc:
         try:
             if proc.poll() is None:
                 proc.kill()
         except Exception:
             pass
+
+async def _fetch_payway_qr_http(payway_url: str, amount: float, order_number: str) -> Optional[Dict[str, Any]]:
+    """Direct, lightweight pure-Python ABA PayWay extraction without headless browser."""
+    try:
+        async with httpx.AsyncClient(timeout=10.0, follow_redirects=True) as client:
+            resp = await client.get(payway_url)
+            if resp.status_code != 200:
+                return None
+            match = re.search(r'aba_data="([^"]+)"', resp.text)
+            if not match:
+                return None
+            raw_aba = match.group(1)
+            aba_data = raw_aba.encode("utf-8").decode("unicode_escape")
+
+            now = datetime.datetime.now(datetime.timezone.utc)
+            req_time = now.strftime("%Y%m%d%H%M%S")
+            additional_fields = json.dumps({"amount": f"{amount:.2f}"}, separators=(",", ":"))
+            hash_str = req_time + aba_data + additional_fields
+            h = hashlib.sha512(hash_str.encode("utf-8")).hexdigest()
+
+            post_data = {
+                "additional_fields": additional_fields,
+                "request_time": req_time,
+                "aba_data": aba_data,
+                "hash": h
+            }
+            headers = {
+                "Content-Type": "application/json",
+                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+                "Referer": payway_url,
+                "language": "en"
+            }
+            res = await client.post(
+                "https://link.payway.com.kh/api/pw-app/v1/payment/gateway/list-payment-options",
+                json=post_data,
+                headers=headers
+            )
+            if res.status_code != 200:
+                return None
+            data = res.json()
+            qr_string = data.get("qr_string")
+            client_id = data.get("client_id")
+            if not qr_string or not client_id or not matches_order_qr(qr_string, amount):
+                return None
+
+            merchant_name = data.get("transaction_summary", {}).get("merchant", {}).get("company") or os.getenv("BAKONG_MERCHANT_NAME", DEFAULT_MERCHANT_NAME)
+            device_id = "lumea" + req_time[-6:]
+            ACTIVE_PAYWAY_SESSIONS[order_number] = {
+                "client_id": str(client_id),
+                "device_id": device_id,
+                "payway_url": payway_url,
+                "amount": amount
+            }
+            qr_data = {
+                "success": True,
+                "qr_string": qr_string,
+                "amount": amount,
+                "currency": "USD",
+                "merchant_name": merchant_name,
+                "order_number": order_number,
+                "client_id": str(client_id),
+                "source": "live_aba_payway",
+                "payway_url": payway_url
+            }
+            LOCAL_PAYMENT_QRS[order_number] = qr_data
+            return qr_data
+    except Exception as e:
+        logger.warning(f"PayWay direct HTTP extraction failed for {order_number}: {e}")
+        return None
+
+async def check_payway_link_status(order_number: str) -> Optional[Dict[str, Any]]:
+    """Polls ABA PayWay link status directly via HTTP."""
+    session = ACTIVE_PAYWAY_SESSIONS.get(order_number)
+    if not session:
+        return None
+    client_id = session["client_id"]
+    device_id = session["device_id"]
+    payway_url = session.get("payway_url", "https://link.payway.com.kh/ABAPAYaC455755m")
+
+    now = datetime.datetime.now(datetime.timezone.utc)
+    req_time = now.strftime("%Y%m%d%H%M%S")
+    h_str = client_id + device_id + req_time
+    h = hashlib.sha512(h_str.encode("utf-8")).hexdigest()
+
+    post_data = {
+        "device_id": device_id,
+        "request_time": req_time,
+        "client_id": client_id,
+        "hash": h
+    }
+    headers = {
+        "Content-Type": "application/json",
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+        "Referer": payway_url
+    }
+    try:
+        async with httpx.AsyncClient(timeout=5.0) as client:
+            res = await client.post(
+                "https://link.payway.com.kh/api/pw-app/v1/payment-link/check-payment-status",
+                json=post_data,
+                headers=headers
+            )
+            if res.status_code == 200:
+                body = res.json()
+                action = body.get("data", {}).get("action")
+                if action == "approved":
+                    receipt = body.get("data", {}).get("download_receipt", "")
+                    return {"approved": True, "receipt": receipt, "client_id": client_id}
+                elif action in ("expired", "rejected", "cancel"):
+                    return {"approved": False, "failed": True, "action": action}
+    except Exception as e:
+        logger.warning(f"Error checking PayWay status for {order_number}: {e}")
+    return None
 
 async def get_bakong_khqr_data(amount: float, order_number: str = "LUM-000000", try_live: bool = True) -> Dict[str, Any]:
     """Local PayWay link integration. Hosted checkout uses the merchant API."""
@@ -182,6 +301,13 @@ async def get_bakong_khqr_data(amount: float, order_number: str = "LUM-000000", 
         return {"success": False, "source": "unavailable"}
     if order_number in LOCAL_PAYMENT_QRS:
         return LOCAL_PAYMENT_QRS[order_number]
+
+    # 1. First attempt direct pure-Python HTTP extraction (fast, reliable in cloud container)
+    http_data = await _fetch_payway_qr_http(payway_url, amount, order_number)
+    if http_data and http_data.get("qr_string"):
+        return http_data
+
+    # 2. Fallback to local node bridge if running in an environment with node
     for num, p in list(ACTIVE_PAYMENT_PROCS.items()):
         if p.poll() is not None:
             ACTIVE_PAYMENT_PROCS.pop(num, None)
@@ -220,6 +346,7 @@ async def get_bakong_khqr_data(amount: float, order_number: str = "LUM-000000", 
             "order_number": order_number,
             "client_id": client_id,
             "source": "live_aba_payway",
+            "payway_url": payway_url,
         }
         LOCAL_PAYMENT_QRS[order_number] = qr_data
         asyncio.create_task(asyncio.to_thread(_sync_watch_approval, proc, order_number, client_id))

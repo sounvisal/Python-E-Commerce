@@ -94,26 +94,6 @@
         >
           {{ reviewRequired ? 'Close' : closing ? 'Cancelling…' : 'Cancel' }}
         </button>
-        <button
-          v-if="paywayUrl && !paymentApproved && !qrError"
-          type="button"
-          class="btn-khqr-aba"
-          @click="openAbaLink"
-        >
-          Open ABA Mobile
-        </button>
-        <button
-          v-if="paywayUrl && !paymentApproved && !qrError"
-          type="button"
-          class="btn-khqr-copy"
-          @click="copyPaymentLink"
-        >
-          <span class="btn-copy-inner">
-            <Check v-if="copiedPaymentLink" :size="13" class="copy-icon-svg" />
-            <Copy v-else :size="13" class="copy-icon-svg" />
-            <span>{{ copiedPaymentLink ? 'Copied' : 'Copy Link' }}</span>
-          </span>
-        </button>
       </div>
     </div>
   </div>

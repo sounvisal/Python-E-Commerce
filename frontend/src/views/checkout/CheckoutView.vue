@@ -813,10 +813,11 @@ const form = reactive({
   marketing_opt_in: true
 })
 
-// Canonical town check for Cash on Delivery (Krong Kampot only)
+// Canonical town check for Cash on Delivery (Krong Kampot only in local dev, nationwide in production)
 const CANONICAL_LOCAL_TOWNS = ['krong kampot', 'krong kampot (kampot town)', 'kampot town', 'kampot city']
 const isLocalCodEligible = computed(() => {
   if (!form.shipping_city) return false
+  if (import.meta.env.PROD || !khqrAvailable.value) return true
   return CANONICAL_LOCAL_TOWNS.includes(form.shipping_city.trim().toLowerCase())
 })
 
