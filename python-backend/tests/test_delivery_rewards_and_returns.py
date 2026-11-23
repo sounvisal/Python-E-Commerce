@@ -134,6 +134,11 @@ def test_return_rejection_decrements_returned_quantity():
     db.refresh(req)
 
     admin = db.query(User).filter(User.role == "admin").first()
+    if not admin:
+        admin = User(name="Admin User", email="admin_test@lumea.com", role="admin", hashed_password="hash", token_version=1)
+        db.add(admin)
+        db.commit()
+        db.refresh(admin)
     admin_token = create_access_token(admin.id, token_version=admin.token_version)
 
     # Reject return request via admin API

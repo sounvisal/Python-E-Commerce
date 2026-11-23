@@ -1,4 +1,4 @@
-from app.api.deps import get_current_user
+from app.api.deps import get_current_user, get_optional_user
 from app.core.config import settings
 import os
 import re
