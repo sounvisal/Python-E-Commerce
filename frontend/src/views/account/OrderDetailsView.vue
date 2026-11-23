@@ -212,7 +212,9 @@
               </div>
               <div class="summary-line">
                 <span class="summary-label">Shipping (Standard Delivery)</span>
-                <span class="summary-value free-text">Free</span>
+                <span class="summary-value" :class="{ 'free-text': !order.shippingFee || order.shippingFee === 0 }">
+                  {{ (!order.shippingFee || order.shippingFee === 0) ? 'Free' : '$' + order.shippingFee.toFixed(2) }}
+                </span>
               </div>
               <div class="summary-line">
                 <span class="summary-label">Estimated Tax</span>
@@ -1181,10 +1183,15 @@ function openReviewFor(item) {
     border-top: 1px solid #EFE6DD;
     padding-top: 1.5rem;
   }
-  .table-head-row,
+  .table-head-row {
+    display: none;
+  }
   .table-body-row {
-    grid-template-columns: 1fr;
-    gap: 0.5rem;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.75rem;
+    padding: 1.25rem 0;
   }
 }
 

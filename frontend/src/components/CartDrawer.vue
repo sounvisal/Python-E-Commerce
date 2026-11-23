@@ -169,12 +169,14 @@
 import { computed, ref, onMounted, onUnmounted, watch, nextTick } from 'vue'
 import { useRouter } from 'vue-router'
 import { useCartStore } from '@/stores/cart'
+import { useAuthStore } from '@/stores/auth'
 import { useNotificationStore } from '@/stores/notification'
 import { useLocaleStore } from '@/stores/locale'
 import { X, Trash2, Plus, Minus, ShoppingBag, Check, Sparkles } from 'lucide-vue-next'
 
 const router = useRouter()
 const cartStore = useCartStore()
+const authStore = useAuthStore()
 const notificationStore = useNotificationStore()
 const localeStore = useLocaleStore()
 
@@ -256,6 +258,11 @@ const exploreShop = () => {
 
 const goToCheckout = () => {
   cartStore.closeDrawer()
+  if (!authStore.isAuthenticated) {
+    notificationStore.addToast('Please sign in or create an account to proceed with checkout.', 'info')
+    router.push({ path: '/login', query: { redirect: '/checkout' } })
+    return
+  }
   router.push('/checkout')
 }
 </script>

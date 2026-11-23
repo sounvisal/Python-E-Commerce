@@ -296,15 +296,16 @@ def quote_order(payload: OrderCreate, db: Session = Depends(get_db), current_use
     return {"data": {**quote, "items": lines}}
 
 @router.post("", response_model=OrderResponse, status_code=201)
-def place_order(order_in: OrderCreate, db: Session = Depends(get_db), current_user: Optional[User] = Depends(get_optional_user)):
+def place_order(order_in: OrderCreate, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     """
     Creates a new customer order.
+    Requires an authenticated customer to prevent spam bots and fraudulent orders.
     Calculates subtotal, discounts, and items cleanly.
     """
     expire_pending_orders(db)
     db.commit()
-    if current_user and order_in.customer_email.lower() != current_user.email.lower():
-        raise HTTPException(400, "Use your account email for this order")
+    if order_in.customer_email.lower() != current_user.email.lower():
+        raise HTTPException(400, "Order customer email must match your registered account email")
     checkout_key = order_in.checkout_key or secrets.token_urlsafe(32)
     fingerprint = checkout_fingerprint(order_in, current_user)
     existing = db.query(Order).filter(Order.checkout_key == checkout_key).first()
@@ -327,7 +328,7 @@ def place_order(order_in: OrderCreate, db: Session = Depends(get_db), current_us
         raise HTTPException(409, detail={"message": "Your bag total changed. Review the updated total before placing the order.", "quote": quote})
 
     # Delivery carrier & Map coordinates
-    carrier_key = (order_in.shipping_carrier or "vet_express").lower()
+    carrier_key = (order_in.shipping_carrier or "lumea_concierge").lower()
     map_url = None
     if order_in.delivery_lat is not None and order_in.delivery_lng is not None:
         map_url = f"https://www.google.com/maps?q={order_in.delivery_lat:.6f},{order_in.delivery_lng:.6f}"
@@ -337,7 +338,7 @@ def place_order(order_in: OrderCreate, db: Session = Depends(get_db), current_us
         order_number=generate_order_number(),
         checkout_key=checkout_key,
         checkout_fingerprint=fingerprint,
-        user_id=current_user.id if current_user else None,
+        user_id=current_user.id,
         expires_at=utcnow() + timedelta(minutes=5) if order_in.payment_method == 'khqr' else None,
         stock_reserved=True,
         customer_name=order_in.customer_name,

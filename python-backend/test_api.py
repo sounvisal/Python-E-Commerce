@@ -124,7 +124,7 @@ def run_tests():
     quote_res = client.post("/api/orders/quote", json=order_payload)
     if quote_res.status_code == 200:
         order_payload["expected_total"] = quote_res.json()["data"]["total"]
-    res = client.post("/api/orders", json=order_payload)
+    res = client.post("/api/orders", json=order_payload, headers={"Authorization": f"Bearer {token}"})
     assert res.status_code == 201, f"Place order failed: {res.text}"
     created_order = res.json()["data"]
     ord_num = created_order["order_number"]
@@ -306,7 +306,7 @@ def run_tests():
     q_res = client.post("/api/orders/quote", json=khqr_ord_payload)
     if q_res.status_code == 200:
         khqr_ord_payload["expected_total"] = q_res.json()["data"]["total"]
-    khqr_ord_res = client.post("/api/orders", json=khqr_ord_payload)
+    khqr_ord_res = client.post("/api/orders", json=khqr_ord_payload, headers={"Authorization": f"Bearer {token}"})
     assert khqr_ord_res.status_code == 201
     khqr_ord_data = khqr_ord_res.json()["data"]
     khqr_token = khqr_ord_data.get("access_token")
@@ -348,7 +348,7 @@ def run_tests():
         q_res = client.post("/api/orders/quote", json=ord_payload)
         if q_res.status_code == 200:
             ord_payload["expected_total"] = q_res.json()["data"]["total"]
-        order_res = client.post("/api/orders", json=ord_payload)
+        order_res = client.post("/api/orders", json=ord_payload, headers={"Authorization": f"Bearer {token}"})
         test_ord_data = order_res.json()["data"]
         test_ord_num = test_ord_data["order_number"]
         test_token = test_ord_data.get("access_token")

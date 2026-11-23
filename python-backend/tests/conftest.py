@@ -53,19 +53,27 @@ def place_guest_order(client):
         prod = db.query(Product).filter(Product.id == 201).first()
         if prod and prod.stock < 10:
             prod.stock = 50
+        buyer = db.query(User).filter(User.email == "buyer@example.com").first()
+        if not buyer:
+            buyer = User(email="buyer@example.com", name="Test Buyer", role="customer", hashed_password="unused")
+            db.add(buyer)
+            db.flush()
+        token = create_access_token(buyer.email, token_version=getattr(buyer, "token_version", 1))
+    headers = {"Authorization": f"Bearer {token}"}
+
     def place(payment_method="cod"):
         payload = {
             "customer_name": "Test Buyer",
             "customer_email": "buyer@example.com",
             "shipping_address": "123 Norodom Blvd",
-            "shipping_city": "Phnom Penh",
+            "shipping_city": "Kampot",
             "payment_method": payment_method,
             "items": [{"product_id": 201, "quantity": 1}],
         }
-        quote = client.post("/api/orders/quote", json=payload)
+        quote = client.post("/api/orders/quote", json=payload, headers=headers)
         assert quote.status_code == 200, quote.text
         payload["expected_total"] = quote.json()["data"]["total"]
-        order = client.post("/api/orders", json=payload)
+        order = client.post("/api/orders", json=payload, headers=headers)
         assert order.status_code == 201, order.text
         return order.json()["data"]
 

@@ -22,14 +22,27 @@ def test_order_status_lookup(client: TestClient, place_guest_order):
     assert len(data["items"]) == 1
 
 
-def test_invalid_order_missing_items(client: TestClient):
-    """Verify 400 Bad Request when placing empty order."""
+def test_invalid_order_missing_items(client: TestClient, auth_headers):
+    """Verify 400 Bad Request when placing empty order by authenticated user."""
     payload = {
-        "customer_name": "Invalid Order",
-        "customer_email": "invalid@example.com",
+        "customer_name": "Sreynich Chan",
+        "customer_email": "sreynich.chan@example.com",
         "shipping_address": "123 Street",
-        "shipping_city": "Phnom Penh",
+        "shipping_city": "Kampot",
         "items": []
     }
-    res = client.post("/api/orders", json=payload)
+    res = client.post("/api/orders", json=payload, headers=auth_headers)
     assert res.status_code == 400
+
+
+def test_order_without_login_rejected(client: TestClient):
+    """Verify 401 Unauthorized when placing order without login (anti-spam / anti-bot)."""
+    payload = {
+        "customer_name": "Anonymous Spammer",
+        "customer_email": "spam@example.com",
+        "shipping_address": "Nowhere",
+        "shipping_city": "Kampot",
+        "items": [{"product_id": 201, "quantity": 1}]
+    }
+    res = client.post("/api/orders", json=payload)
+    assert res.status_code == 401

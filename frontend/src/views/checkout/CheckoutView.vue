@@ -872,6 +872,11 @@ function onThumbError(e) {
 }
 
 onMounted(async () => {
+  if (!authStore.isAuthenticated) {
+    notificationStore.addToast('Please sign in or create an account to proceed with checkout.', 'info')
+    router.replace({ path: '/login', query: { redirect: '/checkout' } })
+    return
+  }
   restorePendingPayment()
   await cartStore.fetchSettings()
 
@@ -1011,6 +1016,11 @@ async function getCheckoutKey(signature) {
 }
 
 async function handleSubmitOrder() {
+  if (!authStore.isAuthenticated) {
+    notificationStore.addToast('Please sign in or create an account to place your order.', 'error')
+    router.push({ path: '/login', query: { redirect: '/checkout' } })
+    return
+  }
   if (submitting.value || showKHQRModal.value || !cartStore.items.length) return
   const details = checkoutInput.value
   if (!details.customer_name || !details.customer_email || !details.customer_phone || !details.shipping_address) {

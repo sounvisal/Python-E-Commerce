@@ -141,9 +141,9 @@
             </div>
           </div>
 
-          <router-link to="/checkout" class="btn btn-primary btn-lg btn-block">
+          <button @click="proceedToCheckout" class="btn btn-primary btn-lg btn-block">
             {{ localeStore.t('cart.checkout_btn') || 'Proceed to Checkout' }}
-          </router-link>
+          </button>
 
           <router-link to="/shop" class="btn btn-ghost btn-block continue-link">
             &larr; {{ localeStore.t('cart.return_to_catalog') || 'Continue Exploring' }}
@@ -156,15 +156,28 @@
 
 <script setup>
 import { ref } from 'vue'
+import { useRouter } from 'vue-router'
 import { useCartStore } from '@/stores/cart'
+import { useAuthStore } from '@/stores/auth'
 import { useNotificationStore } from '@/stores/notification'
 import { useLocaleStore } from '@/stores/locale'
 import { ShoppingBag, Trash2, Plus, Minus } from 'lucide-vue-next'
 
+const router = useRouter()
 const cartStore = useCartStore()
+const authStore = useAuthStore()
 const notificationStore = useNotificationStore()
 const localeStore = useLocaleStore()
 const promoInput = ref('')
+
+function proceedToCheckout() {
+  if (!authStore.isAuthenticated) {
+    notificationStore.addToast('Please sign in or create an account to proceed with checkout.', 'info')
+    router.push({ path: '/login', query: { redirect: '/checkout' } })
+    return
+  }
+  router.push('/checkout')
+}
 
 const applyPromo = async () => {
   if (!promoInput.value) return

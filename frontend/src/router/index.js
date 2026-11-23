@@ -128,6 +128,7 @@ const routes = [
     path: '/checkout',
     name: 'checkout',
     component: CheckoutView,
+    meta: { requiresAuth: true },
   },
   {
     path: '/order-success/:orderNumber',
