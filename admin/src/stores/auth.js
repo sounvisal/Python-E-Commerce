@@ -15,7 +15,7 @@ export const useAuthStore = defineStore('auth', () => {
     isLoading.value = true
     error.value = null
     try {
-      const response = await apiClient.post('/auth/login', { email, password })
+      const response = await apiClient.post('/auth/login', { email, password }, { timeout: 90_000 })
       const tokenVal = response.data?.data?.access_token || response.data?.data?.token
       if (tokenVal && response.data?.data?.user?.role === 'admin') {
         token.value = tokenVal
@@ -26,9 +26,21 @@ export const useAuthStore = defineStore('auth', () => {
         safeSetJSON('lumea_admin_user', user.value)
         return { success: true }
       }
-      return { success: false, message: 'An administrator account is required.' }
+      const message = tokenVal
+        ? 'This account does not have administrator access.'
+        : 'The sign-in service returned an unexpected response. Try again.'
+      return { success: false, message }
     } catch (err) {
-      error.value = err.response?.data?.detail || 'Login failed. Please verify credentials.'
+      const status = err.response?.status
+      if (status === 401) {
+        error.value = 'The email or password is incorrect. Use your administrator credentials.'
+      } else if (status === 422) {
+        error.value = 'Enter a valid email address and password.'
+      } else if (status === 429) {
+        error.value = 'Too many sign-in attempts. Wait a moment and try again.'
+      } else {
+        error.value = 'The sign-in service is unavailable. Try again in a moment.'
+      }
       return { success: false, message: error.value }
     } finally {
       isLoading.value = false

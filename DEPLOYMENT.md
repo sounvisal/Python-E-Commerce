@@ -94,8 +94,8 @@ You can deploy on Render using either **Option A (Automatic Blueprint)** or **Op
    | `SERVE_BUILT_APPS` | `false` | Backend runs API-only (Vercel serves frontend) |
    | `DATABASE_URL` | *`postgresql://neondb_owner:...`* | Your Neon string (or leave empty for SQLite) |
    | `SECRET_KEY` | *(Click "Generate" or enter 32+ random characters)* | Cryptographic JWT signing key |
-   | `ADMIN_EMAIL` | `admin@lumea.com` | Atelier administrator login email |
-   | `ADMIN_PASSWORD` | `password123` | Atelier administrator login password |
+   | `ADMIN_EMAIL` | Your administrator email | Account to provision on Render |
+   | `ADMIN_PASSWORD` | A unique password | Secret used when provisioning the account |
    | `ENABLE_DEMO_PAYMENTS` | `false` | Keeps live security enabled |
 
 6. Scroll down to **Advanced** -> set **Health Check Path** to `/api/live`.
@@ -173,8 +173,9 @@ This means the `RENDER_API_ORIGIN` environment variable was omitted or formatted
 3. Click **Deployments** -> **Redeploy**.
 
 ### 3. I get a `401 Unauthorized` when logging into Admin.
-- If you specified `ADMIN_EMAIL` and `ADMIN_PASSWORD` in Render's environment variables, use those credentials.
-- In demo/development environments, the default account is `admin@lumea.com` with password `password123`.
+- For a new hosted administrator, set `ADMIN_EMAIL` and `ADMIN_PASSWORD` on Render and redeploy. Sign in after Render reports the deploy as live.
+- For an existing administrator, use its current password. The startup configuration provisions accounts and does not reset an existing administrator's password.
+- Demo credentials are for local development only.
 
 ### 4. How do I test the split Vercel build locally before pushing?
 You can build and test the exact Vercel static output locally:

@@ -1,6 +1,6 @@
 <script setup>
 import { useAuthStore } from '@/stores/auth'
-import { ArrowRight, Lock, Mail, ShieldCheck, Sparkles } from 'lucide-vue-next'
+import { ArrowRight, Eye, EyeOff, Lock, Mail, ShieldCheck, Sparkles } from 'lucide-vue-next'
 import { ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 
@@ -8,26 +8,29 @@ const router = useRouter()
 const route = useRoute()
 const authStore = useAuthStore()
 
-const email = ref('')
-const password = ref('')
 const errorMessage = ref('')
-const isSubmitting = ref(false)
+const showPassword = ref(false)
 
-async function handleLogin() {
-  if (!email.value || !password.value) {
+async function handleLogin(event) {
+  if (authStore.isLoading) return
+
+  const credentials = new FormData(event.currentTarget)
+  const email = credentials.get('email').trim()
+  const password = credentials.get('password')
+  if (!email || !password) {
     errorMessage.value = 'Please enter both email and password.'
     return
   }
 
-  isSubmitting.value = true
   errorMessage.value = ''
 
-  const res = await authStore.login(email.value, password.value)
-  isSubmitting.value = false
+  const res = await authStore.login(email, password)
 
   if (res.success) {
-    const redirectPath = route.query.redirect || '/dashboard'
-    router.push(redirectPath)
+    const redirect = route.query.redirect
+    const isInternal = typeof redirect === 'string' && /^\/(?![/\\])/.test(redirect)
+    const destination = isInternal && router.resolve(redirect).meta.requiresAuth ? redirect : '/dashboard'
+    await router.replace(destination)
   } else {
     errorMessage.value = res.message || 'Login failed. Use a valid administrator account.'
   }
@@ -58,8 +61,8 @@ async function handleLogin() {
           <p>Enter your administrator credentials to access store analytics and inventory control.</p>
         </div>
 
-        <form @submit.prevent="handleLogin" class="login-form">
-          <div v-if="errorMessage" class="error-banner">
+        <form @submit.prevent="handleLogin" class="login-form" :aria-busy="authStore.isLoading">
+          <div v-if="errorMessage" class="error-banner" role="alert">
             {{ errorMessage }}
           </div>
 
@@ -67,46 +70,57 @@ async function handleLogin() {
           <div class="form-group">
             <label for="email">Administrator Email</label>
             <div class="input-with-icon">
-              <Mail :size="17" class="field-icon" />
+              <Mail :size="17" class="field-icon" aria-hidden="true" />
               <input
                 id="email"
-                v-model="email"
+                name="email"
+                class="atelier-input"
                 type="email"
                 placeholder="name@example.com"
                 required
-                autocomplete="email"
+                autocomplete="username"
+                autocapitalize="none"
+                spellcheck="false"
               />
             </div>
           </div>
 
           <!-- Password -->
           <div class="form-group">
-            <label for="password">Security Passcode</label>
-            <div class="input-with-icon">
-              <Lock :size="17" class="field-icon" />
+            <label for="password">Password</label>
+            <div class="input-with-icon password-field">
+              <Lock :size="17" class="field-icon" aria-hidden="true" />
               <input
                 id="password"
-                v-model="password"
-                type="password"
-                placeholder="••••••••"
+                name="password"
+                class="atelier-input"
+                :type="showPassword ? 'text' : 'password'"
                 required
                 autocomplete="current-password"
               />
+              <button
+                class="password-toggle"
+                type="button"
+                :aria-label="showPassword ? 'Hide password' : 'Show password'"
+                aria-controls="password"
+                @click="showPassword = !showPassword"
+              >
+                <component :is="showPassword ? EyeOff : Eye" :size="18" aria-hidden="true" />
+              </button>
             </div>
           </div>
 
           <!-- Submit Button -->
-          <button type="submit" class="btn btn-primary login-btn" :disabled="isSubmitting">
-            <span v-if="!isSubmitting">Authenticate & Enter Console</span>
-            <span v-else>Verifying Credentials...</span>
-            <ArrowRight :size="16" v-if="!isSubmitting" />
+          <button type="submit" class="btn btn-primary login-btn" :disabled="authStore.isLoading">
+            <span>{{ authStore.isLoading ? 'Signing in…' : 'Sign in' }}</span>
+            <ArrowRight v-if="!authStore.isLoading" :size="16" aria-hidden="true" />
           </button>
         </form>
 
         <!-- Security Note -->
-        <div class="security-note">
-          <ShieldCheck :size="14" />
-          <span>Administrator access only</span>
+        <div class="security-note" role="status">
+          <ShieldCheck :size="14" aria-hidden="true" />
+          <span>{{ authStore.isLoading ? 'The server may take a minute to wake up.' : 'Administrator access only' }}</span>
         </div>
       </div>
     </div>
@@ -116,14 +130,15 @@ async function handleLogin() {
 <style scoped>
 .login-wrapper {
   min-height: 100vh;
-  width: 100vw;
+  min-height: 100dvh;
+  width: 100%;
   background-color: var(--bg-app);
   display: flex;
   align-items: center;
   justify-content: center;
   position: relative;
   overflow: hidden;
-  padding: 2rem;
+  padding: clamp(1rem, 4vw, 2rem);
 }
 
 .glow-orb {
@@ -200,7 +215,7 @@ async function handleLogin() {
   background: var(--bg-surface);
   border: 1px solid var(--border-medium);
   border-radius: var(--radius-lg);
-  padding: 2.25rem 2rem;
+  padding: clamp(1.25rem, 5vw, 2.25rem);
   box-shadow: var(--shadow-lg);
   backdrop-filter: blur(16px);
 }
@@ -230,10 +245,10 @@ async function handleLogin() {
 
 .error-banner {
   padding: 0.75rem 1rem;
-  background: rgba(244, 63, 94, 0.12);
-  border: 1px solid rgba(244, 63, 94, 0.3);
+  background: var(--rose-bg);
+  border: 1px solid var(--rose-border);
   border-radius: var(--radius-sm);
-  color: #FB7185;
+  color: var(--rose);
   font-size: 0.82rem;
 }
 
@@ -266,11 +281,35 @@ async function handleLogin() {
 
 .input-with-icon input {
   width: 100%;
+  min-height: 48px;
+  font-size: 1rem;
   padding-left: 2.75rem;
+}
+
+.password-field input {
+  padding-right: 3rem;
+}
+
+.password-toggle {
+  position: absolute;
+  right: 2px;
+  width: 44px;
+  height: 44px;
+  display: grid;
+  place-items: center;
+  color: var(--text-muted);
+  border-radius: var(--radius-sm);
+}
+
+.password-toggle:focus-visible,
+.login-btn:focus-visible {
+  outline: 2px solid var(--crimson);
+  outline-offset: 2px;
 }
 
 .login-btn {
   width: 100%;
+  min-height: 48px;
   padding: 0.85rem;
   margin-top: 0.5rem;
   font-size: 0.92rem;
