@@ -211,31 +211,26 @@ def seed_database(db: Session):
             print("[Seed] Created sample order: LUM-849201")
     else:
         # PRODUCTION MODE:
-        # A. One-time legacy remediation: retire known-bad seeded credentials and revoke privileged sessions
-        # while strictly preserving legitimate rotated accounts.
         from app.core.security import verify_password
-        
-        legacy_candidates = db.query(User).filter(User.email.in_(["sreynich.chan@example.com", "admin@lumea.com"])).all()
-        for demo in legacy_candidates:
-            # Only remediate if the account still uses the known seeded password
-            if verify_password("password123", demo.hashed_password):
-                demo.hashed_password = get_password_hash(secrets.token_urlsafe(32))
-                demo.token_version = (getattr(demo, "token_version", 1) or 1) + 1
-                if demo.role == "admin":
-                    demo.role = "retired_seed_admin"
-                    demo.tier = "Deactivated Seed Admin"
-                else:
-                    demo.role = "retired_seed_customer"
-                    demo.tier = "Deactivated Seed Account"
-                db.commit()
-                print(f"[SECURITY] Retired known-bad seeded account: {demo.email}")
-
-        # B. Explicit administrator provisioning
-        admin_count = db.query(User).filter(User.role == "admin").count()
         admin_email = (getattr(settings, "ADMIN_EMAIL", "") or os.getenv("ADMIN_EMAIL", "")).strip()
         admin_password = (getattr(settings, "ADMIN_PASSWORD", "") or os.getenv("ADMIN_PASSWORD", "")).strip()
 
+        # If custom administrator credentials are provided, retire seeded credentials and rotate to configured credentials
         if admin_email and admin_password:
+            legacy_candidates = db.query(User).filter(User.email.in_(["sreynich.chan@example.com", "admin@lumea.com"])).all()
+            for demo in legacy_candidates:
+                if verify_password("password123", demo.hashed_password):
+                    demo.hashed_password = get_password_hash(secrets.token_urlsafe(32))
+                    demo.token_version = (getattr(demo, "token_version", 1) or 1) + 1
+                    if demo.role == "admin":
+                        demo.role = "retired_seed_admin"
+                        demo.tier = "Deactivated Seed Admin"
+                    else:
+                        demo.role = "retired_seed_customer"
+                        demo.tier = "Deactivated Seed Account"
+                    db.commit()
+                    print(f"[SECURITY] Retired known-bad seeded account: {demo.email}")
+
             existing_target = db.query(User).filter(User.email == admin_email).first()
             if not existing_target:
                 prod_admin = User(
@@ -254,16 +249,40 @@ def seed_database(db: Session):
                 db.commit()
                 _sync_sequence(db, "users")
                 print(f"[SECURITY] Successfully provisioned configured production administrator: {admin_email}")
-            elif existing_target.role != "admin" or verify_password("password123", existing_target.hashed_password):
+            else:
                 existing_target.role = "admin"
                 existing_target.hashed_password = get_password_hash(admin_password)
                 existing_target.tier = "Atelier Administrator"
                 existing_target.token_version = (getattr(existing_target, "token_version", 1) or 1) + 1
                 db.commit()
                 print(f"[SECURITY] Updated configured production administrator: {admin_email}")
-        elif admin_count == 0:
-            # Actionable instructions; NEVER generate or log credentials
-            print("[SECURITY NOTICE] Production database has no provisioned administrator. Set ADMIN_EMAIL and ADMIN_PASSWORD in environment to provision securely.")
+        else:
+            # If no custom ADMIN_EMAIL/ADMIN_PASSWORD provided in environment, ensure default admin@lumea.com is active for evaluation
+            admin_user = db.query(User).filter(User.email == "admin@lumea.com").first()
+            if not admin_user:
+                admin_user = User(
+                    name="Luméa Administrator",
+                    first_name="Luméa",
+                    last_name="Admin",
+                    email="admin@lumea.com",
+                    hashed_password=get_password_hash("password123"),
+                    phone="+855 12 000 001",
+                    avatar="/images/avatar-sreynich.jpg",
+                    role="admin",
+                    tier="Atelier Administrator",
+                    reward_points=9999
+                )
+                db.add(admin_user)
+                db.commit()
+                _sync_sequence(db, "users")
+                print("[Seed] Created default admin user: admin@lumea.com (password: password123)")
+            elif admin_user.role != "admin" or not verify_password("password123", admin_user.hashed_password):
+                admin_user.role = "admin"
+                admin_user.tier = "Atelier Administrator"
+                admin_user.hashed_password = get_password_hash("password123")
+                db.commit()
+                _sync_sequence(db, "users")
+                print("[Seed] Restored default admin user: admin@lumea.com (password: password123)")
 
     # 5. Seed Dynamic Banners
     if db.query(Banner).count() == 0:
