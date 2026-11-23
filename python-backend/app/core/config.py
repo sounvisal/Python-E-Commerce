@@ -54,8 +54,10 @@ def safe_db_url_str(url: str) -> str:
     except Exception:
         return "[redacted-database-url]"
 
+_runtime_generated_key = False
 if not settings.SECRET_KEY:
     settings.SECRET_KEY = secrets.token_hex(32)
+    _runtime_generated_key = True
     logger.warning("No SECRET_KEY defined in environment/.env! Generated a secure 256-bit runtime key.")
 
 def validate_production_security(s: Settings):
@@ -64,8 +66,8 @@ def validate_production_security(s: Settings):
     if s.ENABLE_DEMO_PAYMENTS:
         s.ENABLE_DEMO_PAYMENTS = False
         logger.warning("Demo payments cannot be enabled in production. Overriding ENABLE_DEMO_PAYMENTS=False.")
-    raw_env_key = os.environ.get("SECRET_KEY", "").strip()
-    if not raw_env_key or len(raw_env_key.encode("utf-8")) < 32:
+    key = (s.SECRET_KEY or "").strip()
+    if not key or len(key.encode("utf-8")) < 32 or (s is settings and _runtime_generated_key):
         raise ValueError("A stable SECRET_KEY of at least 32 bytes must be configured in environment/.env when PRODUCTION=True to prevent session invalidation.")
     if not s.DATABASE_URL.startswith(("postgresql://", "postgres://", "postgresql+psycopg://")):
         raise ValueError(

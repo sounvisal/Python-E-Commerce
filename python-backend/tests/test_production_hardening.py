@@ -15,7 +15,15 @@ def test_production_enforces_postgresql_and_key():
     with pytest.raises(ValueError, match="PostgreSQL DATABASE_URL is required"):
         validate_production_security(s_sqlite)
 
-def test_partial_settings_save_preserves_unrelated_fields():
+    # 2. Reject short key in production
+    s_short_key = Settings(PRODUCTION=True, DATABASE_URL="postgresql://user:pass@localhost:5432/lumea", SECRET_KEY="short")
+    with pytest.raises(ValueError, match="stable SECRET_KEY"):
+        validate_production_security(s_short_key)
+
+def test_partial_settings_save_preserves_unrelated_fields(monkeypatch, tmp_path):
+    temp_file = str(tmp_path / "store_settings.json")
+    monkeypatch.setattr("app.api.settings.SETTINGS_FILE", temp_file)
+
     # Get current settings
     initial = load_settings()
     tax_before = initial.get("tax_rate", 10.0)

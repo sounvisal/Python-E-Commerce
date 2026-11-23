@@ -31,14 +31,7 @@ jobs:
           PYTHONPATH: python-backend
           DATABASE_URL: sqlite:///${{ runner.temp }}/lumea-tests.sqlite
         run: |
-          python -m pytest -v --tb=short python-backend/tests test_flow_regressions.py test_security_transactions.py > pytest.log 2>&1 || {
-            echo "### PyTest Failures" >> $GITHUB_STEP_SUMMARY
-            echo '```' >> $GITHUB_STEP_SUMMARY
-            tail -n 80 pytest.log >> $GITHUB_STEP_SUMMARY
-            echo '```' >> $GITHUB_STEP_SUMMARY
-            cat pytest.log
-            exit 1
-          }
+          python -m pytest -v --tb=short python-backend/tests test_flow_regressions.py test_security_transactions.py
 
   frontend-build:
     name: Storefront Vite Build
