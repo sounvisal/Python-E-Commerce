@@ -1290,6 +1290,16 @@ function openReviewFor(item) {
     align-items: flex-start;
     gap: 0.75rem;
     padding: 1.25rem 0;
+    min-width: 0;
+  }
+}
+
+@media (max-width: 768px) {
+  .order-aside-column {
+    grid-template-columns: 1fr;
+  }
+  .promo-brand-box {
+    grid-column: span 1;
   }
 }
 

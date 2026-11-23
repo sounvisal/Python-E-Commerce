@@ -36,7 +36,7 @@ class CommerceFlows(unittest.TestCase):
         self.db.close()
         self.engine.dispose()
     def payload(self, **overrides):
-        value = dict(customer_name='Test', customer_email=self.user.email, shipping_address='Test street', shipping_city='Test', payment_method='cod', expected_total=50, items=[{'product_id':1,'quantity':1}])
+        value = dict(customer_name='Test', customer_email=self.user.email, shipping_address='Test street', shipping_city='Test', payment_method='khqr', expected_total=50, items=[{'product_id':1,'quantity':1}])
         value.update(overrides)
         return OrderCreate(**value)
     def place(self, payload):
@@ -71,7 +71,7 @@ class CommerceFlows(unittest.TestCase):
         self.assertEqual(error.exception.status_code,409)
         self.assertEqual(self.db.query(Order).count(),0)
     def test_cod_unpaid_and_khqr_pending(self):
-        self.assertEqual(self.place(self.payload()).payment_status,'Unpaid')
+        self.assertEqual(self.place(self.payload(payment_method='cod')).payment_status,'Unpaid')
         order=self.place(self.payload(payment_method='khqr'))
         self.assertEqual((order.status,order.payment_status),('Pending','Pending'))
     def test_unsupported_gateways_rejected(self):

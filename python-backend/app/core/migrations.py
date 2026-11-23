@@ -45,17 +45,21 @@ def migrate_schema(engine, *, seed_demo_promotions=True):
                         sql_type = {"DATETIME": "TIMESTAMP", "BOOLEAN NOT NULL DEFAULT 0": "BOOLEAN NOT NULL DEFAULT FALSE"}.get(sql_type, sql_type)
                     connection.execute(text(f'ALTER TABLE "{table}" ADD COLUMN "{name}" {sql_type}'))
         if inspector.has_table("orders"):
-            connection.execute(text('CREATE UNIQUE INDEX IF NOT EXISTS ix_orders_checkout_key ON orders (checkout_key)'))
-            connection.execute(text("""
-                CREATE UNIQUE INDEX IF NOT EXISTS ix_orders_user_awaiting_cod 
-                ON orders (user_id) 
-                WHERE status = 'Awaiting Confirmation' AND payment_method = 'cod'
-            """))
-            connection.execute(text("""
-                UPDATE orders 
-                SET promo_claimed = 1 
-                WHERE discount_code IS NOT NULL AND status NOT IN ('Cancelled', 'Expired') AND promo_claimed = 0
-            """))
+            order_cols = {c["name"] for c in inspector.get_columns("orders")}
+            if "checkout_key" in order_cols:
+                connection.execute(text('CREATE UNIQUE INDEX IF NOT EXISTS ix_orders_checkout_key ON orders (checkout_key)'))
+            if {"user_id", "status", "payment_method"}.issubset(order_cols):
+                connection.execute(text("""
+                    CREATE UNIQUE INDEX IF NOT EXISTS ix_orders_user_awaiting_cod 
+                    ON orders (user_id) 
+                    WHERE status = 'Awaiting Confirmation' AND payment_method = 'cod'
+                """))
+            if {"discount_code", "status", "promo_claimed"}.issubset(order_cols):
+                connection.execute(text("""
+                    UPDATE orders 
+                    SET promo_claimed = 1 
+                    WHERE discount_code IS NOT NULL AND status NOT IN ('Cancelled', 'Expired') AND promo_claimed = 0
+                """))
         if inspector.has_table('articles'):
             connection.execute(text("UPDATE articles SET tags='[]' WHERE tags IS NULL"))
         if inspector.has_table('order_items') and inspector.has_table('return_requests'):

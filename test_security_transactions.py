@@ -98,7 +98,7 @@ class AdditionalFlows(regression.CommerceFlows):
         order=self.place(self.payload())
         cancel_order(self.db,order); self.db.commit(); cancel_order(self.db,order); self.db.commit()
         self.assertEqual(self.db.get(Product,1).stock,10)
-        paid=self.place(self.payload()); paid.payment_status='Paid'; self.db.commit()
+        paid=self.place(self.payload()); paid.status='Confirmed'; paid.payment_status='Paid'; self.db.commit()
         with self.assertRaises(HTTPException): cancel_order(self.db,paid)
         self.assertEqual(paid.status,'Confirmed')
     def test_expiry_releases_inventory_and_promo_capacity_once(self):
@@ -153,7 +153,8 @@ class AdditionalFlows(regression.CommerceFlows):
             self.assertFalse(result.value['paid'])
             self.assertEqual(result.value['action'],'review')
     def test_fulfillment_cannot_skip_stages_and_cod_collection_is_recorded(self):
-        order=self.place(self.payload())
+        order=self.place(self.payload(payment_method='cod'))
+        transition_order(self.db,order,'Confirmed')
         with self.assertRaises(HTTPException): transition_order(self.db,order,'Delivered')
         for stage in ('Processing','Shipped','Out for Delivery','Delivered'): transition_order(self.db,order,stage)
         self.db.commit()
@@ -504,7 +505,7 @@ class SchemaMigrations(unittest.TestCase):
         self.assertIn('checkout_key',{c['name'] for c in inspect(engine).get_columns('orders')})
         engine.dispose()
     def test_concurrent_checkouts_cannot_both_buy_the_last_unit(self):
-        with tempfile.TemporaryDirectory(prefix='lumea-flow-') as directory:
+        with tempfile.TemporaryDirectory(prefix='lumea-flow-', ignore_cleanup_errors=True) as directory:
             engine=create_engine('sqlite:///'+str(Path(directory)/'race.db'),connect_args={'check_same_thread':False,'timeout':10})
             Base.metadata.create_all(engine)
             with Session(engine) as db:
@@ -522,7 +523,7 @@ class SchemaMigrations(unittest.TestCase):
             def buy():
                 from app.schemas.order import OrderCreate
                 with Session(engine) as db:
-                    payload=OrderCreate(customer_name='Test',customer_email='test@example.com',shipping_address='Test',shipping_city='Test',payment_method='cod',expected_total=50,items=[{'product_id':1,'quantity':1}])
+                    payload=OrderCreate(customer_name='Test',customer_email='test@example.com',shipping_address='Test',shipping_city='Test',payment_method='khqr',expected_total=50,items=[{'product_id':1,'quantity':1}])
                     try:
                         place_order(payload,db,None)
                         return 'created'

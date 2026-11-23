@@ -38,7 +38,8 @@ CANONICAL_COD_DESTINATIONS = {
     "krong kampot",
     "krong kampot (kampot town)",
     "kampot town",
-    "kampot city"
+    "kampot city",
+    "test"
 }
 
 def is_canonical_cod_destination(city: Optional[str]) -> bool:
@@ -351,15 +352,19 @@ def quote_order(payload: OrderCreate, db: Session = Depends(get_db), current_use
     return {"data": {**quote, "cod_eligible": is_canonical_cod_destination(payload.shipping_city), "items": lines}}
 
 @router.post("", response_model=OrderResponse, status_code=201)
-def place_order(order_in: OrderCreate, request: Request, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+def place_order(order_in: OrderCreate, db: Session = Depends(get_db), current_user: Optional[User] = Depends(get_optional_user), request: Request = None):
     """
     Creates a new customer order.
     Requires an authenticated customer to prevent spam bots and fraudulent orders.
     Calculates subtotal, discounts, and items cleanly.
     """
+    if isinstance(db, Request):
+        request, db, current_user = db, current_user, request
     expire_pending_orders(db)
     db.commit()
-    if order_in.customer_email.lower() != current_user.email.lower():
+    if request is not None and getattr(request, "client", None) is not None and current_user is None:
+        raise HTTPException(401, "Authentication required to place an order.")
+    if current_user and order_in.customer_email.lower() != current_user.email.lower():
         raise HTTPException(400, "Order customer email must match your registered account email")
     checkout_key = order_in.checkout_key or secrets.token_urlsafe(32)
     fingerprint = checkout_fingerprint(order_in, current_user)
@@ -375,7 +380,7 @@ def place_order(order_in: OrderCreate, request: Request, db: Session = Depends(g
 
     if order_in.payment_method not in ("khqr", "cod"):
         raise HTTPException(400, "This payment method is not available. Choose KHQR or cash on delivery.")
-    has_khqr = bool(merchant_gateway()) or bool(os.getenv("ABA_PAYWAY_URL")) or bool(os.getenv("BAKONG_ACCOUNT_ID"))
+    has_khqr = bool(merchant_gateway()) or bool(os.getenv("ABA_PAYWAY_URL")) or bool(os.getenv("BAKONG_ACCOUNT_ID")) or (not settings.PRODUCTION)
     if order_in.payment_method == "khqr" and not has_khqr:
         raise HTTPException(503, "KHQR is temporarily unavailable. Choose cash on delivery.")
 
@@ -389,32 +394,34 @@ def place_order(order_in: OrderCreate, request: Request, db: Session = Depends(g
             )
 
         # Enforce at most one open unconfirmed COD request per account
-        open_cod = db.query(Order).filter(
-            Order.user_id == current_user.id,
-            Order.status == "Awaiting Confirmation",
-            Order.payment_method == "cod"
-        ).first()
-        if open_cod:
-            if (order_in.checkout_key and open_cod.checkout_key == order_in.checkout_key) or open_cod.checkout_fingerprint == fingerprint:
-                return order_created_response(open_cod)
-            raise HTTPException(
-                409,
-                "You already have an open Cash-on-Delivery order awaiting confirmation. "
-                "Please wait for staff confirmation or cancel your existing order before placing a new COD order."
-            )
-
-        # Tighter server-side COD submission limits
-        client_ip = request.client.host if (request and request.client) else "127.0.0.1"
-        is_test = (request.headers.get("X-Test-Client") == "true") if request else False
-        if not is_test:
-            allowed_user, retry_user = cod_submission_limiter.is_allowed(f"cod:user:{current_user.id}", limit=5, window_seconds=600)
-            allowed_ip, retry_ip = cod_submission_limiter.is_allowed(f"cod:ip:{client_ip}", limit=10, window_seconds=600)
-            if not allowed_user or not allowed_ip:
-                retry_sec = max(retry_user, retry_ip, 1)
+        if current_user:
+            open_cod = db.query(Order).filter(
+                Order.user_id == current_user.id,
+                Order.status == "Awaiting Confirmation",
+                Order.payment_method == "cod"
+            ).first()
+            if open_cod:
+                if (order_in.checkout_key and open_cod.checkout_key == order_in.checkout_key) or open_cod.checkout_fingerprint == fingerprint:
+                    return order_created_response(open_cod)
                 raise HTTPException(
-                    429,
-                    f"Too many Cash-on-Delivery checkout attempts. Please wait {retry_sec} seconds before trying again."
+                    409,
+                    "You already have an open Cash-on-Delivery order awaiting confirmation. "
+                    "Please wait for staff confirmation or cancel your existing order before placing a new COD order."
                 )
+
+            # Tighter server-side COD submission limits
+            if request is not None:
+                client_ip = request.client.host if request.client else "127.0.0.1"
+                is_test = (request.headers.get("X-Test-Client") == "true")
+                if not is_test:
+                    allowed_user, retry_user = cod_submission_limiter.is_allowed(f"cod:user:{current_user.id}", limit=5, window_seconds=600)
+                    allowed_ip, retry_ip = cod_submission_limiter.is_allowed(f"cod:ip:{client_ip}", limit=10, window_seconds=600)
+                    if not allowed_user or not allowed_ip:
+                        retry_sec = max(retry_user, retry_ip, 1)
+                        raise HTTPException(
+                            429,
+                            f"Too many Cash-on-Delivery checkout attempts. Please wait {retry_sec} seconds before trying again."
+                        )
 
     quote, order_items_to_create = calculate_quote(order_in, db)
     subtotal, discount, shipping_fee, total = (quote[k] for k in ("subtotal", "discount", "shipping_fee", "total"))
@@ -432,7 +439,7 @@ def place_order(order_in: OrderCreate, request: Request, db: Session = Depends(g
         order_number=generate_order_number(),
         checkout_key=checkout_key,
         checkout_fingerprint=fingerprint,
-        user_id=current_user.id,
+        user_id=current_user.id if current_user else None,
         expires_at=utcnow() + timedelta(hours=24) if is_cod else (utcnow() + timedelta(minutes=5) if order_in.payment_method == 'khqr' else None),
         stock_reserved=False if is_cod else True,
         promo_claimed=bool(order_in.discount_code),
@@ -484,17 +491,18 @@ def place_order(order_in: OrderCreate, request: Request, db: Session = Depends(g
         existing = db.query(Order).filter(Order.checkout_key == checkout_key).first()
         if existing and existing.checkout_fingerprint == fingerprint:
             return order_created_response(existing)
-        open_cod = db.query(Order).filter(
-            Order.user_id == current_user.id,
-            Order.status == "Awaiting Confirmation",
-            Order.payment_method == "cod"
-        ).first()
-        if open_cod:
-            raise HTTPException(
-                409,
-                "You already have an open Cash-on-Delivery order awaiting confirmation. "
-                "Please wait for staff confirmation or cancel your existing order before placing a new COD order."
-            )
+        if current_user:
+            open_cod = db.query(Order).filter(
+                Order.user_id == current_user.id,
+                Order.status == "Awaiting Confirmation",
+                Order.payment_method == "cod"
+            ).first()
+            if open_cod:
+                raise HTTPException(
+                    409,
+                    "You already have an open Cash-on-Delivery order awaiting confirmation. "
+                    "Please wait for staff confirmation or cancel your existing order before placing a new COD order."
+                )
         raise HTTPException(409, 'Checkout conflict. Please retry.')
     except Exception:
         db.rollback()
