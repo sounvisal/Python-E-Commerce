@@ -1,15 +1,11 @@
 import secrets
-from fastapi.testclient import TestClient
-from app.main import app
 from app.core.database import SessionLocal
 from app.models.user import User
 from app.models.order import Order, OrderItem
 from app.models.return_request import ReturnRequest
 from app.core.security import create_access_token
 
-client = TestClient(app)
-
-def test_cod_delivery_credits_reward_points():
+def test_cod_delivery_credits_reward_points(client):
     db = SessionLocal()
     customer_email = f"rewardscod_{secrets.token_hex(4)}@lumea.com"
     order_num = f"LUM-RWD-{secrets.token_hex(4).upper()}"
@@ -83,7 +79,7 @@ def test_cod_delivery_credits_reward_points():
     db.commit()
     db.close()
 
-def test_return_rejection_decrements_returned_quantity():
+def test_return_rejection_decrements_returned_quantity(client):
     db = SessionLocal()
     order_num = f"LUM-RET-{secrets.token_hex(4).upper()}"
     req_num = f"RR-{secrets.token_hex(4).upper()}"

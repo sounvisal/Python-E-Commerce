@@ -1,13 +1,8 @@
-import pytest
-from fastapi.testclient import TestClient
-from app.main import app
 from app.core.database import SessionLocal
 from app.models.user import User
 from app.core.security import get_password_hash
 
-client = TestClient(app)
-
-def test_phone_login_and_logout_flow():
+def test_phone_login_and_logout_flow(client):
     db = SessionLocal()
     # Create or update test user with specific phone
     test_email = "phonetest@lumea.com"

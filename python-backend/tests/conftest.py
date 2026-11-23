@@ -1,9 +1,19 @@
 import pytest
 from fastapi.testclient import TestClient
 from app.main import app
-from app.core.database import SessionLocal
+from app.core.database import engine, Base, SessionLocal
+from app.core.migrations import migrate_schema
+from app.seed.seed_data import seed_database
 from app.core.security import create_access_token
 from app.models.user import User
+
+@pytest.fixture(scope="session", autouse=True)
+def initialize_test_database():
+    """Ensure test database tables and fixtures exist on clean databases."""
+    Base.metadata.create_all(bind=engine)
+    migrate_schema(engine, seed_demo_promotions=True)
+    with SessionLocal() as db:
+        seed_database(db)
 
 @pytest.fixture(scope="session")
 def client():
