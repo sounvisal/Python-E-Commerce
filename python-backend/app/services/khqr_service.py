@@ -78,12 +78,17 @@ def build_instant_bakong_khqr(
     
     amt_str = f"{amount:.2f}"
     
-    # Tag 30: Merchant Account Information
-    sub_00 = "0016abaakhppxxx@abaa"
-    sub_01 = f"01{len(account_id):02d}{account_id}"
-    sub_02 = "0208ABA Bank"
-    tag_30_val = f"{sub_00}{sub_01}{sub_02}"
-    tag_30 = f"30{len(tag_30_val):02d}{tag_30_val}"
+    # Tag 29 (Individual Bakong Account) vs Tag 30 (Merchant Account)
+    if "@" in account_id:
+        sub_00 = f"00{len(account_id):02d}{account_id}"
+        acc_tag = f"29{len(sub_00):02d}{sub_00}"
+    else:
+        # Tag 30: Merchant Account Information
+        sub_00 = "0016abaakhppxxx@abaa"
+        sub_01 = f"01{len(account_id):02d}{account_id}"
+        sub_02 = "0208ABA Bank"
+        tag_30_val = f"{sub_00}{sub_01}{sub_02}"
+        acc_tag = f"30{len(tag_30_val):02d}{tag_30_val}"
 
     # Tag 52: Merchant Category Code (5912: Drug Stores & Pharmacies / Beauty or 7832)
     tag_52 = "52047832"
@@ -102,7 +107,7 @@ def build_instant_bakong_khqr(
     tag_59 = f"59{len(m_name):02d}{m_name}"
 
     # Tag 60: Merchant City
-    tag_60 = "6003N/A"
+    tag_60 = "6010PHNOM PENH"
 
     # Tag 62: Additional Data Field Template (Bill/Order Reference)
     bill_sub = f"01{len(order_number):02d}{order_number}"
@@ -111,7 +116,7 @@ def build_instant_bakong_khqr(
     tag_62 = f"62{len(tag_62_val):02d}{tag_62_val}"
 
     # Construct payload without CRC
-    raw_payload = f"000201010212{tag_30}{tag_52}{tag_53}{tag_54}{tag_58}{tag_59}{tag_60}{tag_62}6304"
+    raw_payload = f"000201010212{acc_tag}{tag_52}{tag_53}{tag_54}{tag_58}{tag_59}{tag_60}{tag_62}6304"
     crc = crc16_emvco(raw_payload)
     return f"{raw_payload}{crc}"
 

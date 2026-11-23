@@ -121,6 +121,7 @@ async def generate_khqr(req: KHQRGenerateRequest, db: Session = Depends(get_db),
                 "merchant_name": os.getenv("BAKONG_MERCHANT_NAME", "SUON VISAL"),
                 "order_number": order.order_number,
                 "source": "live_aba_payway",
+                "payway_url": os.getenv("ABA_PAYWAY_URL", ""),
             }
     elif os.getenv("BAKONG_ACCOUNT_ID"):
         instant_qr = build_instant_bakong_khqr(order.total, order.order_number)
@@ -132,6 +133,7 @@ async def generate_khqr(req: KHQRGenerateRequest, db: Session = Depends(get_db),
             "merchant_name": os.getenv("BAKONG_MERCHANT_NAME", "SUON VISAL"),
             "order_number": order.order_number,
             "source": "live_aba_payway",
+            "payway_url": os.getenv("ABA_PAYWAY_URL", ""),
         }
     else:
         qr_data = {}

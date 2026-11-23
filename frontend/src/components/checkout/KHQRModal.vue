@@ -236,7 +236,9 @@ async function fetchAndRenderKHQR() {
     }, request)
     const payment = data.data
     if (!payment?.qr_string) throw new Error('Missing payment code')
-    if (payment.qr_string) {
+    if (payment.payway_url) {
+      paywayUrl.value = payment.payway_url
+    } else if (payment.qr_string) {
       const deeplink = new URL('abamobilebank://ababank.com')
       deeplink.searchParams.set('type', 'payway')
       deeplink.searchParams.set('qrcode', payment.qr_string)
@@ -317,7 +319,13 @@ function onSuccess() {
 }
 
 function openAbaLink() {
-  if (paywayUrl.value) window.location.assign(paywayUrl.value)
+  if (paywayUrl.value) {
+    if (paywayUrl.value.startsWith('http')) {
+      window.open(paywayUrl.value, '_blank')
+    } else {
+      window.location.assign(paywayUrl.value)
+    }
+  }
 }
 
 async function copyPaymentLink() {
