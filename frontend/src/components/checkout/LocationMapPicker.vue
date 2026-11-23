@@ -155,6 +155,7 @@
 import { ref, computed, onMounted, onBeforeUnmount, nextTick } from 'vue'
 import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
+import { useNotificationStore } from '@/stores/notification'
 import {
   MapPin,
   Search,
@@ -185,6 +186,7 @@ const props = defineProps({
 })
 
 const emit = defineEmits(['update:location'])
+const notificationStore = useNotificationStore()
 
 const mapContainer = ref(null)
 let mapInstance = null
@@ -322,7 +324,7 @@ function jumpToPreset(preset) {
 
 function locateUser() {
   if (!navigator.geolocation) {
-    alert('Geolocation is not supported by your browser.')
+    notificationStore.addToast('Geolocation is not supported by your browser.', 'warning')
     return
   }
   isLocating.value = true
@@ -340,7 +342,7 @@ function locateUser() {
     (err) => {
       isLocating.value = false
       console.warn('Geolocation error:', err.message)
-      alert('Unable to detect location. Please click on the map to set your pin.')
+      notificationStore.addToast('Unable to detect location. Please click on the map to set your pin.', 'warning')
     },
     { enableHighAccuracy: true, timeout: 8000 }
   )
@@ -442,7 +444,7 @@ function applyPastedGmaps() {
       return
     }
   }
-  alert('Could not parse valid coordinates from the input. Please enter GPS (e.g. 11.5564, 104.9282) or paste a Google Maps link.')
+  notificationStore.addToast('Could not parse valid coordinates from the input. Please enter GPS (e.g. 11.5564, 104.9282) or paste a Google Maps link.', 'warning')
 }
 
 onMounted(async () => {

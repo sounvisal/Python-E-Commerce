@@ -92,6 +92,9 @@ export const useAuthStore = defineStore('auth', {
       }
     },
     logout(notify = true) {
+      if (this.token) {
+        axios.post('/api/auth/logout').catch(() => {})
+      }
       this.token = null; this.user = null; this.isAuthenticated = false; this.validated = false; this.persist(); clearPrivateState()
       for (const key of Object.keys(sessionStorage)) if (key.startsWith('lumea_order_access_')) sessionStorage.removeItem(key)
       sessionStorage.removeItem('lumea_pending_khqr')

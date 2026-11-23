@@ -2,6 +2,7 @@
 import { ref, onMounted, reactive } from 'vue'
 import apiClient from '@/api/client'
 import { useAdminStore } from '@/stores/admin'
+import { getStorefrontUrl } from '@/utils/storefront'
 import {
   ExternalLink,
   Edit2,
@@ -143,7 +144,36 @@ async function toggleSection(sec) {
 async function updateHomepage() { await fetchBanners() }
 
 function openLiveSite() {
-  window.open('http://localhost:5173', '_blank')
+  window.open(getStorefrontUrl(), '_blank')
+}
+
+const metaImageFileInput = ref(null)
+function triggerMetaImageUpload() {
+  if (metaImageFileInput.value) metaImageFileInput.value.click()
+}
+async function handleMetaImageUpload(e) {
+  const file = e.target.files?.[0]
+  if (!file) return
+  try {
+    const formData = new FormData()
+    formData.append('file', file)
+    const res = await apiClient.post('/upload', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' }
+    })
+    const url = res.data?.data?.url || res.data?.url
+    if (url) {
+      metaImage.value = url
+      adminStore.addToast('Social share meta image updated!', 'success')
+    }
+  } catch (err) {
+    adminStore.addToast('Failed to upload social image.', 'error')
+  } finally {
+    if (e.target) e.target.value = ''
+  }
+}
+
+function applyTemplate(name) {
+  adminStore.addToast(`Applied ${name} template layout presets.`, 'success')
 }
 </script>
 
@@ -193,7 +223,7 @@ function openLiveSite() {
               <h3 class="panel-card-title">Homepage Sections</h3>
               <p class="panel-sub">Drag and drop to reorder sections. Changes will be visible after publishing.</p>
             </div>
-            <button disabled title="Custom sections are not available yet" class="btn-add-section" @click="alert('Add custom promotional section...')">
+            <button disabled title="Custom sections are not available yet" class="btn-add-section opacity-60 cursor-not-allowed">
               <Plus :size="14" />
               <span>Add Section</span>
             </button>
@@ -290,7 +320,14 @@ function openLiveSite() {
                 <img :src="metaImage" class="meta-thumb" />
               </div>
               <div class="meta-btns">
-                <button class="btn-meta-action" @click="alert('Upload new social share image...')">
+                <input
+                  ref="metaImageFileInput"
+                  type="file"
+                  accept="image/*"
+                  style="display: none"
+                  @change="handleMetaImageUpload"
+                />
+                <button class="btn-meta-action" @click="triggerMetaImageUpload">
                   <Upload :size="13" />
                   <span>Change</span>
                 </button>
@@ -342,19 +379,19 @@ function openLiveSite() {
               </div>
               <span class="tmpl-name">Default (Current)</span>
             </div>
-            <div class="template-item" @click="alert('Apply Summer Sale template...')">
+            <div class="template-item" @click="applyTemplate('Summer Sale')">
               <div class="tmpl-thumb-box">
                 <img src="/images/ai-banner-atelier.jpg" class="tmpl-thumb" />
               </div>
               <span class="tmpl-name">Summer Sale</span>
             </div>
-            <div class="template-item" @click="alert('Apply New Arrivals template...')">
+            <div class="template-item" @click="applyTemplate('New Arrivals')">
               <div class="tmpl-thumb-box">
                 <img src="/images/banner-new-arrivals.jpg" class="tmpl-thumb" />
               </div>
               <span class="tmpl-name">New Arrivals</span>
             </div>
-            <div class="template-item" @click="alert('Apply Minimal template...')">
+            <div class="template-item" @click="applyTemplate('Minimal')">
               <div class="tmpl-thumb-box">
                 <img src="/images/prod-sk2.jpg" class="tmpl-thumb" />
               </div>

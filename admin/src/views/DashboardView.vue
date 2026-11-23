@@ -2,6 +2,7 @@
 import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAdminStore } from '@/stores/admin'
+import { getStorefrontUrl } from '@/utils/storefront'
 import StatusBadge from '@/components/common/StatusBadge.vue'
 import {
   TrendingUp,
@@ -526,7 +527,7 @@ function formatCurrency(val) {
           <span>|</span>
           <router-link to="/settings">Terms of Service</router-link>
           <span>|</span>
-          <a href="http://localhost:5173/contact" target="_blank" rel="noopener">Help & Support</a>
+          <a :href="getStorefrontUrl('/contact')" target="_blank" rel="noopener">Help & Support</a>
         </div>
       </div>
 

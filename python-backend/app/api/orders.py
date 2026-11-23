@@ -469,5 +469,11 @@ def claim_guest_order(orderNumber: str, db: Session = Depends(get_db), current_u
     if order.customer_email.lower() != current_user.email.lower() or (order.user_id and order.user_id != current_user.id):
         raise HTTPException(403, "Use the account email entered at checkout")
     order.user_id = current_user.id
+    if order.status == "Delivered" and not getattr(order, "rewards_credited", False):
+        pts_earned = max(0, int(round(order.total or 0)))
+        if pts_earned > 0:
+            current_user.reward_points = (current_user.reward_points or 0) + pts_earned
+            order.rewards_credited = True
+            add_event(order, f"Reward Points Credited upon Claim ({pts_earned} pts)")
     db.commit()
     return {"status": "success", "data": order}

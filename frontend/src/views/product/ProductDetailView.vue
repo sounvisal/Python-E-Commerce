@@ -93,7 +93,7 @@
           <p class="pdp-formula-sub">{{ product.formula_tag || `Clinically proven ${product.category_name || 'skincare'} formulation for balanced radiance.` }}</p>
 
           <!-- Ratings Row -->
-          <div v-if="reviewMetrics" class="pdp-rating-row">
+          <div v-if="reviewMetrics" class="pdp-rating-row" @click="openReviewsTab" style="cursor: pointer;" title="Jump to customer reviews">
             <div v-if="reviewMetrics.total_reviews" class="rating-stars" aria-hidden="true">
               <Star v-for="i in 5" :key="i" :size="14" :class="i <= Math.round(reviewMetrics.average_rating) ? 'star-gold' : 'star-muted'" />
             </div>
@@ -374,7 +374,7 @@
     </section>
 
     <!-- Mid-Page Content Tabs matching Product Details.png -->
-    <section class="container mid-tabs-container">
+    <section id="reviews" ref="midTabsSectionRef" class="container mid-tabs-container">
       <div class="mid-tabs-bar">
         <button
           v-for="tab in midTabs"
@@ -1002,7 +1002,7 @@
 </template>
 
 <script setup>
-import { ref, reactive, computed, watch, onMounted } from 'vue'
+import { ref, reactive, computed, watch, onMounted, nextTick } from 'vue'
 import { useRoute } from 'vue-router'
 import axios from 'axios'
 import {
@@ -1294,9 +1294,52 @@ async function fetchReviews(productId) {
   }
 }
 
+const midTabsSectionRef = ref(null)
+const activeMidTab = ref('details')
+
+const midTabs = computed(() => [
+  { id: 'details', label: 'Product Details' },
+  { id: 'ingredients', label: 'Ingredients' },
+  { id: 'how-to-use', label: 'How to Use' },
+  { id: 'benefits', label: 'Benefits' },
+  { id: 'reviews', label: reviewMetrics.value ? `Reviews (${reviewMetrics.value.total_reviews})` : 'Reviews' },
+  { id: 'qa', label: 'Q&A (28)' },
+])
+
+function openReviewsTab() {
+  activeMidTab.value = 'reviews'
+  nextTick(() => {
+    if (midTabsSectionRef.value) {
+      midTabsSectionRef.value.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    }
+  })
+}
+
+function checkRouteTab() {
+  const hash = (route.hash || '').toLowerCase()
+  const tab = (route.query?.tab || '').toString().toLowerCase()
+  if (hash === '#reviews' || tab === 'reviews') {
+    activeMidTab.value = 'reviews'
+    nextTick(() => {
+      setTimeout(() => {
+        if (midTabsSectionRef.value) {
+          midTabsSectionRef.value.scrollIntoView({ behavior: 'smooth', block: 'start' })
+        }
+      }, 100)
+    })
+  } else if (tab && ['details', 'ingredients', 'how-to-use', 'benefits', 'qa'].includes(tab)) {
+    activeMidTab.value = tab
+  }
+}
+
 onMounted(() => {
   loadProduct()
   fetchGlobalVideoReviews()
+  checkRouteTab()
+})
+
+watch(() => route.fullPath, () => {
+  checkRouteTab()
 })
 
 watch(() => route.params.slug, () => {
@@ -1376,17 +1419,6 @@ function handleAddToCart() {
   }, 2000)
 }
 
-// Mid-tabs
-const activeMidTab = ref('details')
-
-const midTabs = computed(() => [
-  { id: 'details', label: 'Product Details' },
-  { id: 'ingredients', label: 'Ingredients' },
-  { id: 'how-to-use', label: 'How to Use' },
-  { id: 'benefits', label: 'Benefits' },
-  { id: 'reviews', label: reviewMetrics.value ? `Reviews (${reviewMetrics.value.total_reviews})` : 'Reviews' },
-  { id: 'qa', label: 'Q&A (28)' },
-])
 
 async function submitReview() {
   if (!product.value || !authStore.user) return

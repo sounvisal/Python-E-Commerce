@@ -1,4 +1,4 @@
-from pydantic import BaseModel, EmailStr, field_validator
+from pydantic import BaseModel, EmailStr, field_validator, model_validator
 from typing import Optional, List, Dict, Any
 from datetime import datetime
 import re
@@ -57,8 +57,18 @@ class UserCreate(BaseModel):
         return v
 
 class UserLogin(BaseModel):
-    email: EmailStr
+    email: Optional[str] = None
+    identifier: Optional[str] = None
     password: str
+
+    @model_validator(mode="after")
+    def validate_login_target(self) -> 'UserLogin':
+        login_val = (self.identifier or self.email or "").strip()
+        if not login_val:
+            raise ValueError("Email or phone number is required")
+        if not self.email:
+            self.email = login_val
+        return self
 
 class ProfileUpdate(BaseModel):
     name: Optional[str] = None

@@ -3,6 +3,7 @@ import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { useAdminStore } from '@/stores/admin'
+import { getStorefrontUrl } from '@/utils/storefront'
 import {
   Search,
   Bell,
@@ -141,7 +142,7 @@ async function handleLogout() {
             <span>Atelier Settings</span>
           </router-link>
 
-          <a href="http://localhost:5173" target="_blank" rel="noopener" class="popover-menu-item">
+          <a :href="getStorefrontUrl()" target="_blank" rel="noopener" class="popover-menu-item">
             <ExternalLink :size="15" />
             <span>Storefront Atelier</span>
           </a>

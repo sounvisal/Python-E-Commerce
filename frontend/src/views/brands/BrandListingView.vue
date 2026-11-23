@@ -257,6 +257,7 @@
 
 <script setup>
 import { ref, computed } from 'vue'
+import { useNotificationStore } from '@/stores/notification'
 import {
   ChevronRight,
   ChevronDown,
@@ -320,10 +321,12 @@ function resetFilters() {
   displayLimit.value = 24
 }
 
+const notificationStore = useNotificationStore()
+
 function openRequestModal() {
   const brand = prompt('Which skincare brand would you love Luméa to carry?')
-  if (brand) {
-    alert(`Thank you! We have submitted your request for "${brand}" to our beauty curation team.`)
+  if (brand?.trim()) {
+    notificationStore.addToast(`Thank you! We have submitted your request for "${brand.trim()}" to our beauty curation team.`, 'success')
   }
 }
 </script>

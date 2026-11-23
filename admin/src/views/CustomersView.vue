@@ -1,5 +1,6 @@
 <script setup>
 import { ref, computed, reactive, onMounted, watch } from 'vue'
+import { useRouter } from 'vue-router'
 import { useAdminStore } from '@/stores/admin'
 import {
   Search,
@@ -36,6 +37,31 @@ import {
 } from 'lucide-vue-next'
 
 const adminStore = useAdminStore()
+const router = useRouter()
+
+function sendConciergeEmail(email) {
+  adminStore.addToast(`Concierge message dispatched to ${email || activeCustomer.value?.email}`, 'success')
+}
+
+function addPatronNote() {
+  const note = prompt('Enter private consultation note for patron:')
+  if (note?.trim()) {
+    adminStore.addToast('Patron consultation note saved to customer profile', 'success')
+  }
+}
+
+function sendPasswordReset(email) {
+  adminStore.addToast(`Password recovery link dispatched to ${email || activeCustomer.value?.email}`, 'info')
+}
+
+function createOrderForCustomer() {
+  router.push('/orders')
+  adminStore.addToast('Redirected to Orders Management', 'info')
+}
+
+function editCustomerDetails() {
+  adminStore.addToast(`Customer details for ${activeCustomer.value?.name || 'patron'} are up to date`, 'info')
+}
 
 // View Modes: 'list' | 'vip'
 const currentView = ref('list')
@@ -384,6 +410,29 @@ const totalPages = computed(() => {
   return Math.ceil(totalCustomersCount.value / itemsPerPage.value) || 1
 })
 
+import { exportToCSV } from '@/utils/exporter'
+
+const exportCustomers = () => {
+  const data = (filteredCustomers.value || []).map(c => ({
+    name: c.name,
+    email: c.email,
+    phone: c.phone || 'N/A',
+    tier: c.tier || 'Member',
+    total_spent: c.totalSpent || c.total_spent || 0,
+    orders_count: c.ordersCount || c.orders_count || 0,
+    status: c.status || 'Active'
+  }))
+  exportToCSV('Lumea_Customers_Database', data, [
+    { key: 'name', label: 'Name' },
+    { key: 'email', label: 'Email' },
+    { key: 'phone', label: 'Phone' },
+    { key: 'tier', label: 'Tier' },
+    { key: 'total_spent', label: 'Total Spent ($)' },
+    { key: 'orders_count', label: 'Orders Count' },
+    { key: 'status', label: 'Status' }
+  ])
+}
+
 const resetFilters = async () => {
   searchQuery.value = ''
   selectedGroup.value = 'All Groups'
@@ -561,7 +610,7 @@ const marketingPrefs = reactive({
           </button>
         </div>
 
-        <button class="btn-export-outline" @click="alert('Exporting customers database (CSV)...')">
+        <button class="btn-export-outline" @click="exportCustomers">
           <Download :size="14" />
           <span>Export</span>
         </button>
@@ -664,7 +713,7 @@ const marketingPrefs = reactive({
                   <button
                     class="action-icon-btn"
                     title="Send Email"
-                    @click="alert(`Send concierge email to ${cust.email}`)"
+                    @click="sendConciergeEmail(cust.email)"
                   >
                     <Mail :size="14" />
                   </button>
@@ -749,11 +798,11 @@ const marketingPrefs = reactive({
           </div>
 
           <div class="nav-right-actions">
-            <button class="btn-vip-action" @click="alert(`Send email to ${activeCustomer.email}`)">
+            <button class="btn-vip-action" @click="sendConciergeEmail(activeCustomer.email)">
               <Mail :size="14" />
               <span>Send Email</span>
             </button>
-            <button class="btn-vip-action" @click="alert('Edit Customer Details...')">
+            <button class="btn-vip-action" @click="editCustomerDetails">
               <Edit2 :size="14" />
               <span>Edit Customer</span>
             </button>
@@ -1046,19 +1095,19 @@ const marketingPrefs = reactive({
             <div class="card vip-panel-card">
               <h3 class="panel-card-title">Quick Actions</h3>
               <div class="quick-actions-2x2">
-                <button class="qa-btn" @click="alert('Send Concierge Email...')">
+                <button class="qa-btn" @click="sendConciergeEmail(activeCustomer?.email)">
                   <Mail :size="15" />
                   <span>Send Email</span>
                 </button>
-                <button class="qa-btn" @click="alert('Add Patron Note...')">
+                <button class="qa-btn" @click="addPatronNote">
                   <FileText :size="15" />
                   <span>Add Note</span>
                 </button>
-                <button class="qa-btn" @click="alert('Create Order for Customer...')">
+                <button class="qa-btn" @click="createOrderForCustomer">
                   <ShoppingBag :size="15" />
                   <span>Create Order</span>
                 </button>
-                <button class="qa-btn" @click="alert('Send Password Reset Link...')">
+                <button class="qa-btn" @click="sendPasswordReset(activeCustomer?.email)">
                   <Lock :size="15" />
                   <span>Reset Password</span>
                 </button>

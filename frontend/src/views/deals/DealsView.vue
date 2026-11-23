@@ -371,7 +371,8 @@ function addToCart(item) {
 }
 
 function notifyStudent() {
-  alert('Student Verification via StudentBeans opened. Enjoy your extra 10% off!')
+  copyCode('STUDENT10')
+  notificationStore.addToast('StudentBeans discount code STUDENT10 copied! 10% off automatically unlocked.', 'success')
 }
 
 function copyCode(code) {

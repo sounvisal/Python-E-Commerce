@@ -1,5 +1,6 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
 import apiClient from '@/api/client'
 import { useAdminStore } from '@/stores/admin'
 import {
@@ -32,6 +33,12 @@ import {
 } from 'lucide-vue-next'
 
 const adminStore = useAdminStore()
+const router = useRouter()
+
+function manageReturnSettings() {
+  router.push('/settings')
+  adminStore.addToast('Navigated to Atelier Settings & Policy Management', 'info')
+}
 
 // State
 const returns = ref([])
@@ -796,7 +803,7 @@ function formatRequestedDate(dateStr) {
             <p class="bottom-subtitle">Quick and transparent returns build customer trust and encourage repeat purchases.</p>
           </div>
         </div>
-        <button class="btn-settings-bottom" @click="alert('Manage Return Settings...')">
+        <button class="btn-settings-bottom" @click="manageReturnSettings">
           <SettingsIcon class="w-4 h-4 mr-1.5" />
           <span>Manage Return Settings</span>
         </button>

@@ -1,6 +1,7 @@
 import apiClient from '@/api/client'
 import { defineStore } from 'pinia'
 import { computed, ref } from 'vue'
+import { useAuthStore } from './auth'
 
 export const useAdminStore = defineStore('admin', () => {
   // Stats
@@ -294,6 +295,11 @@ export const useAdminStore = defineStore('admin', () => {
   const canUpload = computed(() => uploadStatus.value.enabled === true)
 
   async function fetchUploadStatus() {
+    const authStore = useAuthStore()
+    if (!authStore.isAuthenticated) {
+      uploadStatus.value = { enabled: false, storage_type: 'disabled', max_image_mb: 0, max_video_mb: 0, allowed_formats: [] }
+      return uploadStatus.value
+    }
     try {
       const res = await apiClient.get('/upload/status')
       if (res.data?.status === 'success' && res.data.data) {

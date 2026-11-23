@@ -1,5 +1,6 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
+import apiClient from '@/api/client'
 import { useAdminStore } from '@/stores/admin'
 import {
   FileText,
@@ -52,6 +53,34 @@ const selectedQuestionIndex = ref(0)
 const showPreviewModal = ref(false)
 const previewCurrentStep = ref(0)
 const previewAnswers = ref({})
+const questionImageInputRef = ref(null)
+
+function triggerQuestionImageUpload() {
+  if (questionImageInputRef.value) {
+    questionImageInputRef.value.click()
+  }
+}
+
+async function handleQuestionImageUpload(e) {
+  const file = e.target.files?.[0]
+  if (!file) return
+  try {
+    const formData = new FormData()
+    formData.append('file', file)
+    const res = await apiClient.post('/upload', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' }
+    })
+    const url = res.data?.data?.url || res.data?.url
+    if (url && currentQuestion.value) {
+      currentQuestion.value.image = url
+      adminStore.addToast('Question image updated successfully!', 'success')
+    }
+  } catch (err) {
+    adminStore.addToast('Failed to upload image. Please try again.', 'error')
+  } finally {
+    if (e.target) e.target.value = ''
+  }
+}
 
 onMounted(async () => {
   await adminStore.fetchQuizzes()
@@ -742,7 +771,14 @@ function exportQuizzesCSV() {
               <div class="img-preview-row">
                 <img :src="currentQuestion.image || '/images/quiz-model.jpg'" alt="Question Header" class="q-img-preview" />
                 <div class="q-img-actions">
-                  <button class="btn-change-img" @click="alert('Upload / select new question image...')">
+                  <input
+                    ref="questionImageInputRef"
+                    type="file"
+                    accept="image/*"
+                    style="display: none"
+                    @change="handleQuestionImageUpload"
+                  />
+                  <button class="btn-change-img" @click="triggerQuestionImageUpload">
                     <ImageIcon class="w-3.5 h-3.5 mr-1" />
                     <span>Change Image</span>
                   </button>

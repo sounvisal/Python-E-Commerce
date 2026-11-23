@@ -124,6 +124,31 @@ const totalPages = computed(() => {
   return Math.ceil(filteredPromotions.value.length / itemsPerPage.value) || 1
 })
 
+import { exportToCSV } from '@/utils/exporter'
+
+const exportPromotions = () => {
+  const data = (filteredPromotions.value || []).map(p => ({
+    name: p.name,
+    code: p.code,
+    type: p.type,
+    discount_value: p.discountValue || p.value,
+    usage: `${p.usedCount || 0} / ${p.usageLimit || '∞'}`,
+    start_date: p.startDate,
+    end_date: p.endDate,
+    status: p.status
+  }))
+  exportToCSV('Lumea_Promotions_List', data, [
+    { key: 'name', label: 'Promotion Name' },
+    { key: 'code', label: 'Promo Code' },
+    { key: 'type', label: 'Type' },
+    { key: 'discount_value', label: 'Discount Value' },
+    { key: 'usage', label: 'Usage Count' },
+    { key: 'start_date', label: 'Start Date' },
+    { key: 'end_date', label: 'End Date' },
+    { key: 'status', label: 'Status' }
+  ])
+}
+
 const resetFilters = () => {
   searchQuery.value = ''
   selectedType.value = 'All Types'
@@ -349,7 +374,7 @@ const deletePromo = async promo => {
         </button>
       </div>
 
-      <button class="btn-export-outline" @click="alert('Exporting promotions list...')">
+      <button class="btn-export-outline" @click="exportPromotions">
         <Download :size="14" />
         <span>Export</span>
       </button>

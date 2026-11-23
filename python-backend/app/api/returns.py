@@ -3,7 +3,7 @@ from datetime import datetime, timezone, timedelta
 from typing import Optional, List
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
-from sqlalchemy import desc, func, update
+from sqlalchemy import desc, func, update, case
 
 from app.core.database import get_db
 from app.models.return_request import ReturnRequest
@@ -209,7 +209,12 @@ def update_return_status(
             db.execute(
                 update(OrderItem)
                 .where(OrderItem.id == req.order_item_id)
-                .values(returned_quantity=func.max(0, OrderItem.returned_quantity - req.quantity))
+                .values(
+                    returned_quantity=case(
+                        (OrderItem.returned_quantity - req.quantity > 0, OrderItem.returned_quantity - req.quantity),
+                        else_=0
+                    )
+                )
             )
         req.timeline = [{'id': 1, 'title': 'Submitted', 'date': req.submitted_date, 'status': 'completed'},
                         {'id': 2, 'title': 'Rejected', 'date': datetime.now().strftime('%b %d, %Y'), 'status': 'current'}]

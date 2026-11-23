@@ -736,6 +736,7 @@ import { useRouter } from 'vue-router'
 import { useCartStore } from '@/stores/cart'
 import { useAuthStore } from '@/stores/auth'
 import { useLocaleStore } from '@/stores/locale'
+import { useNotificationStore } from '@/stores/notification'
 import axios from 'axios'
 import { rememberOrderAccess } from '@/utils/orderAccess'
 import LocationMapPicker from '@/components/checkout/LocationMapPicker.vue'
@@ -767,6 +768,7 @@ const router = useRouter()
 const cartStore = useCartStore()
 const authStore = useAuthStore()
 const localeStore = useLocaleStore()
+const notificationStore = useNotificationStore()
 
 // Address Selection Mode
 const addressSelectionMode = ref('new')
@@ -926,7 +928,7 @@ function clearAddressToNew() {
 
 function setCarrier(carrierId) {
   if (carrierId === 'grab_express' && !cartStore.carrierQuoteMap.grab_express.available) {
-    alert('GrabExpress motorbike delivery is available within Phnom Penh only. For provincial delivery, please select Vireak Buntham (VET) or J&T Express.')
+    notificationStore.addToast('GrabExpress motorbike delivery is available within Phnom Penh only. For provincial delivery, please select Vireak Buntham (VET) or J&T Express.', 'info')
     return
   }
   form.shipping_carrier = carrierId

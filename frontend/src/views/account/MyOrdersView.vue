@@ -245,13 +245,13 @@
                 <!-- Secondary Helper Sub-Links -->
                 <div class="sub-links-row">
                   <template v-if="order.statusType === 'delivered'">
-                    <a
-                      href="#"
+                    <button
+                      type="button"
                       class="order-sub-link"
-                      @click.prevent="openReviewModal(order)"
+                      @click="openReviewModal(order)"
                     >
                       Write a Review
-                    </a>
+                    </button>
                     <span class="sub-link-dot">•</span>
                     <router-link
                       :to="`/returns/request?order=${order.orderNumber}`"
@@ -294,6 +294,7 @@
 
 <script setup>
 import { ref, computed, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
 import { useOrdersStore } from '@/stores/orders'
 import { useAuthStore } from '@/stores/auth'
 import { useNotificationStore } from '@/stores/notification'
@@ -352,8 +353,17 @@ function handleCancelOrder(orderNumber) {
   }
 }
 
+const router = useRouter()
+
 function openReviewModal(order) {
-  notificationStore.addToast(`Reviewing products from Order #${order.orderNumber}`, 'info')
+  const item = order.items?.[0]
+  if (item?.product_slug) {
+    router.push(`/product/${item.product_slug}?tab=reviews#reviews`)
+  } else if (item?.product_id) {
+    router.push(`/product/${item.product_id}?tab=reviews#reviews`)
+  } else {
+    router.push('/shop')
+  }
 }
 </script>
 

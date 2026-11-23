@@ -1,10 +1,13 @@
+import re
+from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException, status
+from sqlalchemy import or_
 from sqlalchemy.orm import Session
 from app.core.database import get_db
 from app.core.security import get_password_hash, verify_password, create_access_token
 from app.models.user import User
 from app.schemas.user import ProfileUpdate, UserCreate, UserLogin, UserOut, Token, AuthResponse
-from app.api.deps import get_current_user
+from app.api.deps import get_current_user, get_optional_user
 
 router = APIRouter(prefix="/auth", tags=["Authentication"])
 
@@ -52,8 +55,25 @@ def register(user_in: UserCreate, db: Session = Depends(get_db)):
 
 @router.post("/login", response_model=AuthResponse)
 def login(login_in: UserLogin, db: Session = Depends(get_db)):
-    """Log in with email and password to receive JWT token."""
-    user = db.query(User).filter(User.email == login_in.email).first()
+    """Log in with email or phone number and password to receive JWT token."""
+    login_id = (login_in.identifier or login_in.email or "").strip()
+    user = None
+    if "@" in login_id:
+        user = db.query(User).filter(User.email.ilike(login_id)).first()
+    else:
+        digits = re.sub(r"\D", "", login_id)
+        if digits:
+            user = db.query(User).filter(
+                or_(
+                    User.phone == login_id,
+                    User.phone == digits,
+                    User.phone.like(f"%{digits[-8:]}%") if len(digits) >= 8 else False,
+                    User.email.ilike(login_id)
+                )
+            ).first()
+        else:
+            user = db.query(User).filter(User.email.ilike(login_id)).first()
+
     if not user or not verify_password(login_in.password, user.hashed_password):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -71,6 +91,14 @@ def login(login_in: UserLogin, db: Session = Depends(get_db)):
             "user": user
         }
     }
+
+@router.post("/logout")
+def logout(db: Session = Depends(get_db), current_user: Optional[User] = Depends(get_optional_user)):
+    """Invalidate current JWT session by incrementing user token version."""
+    if current_user:
+        current_user.token_version = getattr(current_user, "token_version", 1) + 1
+        db.commit()
+    return {"status": "success", "message": "Logged out successfully"}
 
 @router.get("/me", response_model=UserOut)
 def get_current_user_profile(current_user: User = Depends(get_current_user)):

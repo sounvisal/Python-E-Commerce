@@ -203,8 +203,21 @@ const recentActivities = ref([
   { id: 5, title: 'Order #10027 completed', meta: '2 hours ago', value: '$42.00', icon: CheckCircle2, color: 'text-green' }
 ])
 
+import { exportToCSV } from '@/utils/exporter'
+
 const exportReport = () => {
-  alert('Exporting executive analytics report (PDF/CSV)...')
+  const data = (categorySales || []).map(c => ({
+    category: c.name,
+    sales: c.sales,
+    percentage: c.percentage,
+    growth: c.growth,
+  }))
+  exportToCSV('Lumea_Executive_Analytics', data, [
+    { key: 'category', label: 'Category' },
+    { key: 'sales', label: 'Sales ($)' },
+    { key: 'percentage', label: 'Share (%)' },
+    { key: 'growth', label: 'Growth YoY' }
+  ])
 }
 </script>
 

@@ -2,6 +2,7 @@
 import { ref, computed, onMounted, reactive } from 'vue'
 import apiClient from '@/api/client'
 import { useAdminStore } from '@/stores/admin'
+import { getStorefrontUrl } from '@/utils/storefront'
 import {
   Search,
   Plus,
@@ -208,6 +209,29 @@ const totalPages = computed(() => {
   return Math.ceil(filteredArticles.value.length / itemsPerPage.value) || 1
 })
 
+import { exportToCSV } from '@/utils/exporter'
+
+const exportArticles = () => {
+  const data = (filteredArticles.value || []).map(a => ({
+    title: a.title,
+    category: a.category,
+    author: a.author,
+    date: a.date,
+    views: a.views || 0,
+    likes: a.likes || 0,
+    status: a.status || 'Published'
+  }))
+  exportToCSV('Lumea_Articles_Library', data, [
+    { key: 'title', label: 'Title' },
+    { key: 'category', label: 'Category' },
+    { key: 'author', label: 'Author' },
+    { key: 'date', label: 'Published Date' },
+    { key: 'views', label: 'Views' },
+    { key: 'likes', label: 'Likes' },
+    { key: 'status', label: 'Status' }
+  ])
+}
+
 const resetFilters = () => {
   searchQuery.value = ''
   selectedCategory.value = 'All Categories'
@@ -283,6 +307,10 @@ async function saveArticle(status) {
 }
 const saveDraft = () => saveArticle('Draft')
 const publishArticle = () => saveArticle('Published')
+function previewReaderView() {
+  const targetSlug = articleForm.slug || articleForm.original_slug || 'the-art-of-layering-k-beauty-skincare-routine'
+  window.open(getStorefrontUrl(`/articles/${targetSlug}`), '_blank')
+}
 
 async function deleteArticle(art) {
   if (!confirm(`Are you sure you want to delete article "${art.title}"?`)) return
@@ -449,7 +477,7 @@ async function deleteArticle(art) {
           </button>
         </div>
 
-        <button class="btn-export-outline" @click="alert('Exporting articles library...')">
+        <button class="btn-export-outline" @click="exportArticles">
           <Download :size="14" />
           <span>Export</span>
         </button>
@@ -554,7 +582,7 @@ async function deleteArticle(art) {
                   <button
                     class="action-icon-btn"
                     title="View Online"
-                    @click="window.open(`http://localhost:5173/articles/${art.slug}`, '_blank')"
+                    @click="window.open(getStorefrontUrl(`/articles/${art.slug}`), '_blank')"
                   >
                     <Eye :size="14" />
                   </button>
@@ -633,7 +661,7 @@ async function deleteArticle(art) {
               <FileText :size="14" />
               <span>Save Draft</span>
             </button>
-            <button class="btn-preview-art" @click="alert('Previewing reader view...')">
+            <button class="btn-preview-art" @click="previewReaderView">
               <Eye :size="14" />
               <span>Preview</span>
             </button>

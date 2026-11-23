@@ -7,6 +7,7 @@ from sqlalchemy import update
 from app.models.order import Order
 from app.models.product import Product
 from app.models.promotion import Promotion
+from app.models.user import User
 from app.core.config import settings
 
 def utcnow():
@@ -164,6 +165,17 @@ def transition_order(db, order, target):
         order.delivered_at = utcnow()
         if order.payment_method == "cod":
             order.payment_status = "Paid"  # staff records collection by completing COD delivery
+        pts_earned = max(0, int(round(order.total or 0)))
+        if pts_earned > 0 and not getattr(order, "rewards_credited", False):
+            customer = None
+            if order.user_id:
+                customer = db.query(User).filter(User.id == order.user_id).first()
+            elif order.customer_email:
+                customer = db.query(User).filter(User.email.ilike(order.customer_email.strip())).first()
+            if customer:
+                customer.reward_points = (customer.reward_points or 0) + pts_earned
+                add_event(order, f"Reward Points Credited ({pts_earned} pts)")
+            order.rewards_credited = True
     add_event(order, target)
     return order
 

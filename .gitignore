@@ -97,3 +97,7 @@ test_payway*.js
 format/
 dashboard-format/
 
+# Local archives and intermediate documentation
+local-docs/
+local_docs/
+

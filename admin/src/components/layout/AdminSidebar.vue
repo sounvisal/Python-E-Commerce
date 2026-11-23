@@ -3,6 +3,7 @@ import { computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useAdminStore } from '@/stores/admin'
 import { useAuthStore } from '@/stores/auth'
+import { getStorefrontUrl } from '@/utils/storefront'
 import {
   LayoutDashboard,
   Package,
@@ -187,7 +188,7 @@ async function handleLogout() {
 
       <!-- Quick Storefront Link -->
       <a
-        href="http://localhost:5173"
+        :href="getStorefrontUrl()"
         target="_blank"
         rel="noopener"
         class="store-link-row"

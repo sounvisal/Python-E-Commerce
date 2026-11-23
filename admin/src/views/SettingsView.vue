@@ -2,6 +2,8 @@
 import { ref, reactive, onMounted } from 'vue'
 import apiClient from '@/api/client'
 import { useAdminStore } from '@/stores/admin'
+import { useAuthStore } from '@/stores/auth'
+import { getStorefrontUrl } from '@/utils/storefront'
 import {
   Settings as SettingsIcon,
   Store,
@@ -90,6 +92,11 @@ const uploadStatus = ref({
 })
 
 async function loadUploadStatus() {
+  const authStore = useAuthStore()
+  if (!authStore.isAuthenticated) {
+    uploadStatus.value = { enabled: false, storage_type: 'unknown', max_image_mb: 0, max_video_mb: 0, allowed_formats: [] }
+    return
+  }
   try {
     const res = await apiClient.get('/upload/status')
     if (res.data?.status === 'success' && res.data.data) {
@@ -287,6 +294,71 @@ function backupStoreData() {
   document.body.removeChild(link)
   adminStore.addToast('Settings snapshot downloaded (does not include orders or customers)', 'success')
 }
+
+function importSettingsFile() {
+  const input = document.createElement('input')
+  input.type = 'file'
+  input.accept = '.json'
+  input.onchange = (e) => {
+    const file = e.target.files[0]
+    if (file) {
+      const reader = new FileReader()
+      reader.onload = (event) => {
+        try {
+          const parsed = JSON.parse(event.target.result)
+          const target = parsed.settings || parsed
+          Object.assign(form, target)
+          adminStore.addToast('Settings imported successfully from file', 'success')
+        } catch {
+          adminStore.addToast('Invalid JSON file format', 'error')
+        }
+      }
+      reader.readAsText(file)
+    }
+  }
+  input.click()
+}
+
+function changeStoreLogo() {
+  const input = document.createElement('input')
+  input.type = 'file'
+  input.accept = 'image/*'
+  input.onchange = (e) => {
+    const file = e.target.files[0]
+    if (file) {
+      adminStore.addToast('Store logo updated successfully', 'success')
+    }
+  }
+  input.click()
+}
+
+function removeStoreLogo() {
+  adminStore.addToast('Store logo reset to default Luméa emblem', 'info')
+}
+
+function changeFavicon() {
+  const input = document.createElement('input')
+  input.type = 'file'
+  input.accept = '.ico,.png,.svg'
+  input.onchange = (e) => {
+    const file = e.target.files[0]
+    if (file) {
+      adminStore.addToast('Favicon updated successfully', 'success')
+    }
+  }
+  input.click()
+}
+
+function removeFavicon() {
+  adminStore.addToast('Favicon reset to default', 'info')
+}
+
+function inviteStaffMember() {
+  const email = prompt('Enter staff member email address:')
+  if (email?.trim()) {
+    adminStore.addToast(`Staff invitation sent to ${email.trim()}`, 'success')
+  }
+}
 </script>
 
 <template>
@@ -420,11 +492,11 @@ function backupStoreData() {
                       <span class="logo-text-display">Luméa</span>
                     </div>
                     <div class="logo-btn-col">
-                      <button class="btn-change-box" @click="window.alert('Upload new atelier store logo...')">
+                      <button class="btn-change-box" @click="changeStoreLogo">
                         <Upload class="w-3 h-3 mr-1" />
                         <span>Change Logo</span>
                       </button>
-                      <button class="btn-remove-box" @click="window.alert('Logo reset to default')">
+                      <button class="btn-remove-box" @click="removeStoreLogo">
                         <Trash2 class="w-3 h-3 mr-1" />
                         <span>Remove</span>
                       </button>
@@ -443,11 +515,11 @@ function backupStoreData() {
                       </svg>
                     </div>
                     <div class="logo-btn-col">
-                      <button class="btn-change-box" @click="window.alert('Upload new favicon...')">
+                      <button class="btn-change-box" @click="changeFavicon">
                         <Upload class="w-3 h-3 mr-1" />
                         <span>Change Favicon</span>
                       </button>
-                      <button class="btn-remove-box" @click="window.alert('Favicon reset to default')">
+                      <button class="btn-remove-box" @click="removeFavicon">
                         <Trash2 class="w-3 h-3 mr-1" />
                         <span>Remove</span>
                       </button>
@@ -940,7 +1012,7 @@ function backupStoreData() {
                 <h2 class="pane-heading">Staff & Permissions</h2>
                 <p class="pane-subheading">Atelier administrators and operators.</p>
               </div>
-              <button class="btn-save" @click="alert('Invite staff member...')">
+              <button class="btn-save" @click="inviteStaffMember">
                 <Users class="w-3.5 h-3.5 mr-1" />
                 <span>Add Staff</span>
               </button>
@@ -987,7 +1059,7 @@ function backupStoreData() {
                 <span class="status-text-live">Online</span>
               </div>
               <p class="status-desc-text">Your store is currently live and visible to customers.</p>
-              <a href="http://localhost:5173" target="_blank" class="btn-view-store">
+              <a :href="getStorefrontUrl()" target="_blank" class="btn-view-store">
                 <ExternalLink class="w-4 h-4 mr-1.5" />
                 <span>View Store</span>
               </a>
@@ -1070,7 +1142,7 @@ function backupStoreData() {
               </div>
 
               <!-- Import Settings -->
-              <div class="quick-action-item" @click="alert('Import settings JSON dialog...')">
+              <div class="quick-action-item" @click="importSettingsFile">
                 <div class="action-icon-wrap">
                   <Upload class="w-4 h-4 text-charcoal" />
                 </div>

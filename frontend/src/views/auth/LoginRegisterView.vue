@@ -131,9 +131,9 @@
                 <div class="form-field">
                   <div class="label-row-with-link">
                     <label class="field-label" for="login-password">Password</label>
-                    <a href="#" class="forgot-pwd-link" @click.prevent="openForgotModal">
+                    <button type="button" class="forgot-pwd-link" @click="openForgotModal">
                       Forgot password?
-                    </a>
+                    </button>
                   </div>
                   <div class="input-with-icon">
                     <Lock :size="17" class="field-prefix-icon" />
@@ -456,7 +456,8 @@ function handleSocialLogin() {
   notificationStore.addToast('Social sign-in is not available yet. Use your email and password.', 'info')
 }
 function openForgotModal() {
-  notificationStore.addToast('Password reset email is not configured. Please contact support for account recovery.', 'info')
+  router.push('/contact?subject=Password%20Reset%20Request')
+  notificationStore.addToast('Please contact atelier concierge for account recovery assistance.', 'info')
 }
 </script>
 

@@ -81,9 +81,9 @@ async def read_bounded_content(file: UploadFile, max_size: int) -> bytes:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Empty files cannot be uploaded.")
     return b"".join(chunks)
 
-@router.get("/status")
-def get_upload_status(current_user=Depends(get_optional_user)):
-    """Check storage availability and readiness."""
+@router.get("/status", dependencies=[Depends(get_current_user)])
+def get_upload_status():
+    """Check storage availability and readiness. Requires authenticated user."""
     enabled = is_storage_enabled()
     storage_type = get_storage_type()
     return {

@@ -13,6 +13,7 @@ ADDITIONS = {
         "expires_at": "DATETIME",
         "delivered_at": "DATETIME",
         "stock_reserved": "BOOLEAN NOT NULL DEFAULT 0",
+        "rewards_credited": "BOOLEAN NOT NULL DEFAULT 0",
         "events": "JSON",
         "discount_code": "VARCHAR(64)",
         "shipping_carrier": "VARCHAR(100) DEFAULT 'vet_express'",

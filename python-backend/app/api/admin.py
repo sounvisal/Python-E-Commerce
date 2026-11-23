@@ -1089,24 +1089,24 @@ def admin_toggle_quiz_status(quiz_id: int, db: Session = Depends(get_db)):
 # --- Atelier Settings Endpoints ---
 
 class AdminSettingsPayload(BaseModel):
-    store_name: Optional[str] = "Luméa"
-    store_email: Optional[str] = "support@lumea.com"
-    store_phone: Optional[str] = "+855 12 345 678"
-    store_language: Optional[str] = "English (Default)"
-    store_description: Optional[str] = "Premium skincare for a healthier, brighter you. Natural beauty, real results."
-    company_name: Optional[str] = "Luméa Co., Ltd."
-    business_reg_number: Optional[str] = "KH-123456789"
-    business_address: Optional[str] = "#123, Norodom Blvd, Phnom Penh, Cambodia"
-    time_zone: Optional[str] = "(UTC+07:00) Phnom Penh"
-    currency: Optional[str] = "USD ($)"
-    free_shipping_enabled: Optional[bool] = True
-    free_shipping_mode: Optional[str] = "threshold"  # "threshold" | "all_orders" | "disabled"
-    free_shipping_threshold: Optional[float] = 50.0
-    free_shipping_promo_text: Optional[str] = "Complimentary nationwide shipping on orders over $50"
+    store_name: Optional[str] = None
+    store_email: Optional[str] = None
+    store_phone: Optional[str] = None
+    store_language: Optional[str] = None
+    store_description: Optional[str] = None
+    company_name: Optional[str] = None
+    business_reg_number: Optional[str] = None
+    business_address: Optional[str] = None
+    time_zone: Optional[str] = None
+    currency: Optional[str] = None
+    free_shipping_enabled: Optional[bool] = None
+    free_shipping_mode: Optional[str] = None  # "threshold" | "all_orders" | "disabled"
+    free_shipping_threshold: Optional[float] = None
+    free_shipping_promo_text: Optional[str] = None
     free_shipping_carriers: Optional[list] = None
-    grab_subsidy_enabled: Optional[bool] = True
-    tax_rate: Optional[float] = 10.0
-    online_status: Optional[str] = "Online"
+    grab_subsidy_enabled: Optional[bool] = None
+    tax_rate: Optional[float] = None
+    online_status: Optional[str] = None
 
 # In-memory settings fallback with initial values
 STORE_SETTINGS = {

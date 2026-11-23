@@ -18,7 +18,10 @@ def auth_headers():
     """
     Generates valid authorization headers for authenticated testing.
     """
-    token = create_access_token("sreynich.chan@example.com")
+    with SessionLocal() as db:
+        user = db.query(User).filter(User.email == "sreynich.chan@example.com").first()
+        version = getattr(user, "token_version", 1) if user else 1
+    token = create_access_token("sreynich.chan@example.com", token_version=version)
     return {"Authorization": f"Bearer {token}"}
 
 @pytest.fixture

@@ -1,6 +1,7 @@
 <script setup>
 import { ref, computed, reactive, onMounted, watch } from 'vue'
 import { useAdminStore } from '@/stores/admin'
+import { getStorefrontUrl } from '@/utils/storefront'
 import {
   Search,
   Plus,
@@ -62,6 +63,11 @@ onMounted(async () => {
     adminStore.fetchStats()
   ])
 })
+
+function openNewOrderModal() {
+  window.open(getStorefrontUrl('/shop'), '_blank')
+  adminStore.addToast('Opened atelier storefront for concierge order placement.', 'info')
+}
 
 // Avatar mapping
 const getAvatar = (name) => {
@@ -334,8 +340,31 @@ const printInvoice = () => {
   window.print()
 }
 
+import { exportToCSV } from '@/utils/exporter'
+
 const exportOrders = () => {
-  alert('Exporting orders archive to CSV/Excel...')
+  const data = (filteredOrders.value || []).map(o => ({
+    order_number: o.id || o.order_number,
+    customer_name: o.customer?.name || o.customer_name,
+    customer_email: o.customer?.email || o.customer_email,
+    date: o.date || o.created_at,
+    total: o.total,
+    status: o.status,
+    payment_status: o.paymentStatus || o.payment_status,
+    payment_method: o.paymentMethod || o.payment_method,
+    carrier: o.shippingCarrier || o.shipping_carrier || 'vet_express'
+  }))
+  exportToCSV('Lumea_Orders_Archive', data, [
+    { key: 'order_number', label: 'Order Number' },
+    { key: 'customer_name', label: 'Customer Name' },
+    { key: 'customer_email', label: 'Customer Email' },
+    { key: 'date', label: 'Order Date' },
+    { key: 'total', label: 'Total ($)' },
+    { key: 'status', label: 'Fulfillment Status' },
+    { key: 'payment_status', label: 'Payment Status' },
+    { key: 'payment_method', label: 'Payment Method' },
+    { key: 'carrier', label: 'Carrier' }
+  ])
 }
 </script>
 
@@ -509,7 +538,7 @@ const exportOrders = () => {
             <Download :size="14" />
             <span>Export</span>
           </button>
-          <button class="btn-create-order" @click="alert('Open New Order modal...')">
+          <button class="btn-create-order" @click="openNewOrderModal">
             <Plus :size="14" />
             <span>Create Order</span>
           </button>
