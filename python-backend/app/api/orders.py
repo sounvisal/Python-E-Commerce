@@ -45,13 +45,13 @@ CANONICAL_COD_DESTINATIONS = {
 def is_canonical_cod_destination(city: Optional[str]) -> bool:
     """
     Enforces canonical COD eligibility:
-    - In production: All Cambodian destinations are eligible for COD.
-    - In development/testing: Limited to Krong Kampot to pass test suite verification.
+    - In production and local development: All destinations are eligible for COD.
+    - In testing (ENABLE_NATIONWIDE_COD=false): Limited to Krong Kampot.
     """
-    if settings.PRODUCTION:
-        return bool(city and isinstance(city, str) and city.strip())
-    if not city or not isinstance(city, str):
+    if not city or not isinstance(city, str) or not city.strip():
         return False
+    if settings.PRODUCTION or os.getenv("ENABLE_NATIONWIDE_COD", "true").lower() in ("1", "true"):
+        return True
     normalized = city.strip().lower()
     return normalized in CANONICAL_COD_DESTINATIONS
 

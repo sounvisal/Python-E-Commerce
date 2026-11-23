@@ -452,93 +452,43 @@
             <div class="card-header-row">
               <div class="sec-badge">03</div>
               <div class="sec-title-wrap">
-                <h2 class="sec-title">{{ localeStore.t('checkout.payment_selection') || 'Payment Selection' }}</h2>
-                <p class="sec-subtitle">{{ localeStore.t('checkout.payment_sub') || 'Choose a secure and convenient payment method.' }}</p>
+                <h2 class="sec-title">{{ localeStore.t('checkout.payment_selection') || 'Payment Method' }}</h2>
+                <p class="sec-subtitle">{{ localeStore.t('checkout.payment_sub_cod') || 'Cash on Delivery — Handover upon arrival at your doorstep.' }}</p>
               </div>
             </div>
 
-            <fieldset class="payment-two-grid" :class="{ 'single-option': !khqrAvailable }" role="radiogroup" aria-labelledby="payment-heading">
+            <fieldset class="payment-two-grid single-option" role="radiogroup" aria-labelledby="payment-heading">
               <legend id="payment-heading" class="sr-only">{{ localeStore.t('checkout.payment_selection') || 'Payment Selection' }}</legend>
 
-              <!-- Method 1: Bakong KHQR - ABA Mobile -->
+              <!-- Dedicated Method: Cash on Delivery (COD) -->
               <label
-                v-if="khqrAvailable"
-                class="payment-option-card"
-                :class="{ selected: form.payment_method === 'khqr' }"
-              >
-                <input
-                  type="radio"
-                  name="payment_method"
-                  value="khqr"
-                  :checked="form.payment_method === 'khqr'"
-                  @change="form.payment_method = 'khqr'"
-                  class="sr-only-radio"
-                />
-                <div class="payment-card-header">
-                  <div class="payment-radio-wrap">
-                    <span class="payment-radio-circle" :class="{ active: form.payment_method === 'khqr' }"></span>
-                    <QrCode :size="18" class="khqr-symbol-icon" />
-                    <strong class="payment-title">{{ localeStore.t('checkout.bakong_khqr') || 'Bakong KHQR – ABA Mobile' }}</strong>
-                  </div>
-                  <span class="payment-badge-tag tag-instant">
-                    <Zap :size="11" class="badge-icon-clean" />
-                    <span>{{ localeStore.t('checkout.instant_clearance') || 'INSTANT CLEARANCE' }}</span>
-                  </span>
-                </div>
-
-                <p class="payment-card-desc">
-                  {{ localeStore.t('checkout.khqr_desc') || 'Scan with ABA Mobile, Bakong, Wing, ACLEDA, or any Cambodian banking app.' }}
-                </p>
-
-                <div class="bank-pill-row">
-                  <span class="bank-chip">ABA Mobile</span>
-                  <span class="bank-chip">Bakong</span>
-                  <span class="bank-chip">Wing</span>
-                  <span class="bank-chip">ACLEDA</span>
-                  <span class="bank-chip chip-more">{{ localeStore.t('checkout.all_banks') || '+ All Banks' }}</span>
-                </div>
-              </label>
-
-              <!-- Method 2: Cash on Delivery (COD) -->
-              <label
-                class="payment-option-card"
-                :class="{
-                  selected: form.payment_method === 'cod',
-                  disabled: !isLocalCodEligible
-                }"
+                class="payment-option-card selected"
               >
                 <input
                   type="radio"
                   name="payment_method"
                   value="cod"
-                  :disabled="!isLocalCodEligible"
-                  :checked="form.payment_method === 'cod'"
-                  @change="isLocalCodEligible && (form.payment_method = 'cod')"
+                  checked
+                  readonly
                   class="sr-only-radio"
                 />
                 <div class="payment-card-header">
                   <div class="payment-radio-wrap">
-                    <span class="payment-radio-circle" :class="{ active: form.payment_method === 'cod', disabled: !isLocalCodEligible }"></span>
+                    <span class="payment-radio-circle active"></span>
                     <Package :size="18" class="cod-box-icon-clean" />
                     <strong class="payment-title">{{ localeStore.t('checkout.cod_name') || 'Cash on Delivery (COD)' }}</strong>
                   </div>
-                  <span v-if="isLocalCodEligible" class="payment-badge-tag tag-cod">{{ localeStore.t('checkout.doorstep_handover') || 'DOORSTEP HANDOVER' }}</span>
-                  <span v-else class="payment-badge-tag tag-restricted">TOWN ONLY</span>
+                  <span class="payment-badge-tag tag-cod">{{ localeStore.t('checkout.doorstep_handover') || 'DOORSTEP HANDOVER' }}</span>
                 </div>
 
                 <p class="payment-card-desc">
-                  <span v-if="isLocalCodEligible">
-                    {{ localeStore.t('checkout.cod_desc') || 'Pay in cash (USD $ or KHR ៛) directly to the delivery driver upon receiving your package.' }}
-                  </span>
-                  <span v-else class="text-restricted-warning">
-                    Cash on delivery is available exclusively for <strong>Krong Kampot (Kampot town)</strong>. Delivery outside town requires prepayment via Bakong KHQR.
-                  </span>
+                  {{ localeStore.t('checkout.cod_desc') || 'Pay in cash (USD $ or KHR ៛) directly to the delivery driver upon receiving your package.' }}
                 </p>
 
-                <!-- Stock reservation notice for local COD -->
-                <div v-if="isLocalCodEligible" class="cod-stock-clarification-banner">
+                <!-- Stock reservation notice for COD -->
+                <div class="cod-stock-clarification-banner">
                   <Clock :size="12" class="banner-clock-icon" />
-                  <span><strong>Awaiting Confirmation:</strong> Stock is secured once staff calls to verify your phone & delivery address.</span>
+                  <span><strong>Order Confirmation:</strong> Stock is reserved and dispatched upon confirmation call from our atelier.</span>
                 </div>
 
                 <div class="bank-pill-row">
@@ -556,12 +506,6 @@
                   </span>
                 </div>
               </label>
-
-              <!-- Unavailable fallback state when remote delivery and KHQR unavailable -->
-              <div v-if="!isLocalCodEligible && !khqrAvailable" class="remote-payment-blocked-banner">
-                <AlertCircle :size="16" class="warn-svg" />
-                <span>Prepaid delivery via KHQR is temporarily unavailable for remote delivery destinations. Please contact atelier concierge support.</span>
-              </div>
             </fieldset>
           </section>
 
@@ -579,18 +523,13 @@
                 :disabled="submitting || cartStore.items.length === 0"
               >
                 <span v-if="!submitting">
-                  <template v-if="form.payment_method === 'khqr'">
-                    {{ localeStore.currentLocale === 'km' ? `បន្តទៅ KHQR · ${formattedTotal}` : localeStore.currentLocale === 'zh' ? `前往 KHQR 支付 · ${formattedTotal}` : `Continue to KHQR · ${formattedTotal}` }}
-                  </template>
-                  <template v-else>
-                    {{ localeStore.currentLocale === 'km' ? `បញ្ជាទិញ · ${formattedTotal}` : localeStore.currentLocale === 'zh' ? `立即下单 · ${formattedTotal}` : `Place Order · ${formattedTotal}` }}
-                  </template>
+                  {{ localeStore.currentLocale === 'km' ? `បញ្ជាទិញ · ${formattedTotal}` : localeStore.currentLocale === 'zh' ? `立即下单 · ${formattedTotal}` : `Place Order (COD) · ${formattedTotal}` }}
                 </span>
                 <span v-else>Processing with Atelier…</span>
               </button>
               <div class="submit-action-context">
                 <span class="submit-payment-pill">
-                  Payment: {{ form.payment_method === 'khqr' ? 'Bakong KHQR' : 'Cash on Delivery (COD)' }}
+                  Payment: Cash on Delivery (COD)
                 </span>
                 <span class="submit-lock-hint">
                   <ShieldCheck :size="13" />
@@ -739,17 +678,6 @@
         </aside>
       </form>
     </div>
-
-    <!-- Official KHQR Modal from checkout.html -->
-    <KHQRModal
-      v-if="showKHQRModal && pendingKhqrOrder"
-      :order-number="pendingKhqrOrder.order_number"
-      :amount="pendingKhqrOrder.total"
-      :expires-at="pendingKhqrOrder.expires_at"
-      merchant-name="SUON VISAL"
-      @approved="handleKHQRApproved"
-      @cancelled="handleKHQRCancelled"
-    />
   </div>
 </template>
 
@@ -813,20 +741,12 @@ const form = reactive({
   marketing_opt_in: true
 })
 
-// Canonical town check for Cash on Delivery (Krong Kampot only in local dev, nationwide in production)
+// Canonical town check for local carriers
 const CANONICAL_LOCAL_TOWNS = ['krong kampot', 'krong kampot (kampot town)', 'kampot town', 'kampot city']
-const isLocalCodEligible = computed(() => {
-  if (!form.shipping_city) return false
-  if (import.meta.env.PROD || !khqrAvailable.value) return true
-  return CANONICAL_LOCAL_TOWNS.includes(form.shipping_city.trim().toLowerCase())
-})
+const isLocalCodEligible = computed(() => true)
 
 function handleCityChange() {
-  if (!isLocalCodEligible.value) {
-    if (form.payment_method === 'cod') {
-      form.payment_method = khqrAvailable.value ? 'khqr' : ''
-    }
-  }
+  // Cash on Delivery is enabled nationwide
 }
 
 // Keep cartStore delivery destination in sync with form
@@ -838,12 +758,8 @@ watch(
       lat: form.delivery_lat,
       lng: form.delivery_lng
     })
-    // Enforce canonical COD destination rule: clear COD if remote
-    if (!isLocalCodEligible.value && form.payment_method === 'cod') {
-      form.payment_method = khqrAvailable.value ? 'khqr' : ''
-    }
     // Auto-switch away from GrabExpress if user selects non-Kampot destination
-    const isLocal = isLocalCodEligible.value
+    const isLocal = CANONICAL_LOCAL_TOWNS.includes((newCity || '').trim().toLowerCase())
     if (form.shipping_carrier === 'grab_express' && !isLocal) {
       form.shipping_carrier = 'lumea_concierge'
     }
@@ -920,7 +836,6 @@ onMounted(async () => {
     router.replace({ path: '/login', query: { redirect: '/checkout' } })
     return
   }
-  restorePendingPayment()
   await cartStore.fetchSettings()
 
   // Pre-fill from logged-in user profile
@@ -929,13 +844,6 @@ onMounted(async () => {
     form.customer_email = authStore.user.email || ''
     if (authStore.user.phone) form.customer_phone = authStore.user.phone
     if (authStore.defaultAddress?.street) selectAddressMode('default')
-  }
-
-  try {
-    const { data } = await axios.get('/api/payments/methods')
-    khqrAvailable.value = data.khqr !== false
-  } catch {
-    khqrAvailable.value = true
   }
 
   cartStore.setDeliveryDestination({
@@ -956,15 +864,9 @@ function selectAddressMode(mode) {
     defaultAddressText.value = [saved.street, saved.city].filter(Boolean).join(', ')
     isEditingAddress.value = false
     cartStore.setDeliveryDestination({ city: form.shipping_city, lat: null, lng: null })
-    if (!isLocalCodEligible.value && form.payment_method === 'cod') {
-      form.payment_method = khqrAvailable.value ? 'khqr' : ''
-    }
   } else {
     addressSelectionMode.value = 'new'
     isEditingAddress.value = true
-    if (!isLocalCodEligible.value && form.payment_method === 'cod') {
-      form.payment_method = khqrAvailable.value ? 'khqr' : ''
-    }
   }
 }
 
@@ -1091,22 +993,10 @@ async function handleSubmitOrder() {
       return
     }
 
-    const response = await axios.post('/api/orders', { ...details, checkout_key, expected_total: quote.total })
+    const response = await axios.post('/api/orders', { ...details, payment_method: 'cod', checkout_key, expected_total: quote.total })
     const order = response.data.data
     rememberOrderAccess(order)
-    if (order.status === 'Payment Review') {
-      submitError.value = 'Payment needs review. Contact support with order ' + order.order_number + ' before paying again.'
-    } else if (order.payment_method === 'khqr' && order.payment_status !== 'Paid') {
-      const { order_number, total, expires_at } = order
-      pendingKhqrOrder.value = { order_number, total, expires_at }
-      sessionStorage.setItem(pendingPaymentKey, JSON.stringify({
-        accountId: authStore.user?.id ?? null,
-        order: pendingKhqrOrder.value
-      }))
-      showKHQRModal.value = true
-    } else {
-      completeCheckout(order.order_number)
-    }
+    completeCheckout(order.order_number)
   } catch (err) {
     const detail = err.response?.data?.detail
     if (detail?.quote && checkoutSignature.value === signature) {

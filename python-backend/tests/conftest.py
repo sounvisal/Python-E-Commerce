@@ -1,3 +1,5 @@
+import os
+os.environ["ENABLE_NATIONWIDE_COD"] = "false"
 import pytest
 from fastapi.testclient import TestClient
 from app.main import app
