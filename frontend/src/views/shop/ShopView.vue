@@ -79,17 +79,29 @@
 
       <!-- 4. Two-Column Layout (Sidebar Filters + Catalog Main) -->
       <div class="shop-layout">
+        <!-- Mobile Filter Backdrop -->
+        <div v-if="mobileFiltersOpen" class="mobile-filter-backdrop" @click="mobileFiltersOpen = false"></div>
+
         <!-- Sidebar Filters -->
-        <aside class="shop-sidebar">
+        <aside class="shop-sidebar" :class="{ 'is-open': mobileFiltersOpen }">
           <div class="sidebar-header">
             <h3>Filters</h3>
-            <button
-              v-if="hasActiveFilters"
-              class="clear-all-btn"
-              @click="clearAllFilters"
-            >
-              Clear All
-            </button>
+            <div class="sidebar-header-actions">
+              <button
+                v-if="hasActiveFilters"
+                class="clear-all-btn"
+                @click="clearAllFilters"
+              >
+                Clear All
+              </button>
+              <button
+                class="sidebar-mobile-close"
+                @click="mobileFiltersOpen = false"
+                aria-label="Close Filters"
+              >
+                <X :size="18" />
+              </button>
+            </div>
           </div>
 
           <!-- Category Filter Accordion -->
@@ -299,6 +311,13 @@
               </div>
             </div>
           </div>
+
+          <!-- Mobile Apply Filters Button -->
+          <div class="sidebar-mobile-apply">
+            <button class="btn btn-pill-dark w-full" @click="mobileFiltersOpen = false">
+              Show {{ displayProducts.length }} Products
+            </button>
+          </div>
         </aside>
 
         <!-- Main Product Listing Content -->
@@ -352,11 +371,32 @@
                   <List :size="16" />
                 </button>
               </div>
+
+              <!-- Mobile Filters Button -->
+              <button
+                class="mobile-filter-btn"
+                @click="mobileFiltersOpen = true"
+                aria-label="Open Filters"
+              >
+                <SlidersHorizontal :size="15" />
+                <span>Filters</span>
+                <span v-if="activeFiltersCount > 0" class="filter-count-pill">{{ activeFiltersCount }}</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Loading Skeleton Grid -->
+          <div v-if="productStore.loading && displayProducts.length === 0" class="shop-products-grid">
+            <div v-for="n in 8" :key="n" class="skeleton-card">
+              <div class="skeleton-img"></div>
+              <div class="skeleton-line skeleton-brand"></div>
+              <div class="skeleton-line skeleton-title"></div>
+              <div class="skeleton-line skeleton-price"></div>
             </div>
           </div>
 
           <!-- Empty State -->
-          <div v-if="displayProducts.length === 0" class="no-results-state">
+          <div v-else-if="displayProducts.length === 0" class="no-results-state">
             <div class="no-results-card">
               <h3>No products found</h3>
               <p>Try adjusting your search criteria or clearing applied filters.</p>
@@ -457,6 +497,8 @@ import {
   List,
   Star,
   ArrowRight,
+  SlidersHorizontal,
+  X,
 } from 'lucide-vue-next'
 
 const route = useRoute()
@@ -466,6 +508,7 @@ const notificationStore = useNotificationStore()
 // State
 const brandsRowRef = ref(null)
 const viewMode = ref('grid')
+const mobileFiltersOpen = ref(false)
 const brandSearch = ref('')
 const showAllBrands = ref(false)
 const selectedCategories = ref([])
@@ -582,6 +625,17 @@ const hasActiveFilters = computed(() => {
     selectedRating.value !== null ||
     priceMin.value > 0 ||
     priceMax.value < 200
+  )
+})
+
+const activeFiltersCount = computed(() => {
+  return (
+    selectedCategories.value.length +
+    selectedBrands.value.length +
+    selectedSkinConcerns.value.length +
+    selectedSkinTypes.value.length +
+    (selectedRating.value !== null ? 1 : 0) +
+    (priceMin.value > 0 || priceMax.value < 200 ? 1 : 0)
   )
 })
 
@@ -1505,6 +1559,80 @@ watch(
 /* ==========================================================================
    RESPONSIVE DESIGN
    ========================================================================== */
+.mobile-filter-backdrop {
+  display: none;
+}
+.sidebar-mobile-close {
+  display: none;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--color-text-muted);
+  padding: 0.25rem;
+}
+.sidebar-mobile-apply {
+  display: none;
+}
+.mobile-filter-btn {
+  display: none;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.45rem 0.85rem;
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+  background: var(--color-surface);
+  font-size: 0.82rem;
+  font-weight: 500;
+  color: var(--color-text);
+  cursor: pointer;
+}
+.filter-count-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--color-primary);
+  color: #fff;
+  font-size: 0.7rem;
+  font-weight: 600;
+}
+
+/* Skeletons */
+.skeleton-card {
+  display: flex;
+  flex-direction: column;
+  padding: 1rem;
+  border-radius: 12px;
+  background: #FFFFFF;
+  border: 1px solid rgba(0, 0, 0, 0.05);
+}
+.skeleton-img {
+  width: 100%;
+  aspect-ratio: 1;
+  border-radius: 8px;
+  background: linear-gradient(90deg, #F5EFEB 25%, #EBE3DC 50%, #F5EFEB 75%);
+  background-size: 200% 100%;
+  animation: skeletonShimmer 1.5s infinite;
+  margin-bottom: 0.85rem;
+}
+.skeleton-line {
+  border-radius: 4px;
+  background: linear-gradient(90deg, #F5EFEB 25%, #EBE3DC 50%, #F5EFEB 75%);
+  background-size: 200% 100%;
+  animation: skeletonShimmer 1.5s infinite;
+  margin-bottom: 0.5rem;
+}
+.skeleton-brand { width: 40%; height: 10px; }
+.skeleton-title { width: 85%; height: 14px; }
+.skeleton-price { width: 30%; height: 14px; margin-top: 0.4rem; }
+
+@keyframes skeletonShimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
 @media (max-width: 1200px) {
   .shop-products-grid {
     grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -1516,7 +1644,44 @@ watch(
     grid-template-columns: 1fr;
   }
   .shop-sidebar {
-    display: none;
+    display: flex;
+    flex-direction: column;
+    position: fixed;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    width: 320px;
+    max-width: 85vw;
+    background: #FFFFFF;
+    z-index: 1000;
+    transform: translateX(-100%);
+    transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    box-shadow: 4px 0 24px rgba(0, 0, 0, 0.15);
+    overflow-y: auto;
+    padding: 1.5rem;
+  }
+  .shop-sidebar.is-open {
+    transform: translateX(0);
+  }
+  .mobile-filter-backdrop {
+    display: block;
+    position: fixed;
+    inset: 0;
+    background: rgba(26, 26, 26, 0.4);
+    backdrop-filter: blur(2px);
+    z-index: 999;
+  }
+  .sidebar-mobile-close {
+    display: flex;
+  }
+  .sidebar-mobile-apply {
+    display: block;
+    margin-top: 1.5rem;
+    padding-top: 1rem;
+    border-top: 1px solid var(--color-border);
+  }
+  .mobile-filter-btn {
+    display: inline-flex;
   }
   .shop-products-grid {
     grid-template-columns: repeat(3, minmax(0, 1fr));

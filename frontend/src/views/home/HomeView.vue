@@ -7,22 +7,19 @@
       <div class="container hero-container">
         <!-- Hero Left Column: Editorial Copy -->
         <div class="hero-text-col">
-          <div class="hero-eyebrow animate-fade-in">
-            <span>DISCOVER A BRIGHTER YOU</span>
+          <div class="hero-eyebrow animate-fade-in" :key="'eyebrow-' + activeSlide">
+            <span>{{ currentSlide.eyebrow }}</span>
           </div>
 
-          <h1 class="hero-headline animate-fade-in-up">
-            Your Skincare<br>
-            Destination.
-          </h1>
+          <h1 class="hero-headline animate-fade-in-up" :key="'headline-' + activeSlide" v-html="currentSlide.headline"></h1>
 
-          <p class="hero-description animate-fade-in-up delay-1">
-            Explore 100+ trusted skincare brands in one place. Real products. Real results. A healthier, happier you.
+          <p class="hero-description animate-fade-in-up delay-1" :key="'desc-' + activeSlide">
+            {{ currentSlide.description }}
           </p>
 
           <div class="hero-cta-group animate-fade-in-up delay-2">
-            <router-link to="/shop" class="btn btn-pill-dark">
-              <span>Shop Now</span>
+            <router-link :to="currentSlide.link" class="btn btn-pill-dark">
+              <span>{{ currentSlide.cta }}</span>
               <ArrowRight :size="16" />
             </router-link>
 
@@ -59,15 +56,15 @@
         <div class="hero-visual-col animate-fade-in delay-2">
           <div class="hero-image-stage">
             <!-- Floating Editorial Callout -->
-            <div class="floating-script-callout">
-              <span class="script-phrase">More Brands.<br>Healthier Skin.</span>
+            <div class="floating-script-callout" :key="'script-' + activeSlide">
+              <span class="script-phrase" v-html="currentSlide.script"></span>
             </div>
 
             <!-- Main Beauty Bottles Visual matching exact composition -->
-            <div class="bottles-scene">
+            <div class="bottles-scene" :key="'img-' + activeSlide">
               <img
-                :src="homeBanner.image_url || '/images/ai-banner-atelier.jpg'"
-                alt="Luméa Skincare Essentials - SK-II, The Ordinary, Laneige"
+                :src="currentSlide.image"
+                :alt="currentSlide.eyebrow"
                 class="main-scene-img"
               />
             </div>
@@ -194,7 +191,17 @@
           </router-link>
         </div>
 
-        <div class="products-carousel-grid">
+        <div v-if="productStore.loading && bestSellersList.length === 0" class="products-carousel-grid">
+          <div v-for="n in 5" :key="n" class="skeleton-card">
+            <div class="skeleton-img-box shimmer"></div>
+            <div class="skeleton-info-box">
+              <div class="skeleton-line shimmer short"></div>
+              <div class="skeleton-line shimmer medium"></div>
+              <div class="skeleton-line shimmer price"></div>
+            </div>
+          </div>
+        </div>
+        <div v-else class="products-carousel-grid">
           <ProductCard
             v-for="product in bestSellersList"
             :key="product.id"
@@ -490,13 +497,49 @@ import { useRouter } from 'vue-router'
 const router = useRouter()
 const cartStore = useCartStore()
 const bannerStore = useBannerStore()
+const productStore = useProductStore()
 
 const homeBanner = computed(() =>
   bannerStore.getBanner('home', {
-    image_url: '/images/ai-banner-atelier.jpg',
+    image_url: '/images/banner-home.jpg',
     title: 'Your Skincare Destination',
   })
 )
+
+const slides = computed(() => [
+  {
+    id: 1,
+    eyebrow: 'DISCOVER A BRIGHTER YOU',
+    headline: 'Your Skincare<br>Destination.',
+    description: 'Explore 100+ trusted skincare brands in one place. Real products. Real results. A healthier, happier you.',
+    image: homeBanner.value.image_url || '/images/banner-home.jpg',
+    script: 'More Brands.<br>Healthier Skin.',
+    cta: 'Shop Now',
+    link: '/shop',
+  },
+  {
+    id: 2,
+    eyebrow: 'BARRIER SCIENCE & BOTANICALS',
+    headline: 'Nurture Your<br>Natural Glow.',
+    description: 'Clean, clinically-proven botanical actives formulated to repair lipid barriers and restore lasting skin balance.',
+    image: '/images/banner-shop-all.jpg',
+    script: 'Clean Actives.<br>Radiant Life.',
+    cta: 'Explore Serums',
+    link: '/shop?category=serums',
+  },
+  {
+    id: 3,
+    eyebrow: 'PERSONALIZED DIAGNOSTIC',
+    headline: 'Formulated for<br>Your Skin Profile.',
+    description: 'Take our interactive dermatological diagnostic to receive an evidence-based morning and evening regimen.',
+    image: '/images/cat-masks.jpg',
+    script: 'Custom Routine.<br>Proven Results.',
+    cta: 'Take Skin Quiz',
+    link: '/quiz',
+  },
+])
+
+const currentSlide = computed(() => slides.value[activeSlide.value - 1] || slides.value[0])
 
 // State
 const activeSlide = ref(1)
@@ -621,6 +664,9 @@ let scrollObserver = null
 
 onMounted(() => {
   bannerStore.fetchBanners()
+  if (!productStore.allCatalogProducts.length) {
+    productStore.fetchProducts()
+  }
 
   // Positive rootMargin (120px) triggers before elements enter the screen,
   // completely eliminating blank white spaces or stuck/laggy scroll pauses!
@@ -1332,6 +1378,51 @@ async function handleSubscribe() {
   display: grid;
   grid-template-columns: repeat(5, 1fr);
   gap: 1.15rem;
+}
+
+.skeleton-card {
+  background: #FFFFFF;
+  border: 1px solid rgba(28, 25, 23, 0.07);
+  border-radius: 14px;
+  padding: 0.95rem;
+  display: flex;
+  flex-direction: column;
+}
+
+.skeleton-img-box {
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  border-radius: 10px;
+  margin-bottom: 0.75rem;
+  background: #F4EFEB;
+}
+
+.skeleton-info-box {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  flex: 1;
+}
+
+.skeleton-line {
+  height: 12px;
+  border-radius: 6px;
+  background: #F4EFEB;
+}
+
+.skeleton-line.short { width: 40%; }
+.skeleton-line.medium { width: 80%; height: 14px; }
+.skeleton-line.price { width: 35%; height: 16px; margin-top: 0.5rem; }
+
+.shimmer {
+  background: linear-gradient(90deg, #F4EFEB 0%, #E8DFD7 50%, #F4EFEB 100%);
+  background-size: 200% 100%;
+  animation: skeletonShimmer 1.5s ease-in-out infinite;
+}
+
+@keyframes skeletonShimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
 }
 
 .beauty-product-card {

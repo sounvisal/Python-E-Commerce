@@ -4,13 +4,15 @@
     :class="{ 'list-layout': viewMode === 'list' }"
   >
     <!-- Image Stage -->
-    <div class="image-wrapper">
+    <div class="image-wrapper" :class="{ 'img-shimmer': !imageLoaded }">
       <router-link :to="`/product/${product.slug}`" class="image-link">
         <img
           :src="cardImageUrl"
           :alt="product.name"
           class="product-img"
+          :class="{ 'loaded': imageLoaded }"
           loading="lazy"
+          @load="imageLoaded = true"
           @error="handleImageError"
         />
       </router-link>
@@ -130,15 +132,18 @@ const props = defineProps({
 
 const defaultPlaceholder = '/images/prod-essence.jpg'
 const cardImageUrl = ref(props.product.image_url || defaultPlaceholder)
+const imageLoaded = ref(false)
 
 watch(
   () => props.product.image_url,
   (newUrl) => {
     cardImageUrl.value = newUrl || defaultPlaceholder
+    imageLoaded.value = false
   }
 )
 
 const handleImageError = (e) => {
+  imageLoaded.value = true
   if (cardImageUrl.value !== defaultPlaceholder) {
     cardImageUrl.value = defaultPlaceholder
   } else if (e && e.target) {
@@ -229,6 +234,17 @@ const handleAddToCart = () => {
   background: #F4EFEB;
 }
 
+.image-wrapper.img-shimmer {
+  background: linear-gradient(90deg, #F4EFEB 0%, #E8DFD7 50%, #F4EFEB 100%);
+  background-size: 200% 100%;
+  animation: cardImgShimmer 1.5s ease-in-out infinite;
+}
+
+@keyframes cardImgShimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
 .image-link {
   display: flex;
   align-items: center;
@@ -241,6 +257,12 @@ const handleAddToCart = () => {
   width: 100%;
   height: 100%;
   object-fit: cover;
+  opacity: 0;
+  transition: opacity 0.35s ease;
+}
+
+.product-img.loaded {
+  opacity: 1;
 }
 
 .card-heart-btn {

@@ -82,7 +82,7 @@ async def read_bounded_content(file: UploadFile, max_size: int) -> bytes:
     return b"".join(chunks)
 
 @router.get("/status")
-def get_upload_status(current_user=Depends(get_current_user)):
+def get_upload_status(current_user=Depends(get_optional_user)):
     """Check storage availability and readiness."""
     enabled = is_storage_enabled()
     storage_type = get_storage_type()

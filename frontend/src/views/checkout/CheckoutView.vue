@@ -807,7 +807,7 @@ const submitting = ref(false)
 const submitError = ref('')
 const showKHQRModal = ref(false)
 const pendingKhqrOrder = ref(null)
-const khqrAvailable = ref(false)
+const khqrAvailable = ref(true)
 const reviewedQuote = ref(null)
 const checkoutInput = computed(() => ({
   customer_name: form.customer_name.trim(),
@@ -881,9 +881,9 @@ onMounted(async () => {
 
   try {
     const { data } = await axios.get('/api/payments/methods')
-    khqrAvailable.value = data.khqr === true
+    khqrAvailable.value = data.khqr !== false
   } catch {
-    khqrAvailable.value = false
+    khqrAvailable.value = true
   }
 
   cartStore.setDeliveryDestination({

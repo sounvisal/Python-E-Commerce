@@ -1,8 +1,7 @@
-const backendOrigin = (process.env.RENDER_API_ORIGIN ?? '').trim().replace(/\/$/, '')
-
-if (!/^https:\/\/[a-zA-Z0-9_.-]+(?::\d+)?$/i.test(backendOrigin)) {
-  throw new Error('Set RENDER_API_ORIGIN to the HTTPS origin of your backend (e.g. https://your-service.onrender.com).')
-}
+const rawOrigin = (process.env.RENDER_API_ORIGIN ?? '').trim().replace(/\/$/, '')
+const backendOrigin = /^https:\/\/[a-zA-Z0-9_.-]+(?::\d+)?$/i.test(rawOrigin)
+  ? rawOrigin
+  : 'https://lumea-atelier.onrender.com'
 
 export const config = {
   framework: null,
