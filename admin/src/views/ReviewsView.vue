@@ -144,6 +144,8 @@ async function deleteReview(review) {
   }
 }
 
+import { exportToCSV } from '@/utils/exporter'
+
 // Export CSV
 function exportReviewsCSV() {
   const items = adminStore.reviews
@@ -151,25 +153,26 @@ function exportReviewsCSV() {
     adminStore.addToast('No reviews to export', 'error')
     return
   }
-  const headers = ['ID', 'Customer', 'Product', 'Rating', 'Title', 'Comment', 'Status', 'Date']
-  const rows = items.map(r => [
-    r.id,
-    `"${r.customer_name}"`,
-    `"${r.product_name}"`,
-    r.rating,
-    `"${(r.title || '').replace(/"/g, '""')}"`,
-    `"${(r.comment || '').replace(/"/g, '""')}"`,
-    r.status,
-    `"${r.created_at}"`
+  const data = items.map(r => ({
+    id: r.id,
+    customer_name: r.customer_name,
+    product_name: r.product_name,
+    rating: r.rating,
+    title: r.title,
+    comment: r.comment,
+    status: r.status,
+    created_at: r.created_at
+  }))
+  exportToCSV('Lumea_Reviews_Archive', data, [
+    { key: 'id', label: 'ID' },
+    { key: 'customer_name', label: 'Customer' },
+    { key: 'product_name', label: 'Product' },
+    { key: 'rating', label: 'Rating' },
+    { key: 'title', label: 'Review Title' },
+    { key: 'comment', label: 'Comment' },
+    { key: 'status', label: 'Status' },
+    { key: 'created_at', label: 'Date' }
   ])
-  const csvContent = 'data:text/csv;charset=utf-8,' + [headers.join(','), ...rows.map(e => e.join(','))].join('\n')
-  const encodedUri = encodeURI(csvContent)
-  const link = document.createElement('a')
-  link.setAttribute('href', encodedUri)
-  link.setAttribute('download', `lumea_reviews_export_${Date.now()}.csv`)
-  document.body.appendChild(link)
-  link.click()
-  document.body.removeChild(link)
   adminStore.addToast('Reviews exported successfully (CSV)', 'success')
 }
 </script>

@@ -55,6 +55,7 @@ class OrderOut(BaseModel):
     map_url: Optional[str] = None
     subtotal: float
     discount: float
+    discount_code: Optional[str] = None
     shipping_fee: float
     total: float
     status: str

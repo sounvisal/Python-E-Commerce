@@ -1,46 +1,62 @@
 <script setup>
-import { computed, onMounted, ref } from 'vue'
-import { useRouter } from 'vue-router'
+import { computed, onMounted } from 'vue'
 import { useAdminStore } from '@/stores/admin'
 import { getStorefrontUrl } from '@/utils/storefront'
 import StatusBadge from '@/components/common/StatusBadge.vue'
 import {
-  TrendingUp,
   ShoppingBag,
   Users,
   Package,
-  Plus,
   Store,
   Tag,
   FileText,
-  ChevronRight,
-  ArrowRight,
-  Clock,
-  RotateCcw,
-  Sparkles
+  ChevronRight
 } from 'lucide-vue-next'
 
-const router = useRouter()
 const adminStore = useAdminStore()
 
-const salesTimeframe = ref('this-month')
+onMounted(() => adminStore.fetchStats())
 
-onMounted(async () => {
-  await Promise.all([
-    adminStore.fetchStats(),
-    adminStore.fetchOrders({ limit: 10 }),
-    adminStore.fetchProducts({ limit: 10 })
-  ])
-})
+const metrics = computed(() => adminStore.stats?.metrics)
+const recentOrders = computed(() => (adminStore.stats?.recent_orders || []).slice(0, 5))
+const topProducts = computed(() => adminStore.stats?.top_products || [])
+const lowStockProducts = computed(() => adminStore.stats?.low_stock_products || [])
+const recentReturns = computed(() => adminStore.stats?.recent_returns || [])
+const salesSeries = computed(() => adminStore.stats?.timeline || [])
+const chartMax = computed(() => Math.max(3, Math.ceil(Math.max(0, ...salesSeries.value.map(day => day.revenue)) / 3) * 3))
+const salesPoints = computed(() => salesSeries.value.map((day, index, series) => ({
+  x: index * 500 / Math.max(series.length - 1, 1),
+  y: 150 - 145 * day.revenue / chartMax.value,
+})))
+const salesLine = computed(() => salesPoints.value.map(point => `${point.x},${point.y}`).join(' '))
 
-const metrics = computed(() => {
-  return adminStore.stats?.metrics || {
-    total_revenue: 24580,
-    total_orders: 320,
-    total_customers: 4125,
-    total_products: 560,
-  }
+const statusColors = {
+  'awaiting confirmation': '#D9B36C',
+  pending: '#E7C98D',
+  confirmed: '#A77C53',
+  processing: '#E89E88',
+  shipped: '#C4623C',
+  'out for delivery': '#A34532',
+  delivered: '#84261B',
+  cancelled: '#A89D95',
+  expired: '#756C65',
+  'payment review': '#9B779B',
+}
+const statusSegments = computed(() => {
+  const counts = adminStore.stats?.orders_by_status || {}
+  const sum = Object.values(counts).reduce((total, count) => total + count, 0)
+  let start = 0
+  return Object.entries(counts).filter(([, count]) => count > 0).map(([state, count]) => {
+    const end = start + count / sum * 100
+    const segment = { state, count, color: statusColors[state] || '#756C65', start, end }
+    start = end
+    return segment
+  })
 })
+const statusBackground = computed(() => statusSegments.value.length
+  ? `conic-gradient(${statusSegments.value.map(segment => `${segment.color} ${segment.start}% ${segment.end}%`).join(', ')})`
+  : '#F6EFE9'
+)
 
 // Quick Actions
 const quickActions = [
@@ -50,81 +66,18 @@ const quickActions = [
   { name: 'View Orders', path: '/orders', icon: FileText },
 ]
 
-// Dynamic Low Stock Products matching live catalog or fallback
-const lowStockProducts = computed(() => {
-  if (adminStore.products && adminStore.products.length > 0) {
-    return [...adminStore.products]
-      .sort((a, b) => (a.stock || 0) - (b.stock || 0))
-      .slice(0, 4)
-      .map(p => ({
-        id: p.id,
-        name: p.name,
-        stock: p.stock ?? 0,
-        status: (p.stock || 0) <= 5 ? 'Low Stock' : ((p.stock || 0) <= 15 ? 'Normal' : 'In Stock'),
-        class: (p.stock || 0) <= 5 ? 'badge-amber' : 'badge-emerald',
-        img: p.image_url || p.thumbnail_url || '/images/prod-sk2.jpg'
-      }))
-  }
-  return [
-    { id: 1, name: 'Hydrating Toner', stock: 5, status: 'Low Stock', class: 'badge-amber', img: '/images/prod-sk2.jpg' },
-    { id: 2, name: 'Vitamin C Serum', stock: 8, status: 'Low Stock', class: 'badge-amber', img: '/images/prod-ordinary.jpg' },
-    { id: 3, name: 'Gentle Cleanser', stock: 12, status: 'Normal', class: 'badge-emerald', img: '/images/prod-cosrx.jpg' },
-    { id: 4, name: 'Daily Sunscreen', stock: 3, status: 'Low Stock', class: 'badge-amber', img: '/images/prod-laneige.jpg' },
-  ]
-})
-
-// Dynamic Top Products matching live catalog and sales metrics or fallback
-const topProducts = computed(() => {
-  if (adminStore.products && adminStore.products.length > 0) {
-    return [...adminStore.products]
-      .sort((a, b) => ((b.review_count || 0) * (b.price || 0)) - ((a.review_count || 0) * (a.price || 0)))
-      .slice(0, 5)
-      .map((p, idx) => ({
-        rank: idx + 1,
-        name: p.name,
-        sold: (p.review_count ? p.review_count * 12 : 120 + (5 - idx) * 35),
-        revenue: Math.round((p.price || 40) * (p.review_count ? p.review_count * 2.5 : 20 + (5 - idx) * 6)),
-        img: p.image_url || p.thumbnail_url || '/images/prod-sk2.jpg'
-      }))
-  }
-  return [
-    { rank: 1, name: 'Hydrating Toner', sold: 320, revenue: 1240, img: '/images/prod-sk2.jpg' },
-    { rank: 2, name: 'Vitamin C Serum', sold: 210, revenue: 980, img: '/images/prod-ordinary.jpg' },
-    { rank: 3, name: 'Gentle Cleanser', sold: 180, revenue: 870, img: '/images/prod-cosrx.jpg' },
-    { rank: 4, name: 'Daily Sunscreen', sold: 150, revenue: 760, img: '/images/prod-laneige.jpg' },
-    { rank: 5, name: 'Acne Treatment', sold: 120, revenue: 680, img: '/images/prod-sk2.jpg' },
-  ]
-})
-
-// Recent Returns matching mockup
-const recentReturns = [
-  { id: '#RT-0012', reason: 'Wrong item', status: 'Under Review', class: 'badge-amber' },
-  { id: '#RT-0011', reason: 'Product damaged', status: 'Approved', class: 'badge-emerald' },
-  { id: '#RT-0010', reason: 'Not suitable', status: 'Processing', class: 'badge-blue' },
-  { id: '#RT-0009', reason: 'Change of mind', status: 'Completed', class: 'badge-emerald' },
-]
-
-// Recent Orders matching mockup or fallback to live DB
-const recentOrders = computed(() => {
-  if (adminStore.orders && adminStore.orders.length > 0) {
-    return adminStore.orders.slice(0, 5)
-  }
-  return [
-    { order_number: 'LUM-00124', customer_name: 'Sophea Chan', total: 58.0, status: 'Processing', created_at: 'Aug 30, 2025' },
-    { order_number: 'LUM-00123', customer_name: 'Dara Kim', total: 24.5, status: 'Shipped', created_at: 'Aug 30, 2025' },
-    { order_number: 'LUM-00122', customer_name: 'Kimheang Lim', total: 96.0, status: 'Pending', created_at: 'Aug 29, 2025' },
-    { order_number: 'LUM-00121', customer_name: 'Sreypov Neang', total: 48.0, status: 'Delivered', created_at: 'Aug 29, 2025' },
-    { order_number: 'LUM-00120', customer_name: 'Vannak Sok', total: 32.0, status: 'Processing', created_at: 'Aug 28, 2025' },
-  ]
-})
-
 function formatCurrency(val) {
-  return Number(val || 0).toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 2 })
+  return val == null ? '—' : Number(val).toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 2 })
 }
 </script>
 
 <template>
   <div class="dashboard-page">
+    <div v-if="adminStore.statsLoading && !metrics" role="status">Loading dashboard…</div>
+    <div v-else-if="!metrics" role="alert" class="dashboard-error">
+      Dashboard data is unavailable.
+      <button type="button" class="view-all-link" @click="adminStore.fetchStats()">Retry</button>
+    </div>
     <div class="dashboard-split-layout">
       <!-- ============================================== -->
       <!-- MAIN COLUMN (LEFT): Hero, KPIs, Charts, Orders -->
@@ -159,16 +112,9 @@ function formatCurrency(val) {
             <ShoppingBag :size="18" />
           </div>
           <div class="kpi-numbers">
-            <strong class="kpi-value">${{ formatCurrency(metrics.total_revenue || 24580) }}</strong>
+            <strong class="kpi-value">{{ metrics ? '$' + formatCurrency(metrics.total_revenue) : '—' }}</strong>
             <span class="kpi-label">Total Sales</span>
           </div>
-        </div>
-        <div class="kpi-bottom">
-          <span class="kpi-trend text-green">↑ +12%</span>
-          <span class="kpi-period">vs last month</span>
-          <svg class="mini-sparkline" viewBox="0 0 70 20" fill="none">
-            <path d="M2 16 Q 20 18, 35 12 T 68 4" stroke="#C4623C" stroke-width="2" stroke-linecap="round"/>
-          </svg>
         </div>
       </div>
 
@@ -179,16 +125,9 @@ function formatCurrency(val) {
             <Package :size="18" />
           </div>
           <div class="kpi-numbers">
-            <strong class="kpi-value">{{ metrics.total_orders || 320 }}</strong>
+            <strong class="kpi-value">{{ formatCurrency(metrics?.total_orders) }}</strong>
             <span class="kpi-label">Orders</span>
           </div>
-        </div>
-        <div class="kpi-bottom">
-          <span class="kpi-trend text-green">↑ +8%</span>
-          <span class="kpi-period">vs last month</span>
-          <svg class="mini-sparkline" viewBox="0 0 70 20" fill="none">
-            <path d="M2 17 Q 25 15, 40 10 T 68 5" stroke="#C4623C" stroke-width="2" stroke-linecap="round"/>
-          </svg>
         </div>
       </div>
 
@@ -199,16 +138,9 @@ function formatCurrency(val) {
             <Users :size="18" />
           </div>
           <div class="kpi-numbers">
-            <strong class="kpi-value">{{ formatCurrency(metrics.total_customers || 4125) }}</strong>
+            <strong class="kpi-value">{{ formatCurrency(metrics?.total_customers) }}</strong>
             <span class="kpi-label">Customers</span>
           </div>
-        </div>
-        <div class="kpi-bottom">
-          <span class="kpi-trend text-green">↑ +15%</span>
-          <span class="kpi-period">vs last month</span>
-          <svg class="mini-sparkline" viewBox="0 0 70 20" fill="none">
-            <path d="M2 18 Q 20 14, 45 12 T 68 3" stroke="#C4623C" stroke-width="2" stroke-linecap="round"/>
-          </svg>
         </div>
       </div>
 
@@ -219,16 +151,9 @@ function formatCurrency(val) {
             <Tag :size="18" />
           </div>
           <div class="kpi-numbers">
-            <strong class="kpi-value">{{ metrics.total_products || 560 }}</strong>
+            <strong class="kpi-value">{{ formatCurrency(metrics?.total_products) }}</strong>
             <span class="kpi-label">Products</span>
           </div>
-        </div>
-        <div class="kpi-bottom">
-          <span class="kpi-trend text-green">↑ +6%</span>
-          <span class="kpi-period">vs last month</span>
-          <svg class="mini-sparkline" viewBox="0 0 70 20" fill="none">
-            <path d="M2 16 Q 25 16, 45 11 T 68 6" stroke="#C4623C" stroke-width="2" stroke-linecap="round"/>
-          </svg>
         </div>
       </div>
     </div>
@@ -239,123 +164,43 @@ function formatCurrency(val) {
       <div class="card sales-overview-box">
         <div class="card-head-row">
           <h3 class="panel-card-title">Sales Overview</h3>
-          <div class="select-timeframe">
-            <select v-model="salesTimeframe">
-              <option value="this-month">This Month</option>
-              <option value="last-30">Last 30 Days</option>
-              <option value="this-year">This Year</option>
-            </select>
-          </div>
+          <span class="chart-period">Last 7 days</span>
         </div>
-
-        <!-- Sales Chart Canvas SVG matching mockup -->
-        <div class="sales-chart-wrap">
+        <div v-if="salesSeries.length" class="sales-chart-wrap">
           <div class="chart-y-axis">
-            <span>30K</span>
-            <span>20K</span>
-            <span>10K</span>
-            <span>0</span>
+            <span v-for="step in [3, 2, 1, 0]" :key="step">{{ formatCurrency(chartMax / 3 * step) }}</span>
           </div>
           <div class="chart-drawing-area">
-            <svg class="sales-curve-svg" viewBox="0 0 500 160" preserveAspectRatio="none">
-              <!-- Gradient definition -->
-              <defs>
-                <linearGradient id="salesGrad" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stop-color="#84261B" stop-opacity="0.25" />
-                  <stop offset="100%" stop-color="#84261B" stop-opacity="0.0" />
-                </linearGradient>
-              </defs>
-              <!-- Filled Area -->
-              <path
-                d="M 10 145 C 50 140, 70 100, 110 88 C 150 78, 170 115, 220 95 C 270 75, 310 100, 360 82 C 410 65, 450 72, 485 35 L 485 155 L 10 155 Z"
-                fill="url(#salesGrad)"
-              />
-              <!-- Smooth Curve Line -->
-              <path
-                d="M 10 145 C 50 140, 70 100, 110 88 C 150 78, 170 115, 220 95 C 270 75, 310 100, 360 82 C 410 65, 450 72, 485 35"
-                fill="none"
-                stroke="#84261B"
-                stroke-width="2.5"
-                stroke-linecap="round"
-              />
-              <!-- Active Highlight Dot -->
-              <circle cx="485" cy="35" r="5" fill="#84261B" />
-              <circle cx="485" cy="35" r="9" fill="none" stroke="rgba(132, 38, 27, 0.3)" stroke-width="2" />
+            <svg class="sales-curve-svg" viewBox="0 0 500 155" preserveAspectRatio="none" role="img"
+              :aria-label="salesSeries.map(day => day.date + ' $' + formatCurrency(day.revenue)).join(', ')">
+              <polyline :points="salesLine" fill="none" stroke="#84261B" stroke-width="2.5"
+                vector-effect="non-scaling-stroke" />
             </svg>
-
-            <!-- Peak Callout Badge -->
-            <div class="chart-callout-badge" style="top: 15px; right: 5px;">
-              $24,580
-            </div>
-
             <div class="chart-x-axis">
-              <span>Aug 1</span>
-              <span>Aug 7</span>
-              <span>Aug 14</span>
-              <span>Aug 21</span>
-              <span>Aug 31</span>
+              <span v-for="day in salesSeries" :key="day.date">{{ day.date }}</span>
             </div>
           </div>
         </div>
+        <p v-else-if="metrics" class="dashboard-empty">No sales data for this period.</p>
       </div>
 
-      <!-- Order Status Donut Card matching mockup -->
       <div class="card order-status-box">
         <h3 class="panel-card-title">Order Status</h3>
-
         <div class="donut-and-legend">
-          <!-- Donut SVG -->
-          <div class="donut-wrap">
-            <svg class="donut-svg" viewBox="0 0 120 120">
-              <!-- Background Ring -->
-              <circle cx="60" cy="60" r="46" fill="none" stroke="#F6EFE9" stroke-width="14"/>
-              <!-- Delivered Segment (Crimson #84261B) -->
-              <circle cx="60" cy="60" r="46" fill="none" stroke="#84261B" stroke-width="14"
-                stroke-dasharray="144 289" stroke-dashoffset="0"/>
-              <!-- Shipped Segment (Coral #C4623C) -->
-              <circle cx="60" cy="60" r="46" fill="none" stroke="#C4623C" stroke-width="14"
-                stroke-dasharray="65 289" stroke-dashoffset="-144"/>
-              <!-- Processing Segment (Peach #E89E88) -->
-              <circle cx="60" cy="60" r="46" fill="none" stroke="#E89E88" stroke-width="14"
-                stroke-dasharray="45 289" stroke-dashoffset="-209"/>
-              <!-- Pending Segment (Gold #D9B36C) -->
-              <circle cx="60" cy="60" r="46" fill="none" stroke="#D9B36C" stroke-width="14"
-                stroke-dasharray="35 289" stroke-dashoffset="-254"/>
-            </svg>
+          <div class="donut-wrap" :style="{ background: statusBackground }">
             <div class="donut-center-text">
-              <strong class="donut-total">320</strong>
+              <strong class="donut-total">{{ formatCurrency(metrics?.total_orders) }}</strong>
               <span class="donut-label">Total Orders</span>
             </div>
           </div>
-
-          <!-- Status Legend matching mockup -->
-          <div class="donut-legend-col">
-            <div class="legend-row">
-              <span class="dot-color" style="background-color: #D9B36C;"></span>
-              <span class="legend-name">Pending</span>
-              <strong class="legend-val">48</strong>
-            </div>
-            <div class="legend-row">
-              <span class="dot-color" style="background-color: #E89E88;"></span>
-              <span class="legend-name">Processing</span>
-              <strong class="legend-val">72</strong>
-            </div>
-            <div class="legend-row">
-              <span class="dot-color" style="background-color: #C4623C;"></span>
-              <span class="legend-name">Shipped</span>
-              <strong class="legend-val">120</strong>
-            </div>
-            <div class="legend-row">
-              <span class="dot-color" style="background-color: #84261B;"></span>
-              <span class="legend-name">Delivered</span>
-              <strong class="legend-val">320</strong>
-            </div>
-            <div class="legend-row">
-              <span class="dot-color" style="background-color: #A89D95;"></span>
-              <span class="legend-name">Cancelled</span>
-              <strong class="legend-val">12</strong>
+          <div v-if="statusSegments.length" class="donut-legend-col">
+            <div v-for="segment in statusSegments" :key="segment.state" class="legend-row">
+              <span class="dot-color" :style="{ backgroundColor: segment.color }"></span>
+              <span class="legend-name">{{ segment.state }}</span>
+              <strong class="legend-val">{{ segment.count }}</strong>
             </div>
           </div>
+          <p v-else-if="metrics" class="dashboard-empty">No orders yet.</p>
         </div>
       </div>
     </div>
@@ -382,6 +227,7 @@ function formatCurrency(val) {
               </tr>
             </thead>
             <tbody>
+              <tr v-if="metrics && !recentOrders.length"><td colspan="6">No orders yet.</td></tr>
               <tr v-for="order in recentOrders" :key="order.order_number || order.id">
                 <td>
                   <span class="order-hash-id">#{{ order.order_number }}</span>
@@ -391,8 +237,8 @@ function formatCurrency(val) {
                 </td>
                 <td>
                   <div class="mini-thumbs-stack">
-                    <img src="/images/prod-sk2.jpg" alt="Item" class="table-item-micro" />
-                    <img src="/images/prod-ordinary.jpg" alt="Item" class="table-item-micro" />
+                    <img v-for="item in (order.items || []).filter(item => item.image_url).slice(0, 2)" :key="item.id"
+                      :src="item.image_url" :alt="item.product_name" class="table-item-micro" />
                   </div>
                 </td>
                 <td>
@@ -424,21 +270,22 @@ function formatCurrency(val) {
                 <th>#</th>
                 <th>Product</th>
                 <th>Sold</th>
-                <th>Revenue</th>
+                <th>Item sales</th>
               </tr>
             </thead>
             <tbody>
-              <tr v-for="prod in topProducts" :key="prod.rank">
-                <td>{{ prod.rank }}</td>
+              <tr v-if="metrics && !topProducts.length"><td colspan="4">No paid product sales yet.</td></tr>
+              <tr v-for="(prod, index) in topProducts" :key="prod.id">
+                <td>{{ index + 1 }}</td>
                 <td>
                   <div class="product-cell-flex">
-                    <img :src="prod.img" :alt="prod.name" class="table-item-micro" />
+                    <img :src="prod.image_url" :alt="prod.name" class="table-item-micro" />
                     <span class="prod-name-text">{{ prod.name }}</span>
                   </div>
                 </td>
                 <td>{{ prod.sold }}</td>
                 <td>
-                  <strong>${{ Number(prod.revenue).toLocaleString() }}</strong>
+                  <strong>${{ formatCurrency(prod.sales) }}</strong>
                 </td>
               </tr>
             </tbody>
@@ -479,17 +326,18 @@ function formatCurrency(val) {
       </div>
 
       <div class="low-stock-list">
+        <p v-if="metrics && !lowStockProducts.length" class="dashboard-empty">No low-stock products.</p>
         <div
           v-for="item in lowStockProducts"
           :key="item.id"
           class="low-stock-row"
         >
-          <img :src="item.img" :alt="item.name" class="stock-item-thumb" />
+          <img :src="item.image_url" :alt="item.name" class="stock-item-thumb" />
           <div class="stock-item-meta">
             <strong>{{ item.name }}</strong>
             <span class="stock-left-sub">{{ item.stock }} left</span>
           </div>
-          <span class="badge" :class="item.class">{{ item.status }}</span>
+          <span class="badge badge-amber">Low stock</span>
         </div>
       </div>
     </div>
@@ -502,16 +350,17 @@ function formatCurrency(val) {
       </div>
 
       <div class="returns-items-list">
+        <p v-if="metrics && !recentReturns.length" class="dashboard-empty">No returns yet.</p>
         <div
           v-for="ret in recentReturns"
-          :key="ret.id"
+          :key="ret.request_number"
           class="return-item-row"
         >
           <div class="return-id-reason">
-            <strong class="return-hash">{{ ret.id }}</strong>
+            <strong class="return-hash">{{ ret.request_number }}</strong>
             <span class="return-reason-text">{{ ret.reason }}</span>
           </div>
-          <span class="badge" :class="ret.class">{{ ret.status }}</span>
+          <StatusBadge :status="ret.status" />
         </div>
       </div>
     </div>
@@ -551,18 +400,19 @@ function formatCurrency(val) {
 /* 2-Column Split Layout matching mockup */
 .dashboard-split-layout {
   display: grid;
-  grid-template-columns: 1fr 310px;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 310px);
   gap: 1.5rem;
   align-items: flex-start;
 }
 
-@media (max-width: 1250px) {
+@media (max-width: 1200px) {
   .dashboard-split-layout {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
   }
 }
 
 .dashboard-main-col {
+  container-type: inline-size;
   display: flex;
   flex-direction: column;
   gap: 1.5rem;
@@ -693,19 +543,19 @@ function formatCurrency(val) {
 /* KPI Metrics */
 .kpi-metrics-row {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 1.25rem;
 }
 
-@media (max-width: 900px) {
+@container (max-width: 780px) {
   .kpi-metrics-row {
-    grid-template-columns: repeat(2, 1fr);
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 
-@media (max-width: 550px) {
+@container (max-width: 400px) {
   .kpi-metrics-row {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
   }
 }
 
@@ -780,13 +630,13 @@ function formatCurrency(val) {
 /* Mid Section: Chart + Donut */
 .dashboard-mid-grid {
   display: grid;
-  grid-template-columns: 1.4fr 1fr;
+  grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr);
   gap: 1.25rem;
 }
 
-@media (max-width: 900px) {
+@container (max-width: 760px) {
   .dashboard-mid-grid {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
   }
 }
 
@@ -863,7 +713,7 @@ function formatCurrency(val) {
   display: flex;
   align-items: center;
   gap: 1rem;
-  height: 180px;
+  min-height: 180px;
 }
 
 .donut-wrap {
@@ -973,14 +823,47 @@ function formatCurrency(val) {
 /* Bottom Grid: Recent Orders + Top Products */
 .dashboard-bottom-grid {
   display: grid;
-  grid-template-columns: 1.45fr 1fr;
+  grid-template-columns: minmax(0, 1.45fr) minmax(0, 1fr);
   gap: 1.25rem;
 }
 
-@media (max-width: 900px) {
+@container (max-width: 910px) {
   .dashboard-bottom-grid {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
   }
+}
+
+.dashboard-bottom-grid > .card {
+  min-width: 0;
+}
+.dashboard-bottom-grid .table-container {
+  overflow-x: auto;
+}
+.chart-period, .dashboard-empty {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+.chart-drawing-area {
+  min-width: 0;
+}
+.chart-x-axis {
+  gap: 0.25rem;
+  flex-wrap: wrap;
+}
+.donut-wrap {
+  border-radius: 50%;
+  aspect-ratio: 1;
+}
+.donut-wrap .donut-center-text {
+  inset: 12%;
+  border-radius: 50%;
+  background: #fff;
+}
+.donut-and-legend {
+  flex-wrap: wrap;
+}
+.legend-name {
+  text-transform: capitalize;
 }
 
 .order-hash-id {

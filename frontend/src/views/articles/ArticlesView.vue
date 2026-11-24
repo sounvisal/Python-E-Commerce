@@ -80,9 +80,8 @@
       <div class="journal-layout-grid">
         <!-- Left: Articles Grid & Pagination -->
         <div class="articles-content-col">
-          <div v-if="loading" class="journal-loading-state">
-            <div class="spinner"></div>
-            <p>Loading curated skincare stories...</p>
+          <div v-if="loading" class="articles-cards-grid">
+            <ArticleCardSkeleton v-for="n in 6" :key="n" />
           </div>
 
           <div v-else-if="articles.length === 0" class="journal-empty-state">
@@ -239,6 +238,7 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import { Search, X, SlidersHorizontal, BookOpen, Mail } from 'lucide-vue-next'
+import ArticleCardSkeleton from '@/components/common/ArticleCardSkeleton.vue'
 
 const articles = ref([])
 const popularArticles = ref([])

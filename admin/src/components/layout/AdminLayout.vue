@@ -61,7 +61,8 @@ watch(() => route.path, () => {
 .admin-shell {
   display: flex;
   min-height: 100vh;
-  width: 100vw;
+  width: 100%;
+  max-width: 100vw;
   background-color: var(--bg-app);
   overflow-x: hidden;
 }
@@ -71,6 +72,7 @@ watch(() => route.path, () => {
   display: flex;
   flex-direction: column;
   min-width: 0;
+  max-width: 100%;
   height: 100vh;
   overflow: hidden;
 }
@@ -78,6 +80,10 @@ watch(() => route.path, () => {
 .admin-content {
   flex: 1;
   overflow-y: auto;
+  overflow-x: hidden;
+  max-width: 100%;
+  min-width: 0;
+  width: 100%;
   padding: 2rem;
   background-color: var(--bg-app);
 }

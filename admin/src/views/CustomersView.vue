@@ -1,6 +1,9 @@
 <script setup>
 import { ref, computed, reactive, onMounted, watch } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
+import apiClient from '@/api/client'
+import ProfileAvatar from '@/components/common/ProfileAvatar.vue'
+import StatusBadge from '@/components/common/StatusBadge.vue'
 import { useAdminStore } from '@/stores/admin'
 import {
   Search,
@@ -38,29 +41,10 @@ import {
 
 const adminStore = useAdminStore()
 const router = useRouter()
+const route = useRoute()
 
 function sendConciergeEmail(email) {
   adminStore.addToast(`Concierge message dispatched to ${email || activeCustomer.value?.email}`, 'success')
-}
-
-function addPatronNote() {
-  const note = prompt('Enter private consultation note for patron:')
-  if (note?.trim()) {
-    adminStore.addToast('Patron consultation note saved to customer profile', 'success')
-  }
-}
-
-function sendPasswordReset(email) {
-  adminStore.addToast(`Password recovery link dispatched to ${email || activeCustomer.value?.email}`, 'info')
-}
-
-function createOrderForCustomer() {
-  router.push('/orders')
-  adminStore.addToast('Redirected to Orders Management', 'info')
-}
-
-function editCustomerDetails() {
-  adminStore.addToast(`Customer details for ${activeCustomer.value?.name || 'patron'} are up to date`, 'info')
 }
 
 // View Modes: 'list' | 'vip'
@@ -81,9 +65,6 @@ const itemsPerPage = ref(10)
 const selectedCustomerIds = ref([])
 const selectAll = ref(false)
 
-// Active tab in VIP detail view
-const activeVipTab = ref('overview')
-
 // Add Customer modal
 const showAddModal = ref(false)
 const newCustomerForm = reactive({
@@ -100,6 +81,12 @@ async function loadCustomers() {
     limit: itemsPerPage.value,
     offset: (currentPage.value - 1) * itemsPerPage.value
   }
+  if (activeTab.value && activeTab.value !== 'all') {
+    params.tab = activeTab.value
+  }
+  if (selectedGroup.value && selectedGroup.value !== 'All Groups') {
+    params.group = selectedGroup.value
+  }
   if (searchQuery.value && searchQuery.value.trim()) {
     params.q = searchQuery.value.trim()
   }
@@ -107,7 +94,18 @@ async function loadCustomers() {
 }
 
 onMounted(async () => {
+  if (route.query.q) {
+    searchQuery.value = String(route.query.q)
+  }
   await loadCustomers()
+})
+
+watch(() => route.query.q, (newQ) => {
+  if (newQ !== undefined && newQ !== searchQuery.value) {
+    searchQuery.value = String(newQ || '')
+    currentPage.value = 1
+    loadCustomers()
+  }
 })
 
 let searchDebounce = null
@@ -119,22 +117,9 @@ watch(searchQuery, () => {
   }, 300)
 })
 
-watch(currentPage, () => {
+watch([currentPage, activeTab, selectedGroup, selectedStatus], () => {
   loadCustomers()
 })
-
-// Avatar mapping
-const getAvatar = (name) => {
-  const hash = (name || '').charCodeAt(0) % 5
-  const avatars = [
-    '/images/avatar-sreynich.jpg',
-    '/images/avatar-super-admin.jpg',
-    '/images/avatar-sreynich.jpg',
-    '/images/avatar-super-admin.jpg',
-    '/images/avatar-sreynich.jpg'
-  ]
-  return avatars[hash] || '/images/avatar-sreynich.jpg'
-}
 
 // 4 Top KPIs computed dynamically from real clientele records
 const customerKpis = computed(() => {
@@ -182,214 +167,58 @@ const customerKpis = computed(() => {
   ]
 })
 
-// Customer directory mock fallback data to match Luméa Customer Management Dashboard.png
-const directoryData = ref([
-  {
-    id: 1,
-    name: 'Sokha Meas',
-    email: 'sokha.meas@gmail.com',
-    phone: '+855 12 345 678',
-    country: 'Cambodia',
-    country_code: 'KH',
-    orders_count: 12,
-    total_spent: 248.50,
-    group: 'VIP',
-    status: 'Active',
-    created_at: 'Mar 10, 2024'
-  },
-  {
-    id: 2,
-    name: 'Dara Kim',
-    email: 'dara.kim@gmail.com',
-    phone: '+855 98 765 432',
-    country: 'Cambodia',
-    country_code: 'KH',
-    orders_count: 5,
-    total_spent: 98.00,
-    group: 'Regular',
-    status: 'Active',
-    created_at: 'Apr 22, 2024'
-  },
-  {
-    id: 3,
-    name: 'Chanthy Norn',
-    email: 'chanthy.norn@gmail.com',
-    phone: '+855 16 234 567',
-    country: 'Cambodia',
-    country_code: 'KH',
-    orders_count: 18,
-    total_spent: 412.00,
-    group: 'VIP',
-    status: 'Active',
-    created_at: 'Jan 5, 2024'
-  },
-  {
-    id: 4,
-    name: 'Visal Chhum',
-    email: 'visal.chhum@gmail.com',
-    phone: '+855 70 123 456',
-    country: 'Cambodia',
-    country_code: 'KH',
-    orders_count: 3,
-    total_spent: 56.00,
-    group: 'Regular',
-    status: 'Active',
-    created_at: 'Jun 18, 2024'
-  },
-  {
-    id: 5,
-    name: 'Sreypov Tep',
-    email: 'sreypov.tep@gmail.com',
-    phone: '+855 11 987 654',
-    country: 'Cambodia',
-    country_code: 'KH',
-    orders_count: 8,
-    total_spent: 189.00,
-    group: 'Gold',
-    status: 'Active',
-    created_at: 'Feb 14, 2024'
-  },
-  {
-    id: 6,
-    name: 'Leap Meng',
-    email: 'leap.meng@gmail.com',
-    phone: '+855 93 456 789',
-    country: 'Cambodia',
-    country_code: 'KH',
-    orders_count: 2,
-    total_spent: 32.00,
-    group: 'Regular',
-    status: 'Inactive',
-    created_at: 'Aug 1, 2024'
-  },
-  {
-    id: 7,
-    name: 'Takakvitya Tey',
-    email: 'takakvitya.tey@gmail.com',
-    phone: '+855 81 222 333',
-    country: 'Cambodia',
-    country_code: 'KH',
-    orders_count: 10,
-    total_spent: 276.00,
-    group: 'Gold',
-    status: 'Active',
-    created_at: 'Mar 28, 2024'
-  },
-  {
-    id: 8,
-    name: 'Put Sokchan',
-    email: 'put.sokchan@gmail.com',
-    phone: '+855 17 444 555',
-    country: 'Cambodia',
-    country_code: 'KH',
-    orders_count: 1,
-    total_spent: 24.00,
-    group: 'Regular',
-    status: 'Active',
-    created_at: 'Aug 15, 2024'
-  },
-  {
-    id: 9,
-    name: 'Keat Pichudom',
-    email: 'keat.pichudom@gmail.com',
-    phone: '+855 69 888 999',
-    country: 'Cambodia',
-    country_code: 'KH',
-    orders_count: 7,
-    total_spent: 156.00,
-    group: 'Regular',
-    status: 'Active',
-    created_at: 'May 3, 2024'
-  },
-  {
-    id: 10,
-    name: 'Rathana Sor',
-    email: 'rathana.sor@gmail.com',
-    phone: '+855 77 111 222',
-    country: 'Cambodia',
-    country_code: 'KH',
-    orders_count: 4,
-    total_spent: 89.00,
-    group: 'Regular',
-    status: 'Inactive',
-    created_at: 'Jul 19, 2024'
+
+function formatCustomer(user) {
+  const totalSpent = Number(user.total_spent ?? 0)
+  const ordersCount = Number(user.orders_count ?? 0)
+  const tier = user.tier?.toLowerCase()
+  let group = 'Regular'
+  if (tier?.includes('gold') || totalSpent >= 200 || ordersCount >= 5) {
+    group = 'Gold'
+  } else if (tier?.includes('radiant') || totalSpent >= 100 || ordersCount >= 3) {
+    group = 'VIP'
+  } else if (ordersCount <= 1) {
+    group = 'New'
   }
-])
-
-// Render actual API customers and preserve zero spend
-const combinedCustomers = computed(() => {
-  const dbUsers = adminStore.customers || []
-  if (dbUsers.length > 0) {
-    return dbUsers.map(u => {
-      const match = directoryData.value.find(c => c.email === u.email)
-      const totalSpent = typeof u.total_spent === 'number' ? u.total_spent : Number(u.total_spent ?? 0)
-      const ordersCount = typeof u.orders_count === 'number' ? u.orders_count : Number(u.orders_count ?? 0)
-      
-      let group = 'Regular'
-      if (u.tier?.toLowerCase().includes('gold') || totalSpent >= 200 || ordersCount >= 5) {
-        group = 'Gold'
-      } else if (u.tier?.toLowerCase().includes('radiant') || totalSpent >= 100 || ordersCount >= 3) {
-        group = 'VIP'
-      } else if (ordersCount <= 1) {
-        group = 'New'
-      }
-
-      const status = ordersCount > 0 ? 'Active' : 'New'
-
-      return {
-        id: u.id,
-        name: u.name || match?.name || 'Valued Patron',
-        email: u.email,
-        phone: u.phone || match?.phone || 'N/A',
-        country: 'Cambodia',
-        country_code: 'KH',
-        orders_count: ordersCount,
-        total_spent: totalSpent,
-        group: match?.group || group,
-        status: match?.status || status,
-        created_at: u.created_at ? new Date(u.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : (match?.created_at || 'Recently')
-      }
-    })
+  return {
+    id: user.id,
+    name: user.name || 'Valued Patron',
+    email: user.email,
+    phone: user.phone || 'N/A',
+    avatar: user.avatar,
+    tier: user.tier || 'Member',
+    reward_points: user.reward_points ?? 0,
+    addresses: user.addresses || [],
+    recent_orders: user.recent_orders || [],
+    country: 'Cambodia',
+    country_code: 'KH',
+    orders_count: ordersCount,
+    total_spent: totalSpent,
+    group,
+    status: ordersCount > 0 ? 'Active' : 'New',
+    created_at: user.created_at ? new Date(user.created_at).toLocaleDateString('en-US', {
+      month: 'short', day: 'numeric', year: 'numeric'
+    }) : 'Recently'
   }
-  return directoryData.value
+}
+
+const combinedCustomers = computed(() => (adminStore.customers || []).map(formatCustomer))
+
+// Tab counts describe the complete database metrics
+const tabCounts = computed(() => adminStore.customersMeta?.tab_counts || {
+  all: adminStore.customersMeta?.total ?? combinedCustomers.value.length,
+  new: combinedCustomers.value.filter(c => c.orders_count <= 2).length,
+  vip: combinedCustomers.value.filter(c => c.group === 'VIP' || c.group === 'Gold').length,
+  inactive: combinedCustomers.value.filter(c => c.status === 'Inactive').length,
 })
 
-const allCount = computed(() => combinedCustomers.value.length)
-const newCount = computed(() => combinedCustomers.value.filter(c => c.orders_count <= 2).length)
-const vipCount = computed(() => combinedCustomers.value.filter(c => c.group === 'VIP' || c.group === 'Gold').length)
-const inactiveCount = computed(() => combinedCustomers.value.filter(c => c.status === 'Inactive').length)
+const allCount = computed(() => tabCounts.value.all)
+const newCount = computed(() => tabCounts.value.new)
+const vipCount = computed(() => tabCounts.value.vip)
+const inactiveCount = computed(() => tabCounts.value.inactive)
 
-// Filtered customers
-const filteredCustomers = computed(() => {
-  let list = [...combinedCustomers.value]
-
-  if (activeTab.value === 'new') {
-    list = list.filter(c => c.orders_count <= 2)
-  } else if (activeTab.value === 'vip') {
-    list = list.filter(c => c.group === 'VIP' || c.group === 'Gold')
-  } else if (activeTab.value === 'inactive') {
-    list = list.filter(c => c.status === 'Inactive')
-  }
-
-  if (searchQuery.value) {
-    const q = searchQuery.value.toLowerCase()
-    list = list.filter(c =>
-      c.name.toLowerCase().includes(q) ||
-      c.email.toLowerCase().includes(q) ||
-      c.phone.includes(q)
-    )
-  }
-
-  if (selectedGroup.value !== 'All Groups') {
-    list = list.filter(c => c.group === selectedGroup.value)
-  }
-
-  if (selectedStatus.value !== 'All') {
-    list = list.filter(c => c.status === selectedStatus.value)
-  }
-
-  return list
-})
+// Filtered customers matches the server-filtered results
+const filteredCustomers = computed(() => combinedCustomers.value)
 
 const totalCustomersCount = computed(() => {
   if (adminStore.customersTotal) {
@@ -457,20 +286,44 @@ const getGroupBadgeClass = (group) => {
   return 'badge-regular'
 }
 
-// Open VIP Details view
-const viewCustomerVip = (customer) => {
-  activeCustomer.value = customer
-  activeVipTab.value = 'overview'
-  currentView.value = 'vip'
+function viewCustomerVip(customer) {
+  router.push({ name: 'customers', query: { customerId: customer.id } })
 }
 
-// Marketing preferences state for the VIP customer
-const marketingPrefs = reactive({
-  email: true,
-  sms: true,
-  promos: true,
-  updates: false
-})
+function backToCustomers() {
+  currentView.value = 'list'
+  if (route.query.customerId) router.replace({ name: 'customers' })
+}
+
+watch(() => route.query.customerId, async (id, _, onCleanup) => {
+  if (!id) {
+    currentView.value = 'list'
+    return
+  }
+  const request = new AbortController()
+  onCleanup(() => request.abort())
+  try {
+    const { data } = await apiClient.get('/admin/customers', {
+      params: { customer_id: id, limit: 1 },
+      signal: request.signal,
+    })
+    if (request.signal.aborted) return
+    const customer = data.data?.[0]
+    if (!customer || String(customer.id) !== String(id)) {
+      adminStore.addToast('Customer profile could not be found.', 'warning')
+      backToCustomers()
+      return
+    }
+    activeCustomer.value = formatCustomer(customer)
+    currentView.value = 'vip'
+  } catch {
+    if (!request.signal.aborted) {
+      adminStore.addToast('Unable to load the customer profile.', 'error')
+      backToCustomers()
+    }
+  }
+}, { immediate: true })
+
 </script>
 
 <template>
@@ -659,11 +512,7 @@ const marketingPrefs = reactive({
               </td>
               <td>
                 <div class="customer-cell" @click="viewCustomerVip(cust)">
-                  <img
-                    :src="getAvatar(cust.name)"
-                    alt="Customer Avatar"
-                    class="cust-avatar-img"
-                  />
+                  <ProfileAvatar :src="cust.avatar" :name="cust.name" class="cust-avatar-img" />
                   <div class="cust-info-wrap">
                     <strong class="cust-name-txt">{{ cust.name }}</strong>
                     <span class="cust-email-txt">{{ cust.email }}</span>
@@ -784,7 +633,7 @@ const marketingPrefs = reactive({
         <div class="vip-top-nav-card">
           <div class="nav-left">
             <div class="editor-breadcrumb">
-              <button class="btn-back-link" @click="currentView = 'list'">
+              <button class="btn-back-link" @click="backToCustomers">
                 <ArrowLeft :size="13" /> Customers
               </button>
               <span class="crumb-sep">/</span>
@@ -792,45 +641,29 @@ const marketingPrefs = reactive({
             </div>
             <div class="vip-title-row">
               <h1 class="vip-name-heading">{{ activeCustomer.name }}</h1>
-              <span class="group-pill badge-vip">VIP</span>
+              <span class="group-pill" :class="getGroupBadgeClass(activeCustomer.group)">{{ activeCustomer.group }}</span>
             </div>
-            <p class="vip-sub-date">Customer since {{ activeCustomer.created_at || 'Mar 10, 2024' }}</p>
+            <p class="vip-sub-date">Member since {{ activeCustomer.created_at }}</p>
           </div>
 
-          <div class="nav-right-actions">
-            <button class="btn-vip-action" @click="sendConciergeEmail(activeCustomer.email)">
-              <Mail :size="14" />
-              <span>Send Email</span>
-            </button>
-            <button class="btn-vip-action" @click="editCustomerDetails">
-              <Edit2 :size="14" />
-              <span>Edit Customer</span>
-            </button>
-          </div>
         </div>
 
         <!-- VIP Showcase Hero Banner matching mockup -->
         <div class="vip-hero-banner">
           <div class="vip-profile-summary">
-            <img
-              :src="getAvatar(activeCustomer.name)"
-              alt="VIP Customer"
-              class="vip-large-avatar"
-            />
+            <ProfileAvatar :src="activeCustomer.avatar" :name="activeCustomer.name" class="vip-large-avatar" />
             <div class="vip-meta-texts">
               <div class="name-status-flex">
                 <strong class="vip-person-name">{{ activeCustomer.name }}</strong>
-                <span class="status-pill badge-active">Active</span>
+                <span class="status-pill" :class="activeCustomer.status === 'Active' ? 'badge-active' : 'badge-new'">{{ activeCustomer.status }}</span>
               </div>
               <div class="crown-badge-row">
                 <Crown :size="13" class="crown-icon" />
-                <span class="crown-txt">VIP Customer</span>
+                <span class="crown-txt">{{ activeCustomer.tier }}</span>
               </div>
               <div class="vip-contact-lines">
                 <span>{{ activeCustomer.email }}</span>
                 <span>{{ activeCustomer.phone }}</span>
-                <span>Phnom Penh, Cambodia</span>
-                <span>Joined on {{ activeCustomer.created_at || 'Mar 10, 2024' }}</span>
               </div>
             </div>
           </div>
@@ -861,326 +694,41 @@ const marketingPrefs = reactive({
             <div class="vip-stat-box">
               <Star :size="18" class="stat-ico text-amber" />
               <div class="stat-nums">
-                <strong>{{ (activeCustomer.orders_count ?? 0) > 0 ? '4.8' : 'N/A' }}</strong>
-                <span>Avg. Rating</span>
+                <strong>{{ activeCustomer.reward_points }}</strong>
+                <span>Reward Points</span>
               </div>
             </div>
           </div>
         </div>
 
-        <!-- VIP Navigation Tabs -->
-        <div class="editor-nav-tabs">
-          <button
-            class="editor-tab"
-            :class="{ active: activeVipTab === 'overview' }"
-            @click="activeVipTab = 'overview'"
-          >
-            Overview
-          </button>
-          <button
-            class="editor-tab"
-            :class="{ active: activeVipTab === 'orders' }"
-            @click="activeVipTab = 'orders'"
-          >
-            Orders ({{ activeCustomer.orders_count ?? 0 }})
-          </button>
-          <button
-            class="editor-tab"
-            :class="{ active: activeVipTab === 'addresses' }"
-            @click="activeVipTab = 'addresses'"
-          >
-            Addresses (3)
-          </button>
-          <button
-            class="editor-tab"
-            :class="{ active: activeVipTab === 'payments' }"
-            @click="activeVipTab = 'payments'"
-          >
-            Payment Methods (2)
-          </button>
-          <button
-            class="editor-tab"
-            :class="{ active: activeVipTab === 'wishlist' }"
-            @click="activeVipTab = 'wishlist'"
-          >
-            Wishlist (8)
-          </button>
-          <button
-            class="editor-tab"
-            :class="{ active: activeVipTab === 'reviews' }"
-            @click="activeVipTab = 'reviews'"
-          >
-            Reviews (4)
-          </button>
-          <button
-            class="editor-tab"
-            :class="{ active: activeVipTab === 'activity' }"
-            @click="activeVipTab = 'activity'"
-          >
-            Activity Log
-          </button>
-        </div>
-
-        <!-- 2-Column VIP Dashboard Content -->
         <div class="vip-dashboard-grid">
-          <!-- Left Column -->
           <div class="vip-left-col">
-            <!-- 1. Personal Information -->
             <div class="card vip-panel-card">
-              <div class="card-header-row">
-                <h3 class="panel-card-title">Personal Information</h3>
-                <span class="btn-edit-text">Edit</span>
-              </div>
-              <div class="info-kv-grid">
-                <div class="kv-item">
-                  <span class="kv-lbl">Full Name</span>
-                  <strong class="kv-val">{{ activeCustomer.name }}</strong>
-                </div>
-                <div class="kv-item">
-                  <span class="kv-lbl">Email</span>
-                  <span class="kv-val">{{ activeCustomer.email }}</span>
-                </div>
-                <div class="kv-item">
-                  <span class="kv-lbl">Phone</span>
-                  <span class="kv-val">{{ activeCustomer.phone }}</span>
-                </div>
-                <div class="kv-item">
-                  <span class="kv-lbl">Date of Birth</span>
-                  <span class="kv-val">Apr 15, 1995</span>
-                </div>
-                <div class="kv-item">
-                  <span class="kv-lbl">Gender</span>
-                  <span class="kv-val">Female</span>
-                </div>
-                <div class="kv-item">
-                  <span class="kv-lbl">Language</span>
-                  <span class="kv-val">English</span>
-                </div>
-                <div class="kv-item full-width">
-                  <span class="kv-lbl">Notes</span>
-                  <p class="kv-desc">Loves Korean skincare products. Prefers gentle formulas for sensitive skin.</p>
-                </div>
-              </div>
-            </div>
-
-            <!-- 2. Customer Group -->
-            <div class="card vip-panel-card">
-              <div class="card-header-row">
-                <h3 class="panel-card-title">Customer Group</h3>
-                <span class="btn-edit-text">Edit</span>
-              </div>
-              <div class="group-info-row">
-                <div class="crown-badge-row">
-                  <Crown :size="15" class="crown-icon" />
-                  <strong>VIP</strong>
-                </div>
-                <p class="group-subtext">High-value customer with frequent purchases and strong atelier engagement.</p>
-              </div>
-              <div class="group-stats-row">
-                <div class="g-stat">
-                  <span>Member Since</span>
-                  <strong>Mar 10, 2024</strong>
-                </div>
-                <div class="g-stat">
-                  <span>Total Spent</span>
-                  <strong>${{ Number(activeCustomer.total_spent ?? 0).toFixed(2) }}</strong>
-                </div>
-                <div class="g-stat">
-                  <span>Total Orders</span>
-                  <strong>{{ activeCustomer.orders_count ?? 0 }}</strong>
-                </div>
-                <div class="g-stat">
-                  <span>Avg. Order Value</span>
-                  <strong>${{ (activeCustomer.orders_count ?? 0) > 0 ? (Number(activeCustomer.total_spent ?? 0) / activeCustomer.orders_count).toFixed(2) : '0.00' }}</strong>
-                </div>
-              </div>
-            </div>
-
-            <!-- 3. Addresses -->
-            <div class="card vip-panel-card">
-              <div class="card-header-row">
-                <h3 class="panel-card-title">Addresses</h3>
-                <span class="btn-edit-text">Add Address</span>
-              </div>
-              <div class="address-cards-stack">
-                <div class="addr-box">
-                  <span class="addr-tag default">Default</span>
-                  <p class="addr-body">#21, St. 271, Boeng Keng Kang 1, Chamkarmon, Phnom Penh 12301, Cambodia</p>
-                  <span class="addr-phone">+855 12 345 678</span>
-                </div>
-                <div class="addr-box">
-                  <span class="addr-tag office">Office</span>
-                  <p class="addr-body">#15, Norodom Blvd, Sangkat Tonle Bassac, Phnom Penh 120101, Cambodia</p>
-                  <span class="addr-phone">+855 12 345 678</span>
-                </div>
-              </div>
-            </div>
-
-            <!-- 4. Customer Tags -->
-            <div class="card vip-panel-card">
-              <div class="card-header-row">
-                <h3 class="panel-card-title">Customer Tags</h3>
-                <span class="btn-edit-text">Edit</span>
-              </div>
-              <div class="tags-pill-wrap">
-                <span class="tag-pill rose">VIP</span>
-                <span class="tag-pill peach">Repeat Customer</span>
-                <span class="tag-pill neutral">Sensitive Skin</span>
-                <span class="tag-pill neutral">Loves Korean Brands</span>
-                <button class="btn-add-tag">+ Add Tag</button>
-              </div>
-            </div>
-
-            <!-- 5. Marketing Preferences -->
-            <div class="card vip-panel-card">
-              <div class="card-header-row">
-                <h3 class="panel-card-title">Marketing Preferences</h3>
-                <span class="btn-edit-text">Edit</span>
-              </div>
-              <div class="prefs-grid">
-                <div class="pref-item">
-                  <button
-                    type="button"
-                    class="atelier-toggle-switch"
-                    :class="{ active: marketingPrefs.email }"
-                    @click="marketingPrefs.email = !marketingPrefs.email"
-                  >
-                    <span class="toggle-slider"></span>
-                  </button>
-                  <span>Email Notifications</span>
-                </div>
-
-                <div class="pref-item">
-                  <button
-                    type="button"
-                    class="atelier-toggle-switch"
-                    :class="{ active: marketingPrefs.sms }"
-                    @click="marketingPrefs.sms = !marketingPrefs.sms"
-                  >
-                    <span class="toggle-slider"></span>
-                  </button>
-                  <span>SMS Notifications</span>
-                </div>
-
-                <div class="pref-item">
-                  <button
-                    type="button"
-                    class="atelier-toggle-switch"
-                    :class="{ active: marketingPrefs.promos }"
-                    @click="marketingPrefs.promos = !marketingPrefs.promos"
-                  >
-                    <span class="toggle-slider"></span>
-                  </button>
-                  <span>Promotional Emails</span>
-                </div>
-
-                <div class="pref-item">
-                  <button
-                    type="button"
-                    class="atelier-toggle-switch"
-                    :class="{ active: marketingPrefs.updates }"
-                    @click="marketingPrefs.updates = !marketingPrefs.updates"
-                  >
-                    <span class="toggle-slider"></span>
-                  </button>
-                  <span>New Product Updates</span>
+              <h3 class="panel-card-title">Saved Addresses</h3>
+              <p v-if="!activeCustomer.addresses.length" class="text-muted">No saved addresses.</p>
+              <div v-else class="address-cards-stack">
+                <div v-for="(address, index) in activeCustomer.addresses" :key="index" class="addr-box">
+                  <span class="addr-tag" :class="{ default: address.isDefault }">
+                    {{ address.tag || address.name || (address.isDefault ? 'Default' : 'Delivery address') }}
+                  </span>
+                  <p class="addr-body">{{ [address.street, address.commune, address.district, address.city, address.postalCode, address.country].filter(Boolean).join(', ') }}</p>
+                  <span v-if="address.phone" class="addr-phone">{{ address.phone }}</span>
                 </div>
               </div>
             </div>
           </div>
-
-          <!-- Right Column -->
           <div class="vip-right-col">
-            <!-- 1. Quick Actions -->
             <div class="card vip-panel-card">
-              <h3 class="panel-card-title">Quick Actions</h3>
-              <div class="quick-actions-2x2">
-                <button class="qa-btn" @click="sendConciergeEmail(activeCustomer?.email)">
-                  <Mail :size="15" />
-                  <span>Send Email</span>
-                </button>
-                <button class="qa-btn" @click="addPatronNote">
-                  <FileText :size="15" />
-                  <span>Add Note</span>
-                </button>
-                <button class="qa-btn" @click="createOrderForCustomer">
-                  <ShoppingBag :size="15" />
-                  <span>Create Order</span>
-                </button>
-                <button class="qa-btn" @click="sendPasswordReset(activeCustomer?.email)">
-                  <Lock :size="15" />
-                  <span>Reset Password</span>
-                </button>
-              </div>
-            </div>
-
-            <!-- 2. Recent Orders -->
-            <div class="card vip-panel-card">
-              <div class="card-header-row">
-                <h3 class="panel-card-title">Recent Orders</h3>
-                <router-link to="/orders" class="view-all-link">View All</router-link>
-              </div>
-              <div v-if="(activeCustomer.orders_count ?? 0) === 0" class="empty-orders-note" style="padding: 1.5rem; text-align: center; color: var(--text-muted); font-size: 0.88rem;">
-                No orders placed by this customer yet.
-              </div>
-              <div v-else class="recent-orders-list">
-                <div class="cust-order-row">
+              <h3 class="panel-card-title">Recent Orders</h3>
+              <p v-if="!activeCustomer.recent_orders.length" class="text-muted">No orders yet.</p>
+              <div v-else class="cust-orders-list">
+                <div v-for="order in activeCustomer.recent_orders" :key="order.order_number" class="cust-order-row">
                   <div class="c-order-id">
-                    <strong>#LUM-001</strong>
-                    <span class="text-muted">Aug 31, 2025</span>
+                    <strong>#{{ order.order_number }}</strong>
+                    <span v-if="order.created_at" class="text-muted">{{ new Date(order.created_at).toLocaleDateString() }}</span>
                   </div>
-                  <span class="c-order-items">3 items</span>
-                  <strong class="c-order-total">$64.00</strong>
-                  <span class="status-pill badge-processing">Processing</span>
-                </div>
-                <div class="cust-order-row">
-                  <div class="c-order-id">
-                    <strong>#LUM-002</strong>
-                    <span class="text-muted">Aug 18, 2025</span>
-                  </div>
-                  <span class="c-order-items">1 item</span>
-                  <strong class="c-order-total">$28.00</strong>
-                  <span class="status-pill badge-delivered">Delivered</span>
-                </div>
-                <div class="cust-order-row">
-                  <div class="c-order-id">
-                    <strong>#LUM-003</strong>
-                    <span class="text-muted">Jul 22, 2025</span>
-                  </div>
-                  <span class="c-order-items">4 items</span>
-                  <strong class="c-order-total">$89.00</strong>
-                  <span class="status-pill badge-delivered">Delivered</span>
-                </div>
-              </div>
-            </div>
-
-            <!-- 3. Customer Activity Timeline -->
-            <div class="card vip-panel-card">
-              <div class="card-header-row">
-                <h3 class="panel-card-title">Customer Activity</h3>
-                <span class="view-all-link">View All</span>
-              </div>
-              <div class="activity-timeline-feed">
-                <div class="feed-item">
-                  <div class="feed-icon-pill rose"><ShoppingBag :size="13" /></div>
-                  <div class="feed-content">
-                    <span class="feed-title">Placed an order #LUM-001</span>
-                    <span class="feed-time">Aug 31, 2025, 10:24 AM</span>
-                  </div>
-                </div>
-                <div class="feed-item">
-                  <div class="feed-icon-pill neutral"><Eye :size="13" /></div>
-                  <div class="feed-content">
-                    <span class="feed-title">Viewed Anua Heartleaf 77% Soothing Toner</span>
-                    <span class="feed-time">Aug 30, 2025, 08:15 PM</span>
-                  </div>
-                </div>
-                <div class="feed-item">
-                  <div class="feed-icon-pill peach"><Star :size="13" /></div>
-                  <div class="feed-content">
-                    <span class="feed-title">Left a 5-star review on Centella Ampoule</span>
-                    <span class="feed-time">Aug 18, 2025, 11:12 AM</span>
-                  </div>
+                  <strong class="c-order-total">${{ Number(order.total).toFixed(2) }}</strong>
+                  <StatusBadge :status="order.status" />
                 </div>
               </div>
             </div>
@@ -2244,6 +1792,19 @@ const marketingPrefs = reactive({
   }
   .kpi-grid-4 {
     grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 640px) {
+  .kpi-grid-4 {
+    grid-template-columns: 1fr;
+  }
+  .filter-toolbar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .filter-dropdowns {
+    flex-wrap: wrap;
   }
 }
 </style>

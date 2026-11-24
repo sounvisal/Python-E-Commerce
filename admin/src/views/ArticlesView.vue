@@ -107,8 +107,9 @@ async function handleArticleImageUpload(e) {
     const res = await apiClient.post('/upload', formData, {
       headers: { 'Content-Type': 'multipart/form-data' }
     })
-    if (res.data?.status === 'success' && res.data.url) {
-      articleForm.featured_image = res.data.url
+    const uploadedUrl = res.data?.data?.url || res.data?.url
+    if (uploadedUrl) {
+      articleForm.featured_image = uploadedUrl
       adminStore.addToast('Featured image uploaded successfully!', 'success')
     }
   } catch (err) {

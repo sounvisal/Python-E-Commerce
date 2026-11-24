@@ -270,8 +270,13 @@
             </div>
           </div>
 
+          <!-- Loading Skeleton Grid -->
+          <div v-if="productStore.loading && paginatedProducts.length === 0" class="concerns-products-grid">
+            <ProductCardSkeleton v-for="n in 8" :key="n" />
+          </div>
+
           <!-- Product Grid: 4 Columns using standardized ProductCard matching HomeView -->
-          <div class="concerns-products-grid">
+          <div v-else class="concerns-products-grid">
             <div
               v-for="(product, idx) in paginatedProducts"
               :key="product.id"
@@ -388,6 +393,7 @@
 
 <script setup>
 import ProductCard from '@/components/ProductCard.vue'
+import ProductCardSkeleton from '@/components/common/ProductCardSkeleton.vue'
 import { useCartStore } from '@/stores/cart'
 import { useProductStore } from '@/stores/products'
 import { useWishlistStore } from '@/stores/wishlist'

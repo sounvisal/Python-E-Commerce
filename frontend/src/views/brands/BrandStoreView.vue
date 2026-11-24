@@ -143,7 +143,12 @@
         </router-link>
       </div>
 
-      <div class="bestsellers-cards-row">
+      <!-- Loading Skeleton for Bestsellers -->
+      <div v-if="productStore.loading && displayedBestsellers.length === 0" class="bestsellers-cards-row">
+        <ProductCardSkeleton v-for="n in 4" :key="n" />
+      </div>
+
+      <div v-else class="bestsellers-cards-row">
         <ProductCard
           v-for="product in displayedBestsellers"
           :key="product.id"
@@ -304,6 +309,7 @@ import {
 } from 'lucide-vue-next'
 import BrandLogo from '@/components/BrandLogo.vue'
 import ProductCard from '@/components/ProductCard.vue'
+import ProductCardSkeleton from '@/components/common/ProductCardSkeleton.vue'
 import { useProductStore, BRANDS_DIRECTORY } from '@/stores/products'
 import { useCartStore } from '@/stores/cart'
 

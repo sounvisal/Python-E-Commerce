@@ -281,8 +281,9 @@ const handleLogoUpload = async (e) => {
     const res = await apiClient.post('/upload', formData, {
       headers: { 'Content-Type': 'multipart/form-data' }
     })
-    if (res.data?.url) {
-      brandForm.logo_url = res.data.url
+    const uploadedUrl = res.data?.data?.url || res.data?.url
+    if (uploadedUrl) {
+      brandForm.logo_url = uploadedUrl
       adminStore.addToast('Brand logo uploaded successfully', 'success')
     }
   } catch (err) {
@@ -303,8 +304,9 @@ const handleBannerUpload = async (e) => {
     const res = await apiClient.post('/upload', formData, {
       headers: { 'Content-Type': 'multipart/form-data' }
     })
-    if (res.data?.url) {
-      brandForm.banner_url = res.data.url
+    const uploadedUrl = res.data?.data?.url || res.data?.url
+    if (uploadedUrl) {
+      brandForm.banner_url = uploadedUrl
       adminStore.addToast('Brand banner uploaded successfully', 'success')
     }
   } catch (err) {

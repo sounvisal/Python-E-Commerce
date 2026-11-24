@@ -228,9 +228,14 @@
             </div>
           </div>
 
+          <!-- Loading Skeleton Grid -->
+          <div v-if="productStore.loading && paginatedProducts.length === 0" class="search-four-grid">
+            <ProductCardSkeleton v-for="n in 8" :key="n" />
+          </div>
+
           <!-- 4-Column Product Grid -->
           <div
-            v-if="paginatedProducts.length > 0"
+            v-else-if="paginatedProducts.length > 0"
             :class="viewMode === 'list' ? 'search-list-container' : 'search-four-grid'"
           >
             <ProductCard
@@ -378,6 +383,7 @@ import {
 } from 'lucide-vue-next'
 import BrandLogo from '@/components/BrandLogo.vue'
 import ProductCard from '@/components/ProductCard.vue'
+import ProductCardSkeleton from '@/components/common/ProductCardSkeleton.vue'
 import { useProductStore, BRANDS_DIRECTORY } from '@/stores/products'
 import { useCartStore } from '@/stores/cart'
 

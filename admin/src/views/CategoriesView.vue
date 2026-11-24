@@ -152,8 +152,9 @@ const handleCategoryImageUpload = async (e) => {
     const res = await apiClient.post('/upload', formData, {
       headers: { 'Content-Type': 'multipart/form-data' }
     })
-    if (res.data?.url) {
-      categoryForm.image = res.data.url
+    const uploadedUrl = res.data?.data?.url || res.data?.url
+    if (uploadedUrl) {
+      categoryForm.image = uploadedUrl
       adminStore.addToast('Category image uploaded successfully', 'success')
     }
   } catch (err) {

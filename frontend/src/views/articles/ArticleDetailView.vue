@@ -1,6 +1,6 @@
 <template>
   <div class="lumea-article-detail-page">
-    <div v-if="loading" class="container article-page-container" role="status">Loading article…</div>
+    <ArticleDetailSkeleton v-if="loading" />
     <div v-else-if="!article" class="container article-page-container">
       <h1 class="article-main-title">{{ loadError }}</h1>
       <router-link to="/articles">Back to articles</router-link>
@@ -189,6 +189,7 @@
 <script setup>
 import { computed, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
+import ArticleDetailSkeleton from '@/components/common/ArticleDetailSkeleton.vue'
 import {
   Calendar,
   Clock,

@@ -140,8 +140,13 @@
             </button>
           </div>
 
+          <!-- Loading Skeleton Grid -->
+          <div v-if="productStore.loading && filteredBrands.length === 0" class="brands-six-grid">
+            <BrandCardSkeleton v-for="n in 12" :key="n" />
+          </div>
+
           <!-- 6-Column Rectangular Logo Grid matching Brand Listing.png -->
-          <div v-if="filteredBrands.length > 0" class="brands-six-grid">
+          <div v-else-if="filteredBrands.length > 0" class="brands-six-grid">
             <router-link
               v-for="brand in visibleBrands"
               :key="brand.id"
@@ -271,7 +276,10 @@ import {
   ArrowRight,
 } from 'lucide-vue-next'
 import BrandLogo from '@/components/BrandLogo.vue'
-import { BRANDS_DIRECTORY } from '@/stores/products'
+import BrandCardSkeleton from '@/components/common/BrandCardSkeleton.vue'
+import { BRANDS_DIRECTORY, useProductStore } from '@/stores/products'
+
+const productStore = useProductStore()
 
 const searchQuery = ref('')
 const selectedLetter = ref('ALL')

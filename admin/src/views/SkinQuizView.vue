@@ -258,26 +258,27 @@ function selectPreviewAnswer(questionId, option) {
   }
 }
 
+import { exportToCSV } from '@/utils/exporter'
+
 function exportQuizzesCSV() {
   const items = adminStore.quizzes
   if (!items || items.length === 0) return
-  const headers = ['ID', 'Title', 'Status', 'Questions', 'Completions', 'Completion Rate']
-  const rows = items.map(q => [
-    q.id,
-    `"${q.title}"`,
-    q.status,
-    q.questions_count,
-    q.completions,
-    `"${q.completion_rate}"`
+  const data = items.map(q => ({
+    id: q.id,
+    title: q.title,
+    status: q.status,
+    questions_count: q.questions_count,
+    completions: q.completions,
+    completion_rate: q.completion_rate
+  }))
+  exportToCSV('Lumea_Quizzes_Summary', data, [
+    { key: 'id', label: 'ID' },
+    { key: 'title', label: 'Quiz Title' },
+    { key: 'status', label: 'Status' },
+    { key: 'questions_count', label: 'Questions' },
+    { key: 'completions', label: 'Completions' },
+    { key: 'completion_rate', label: 'Completion Rate' }
   ])
-  const csvContent = 'data:text/csv;charset=utf-8,' + [headers.join(','), ...rows.map(e => e.join(','))].join('\n')
-  const encodedUri = encodeURI(csvContent)
-  const link = document.createElement('a')
-  link.setAttribute('href', encodedUri)
-  link.setAttribute('download', `lumea_quizzes_${Date.now()}.csv`)
-  document.body.appendChild(link)
-  link.click()
-  document.body.removeChild(link)
   adminStore.addToast('Quizzes exported (CSV)', 'success')
 }
 </script>

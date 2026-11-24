@@ -227,6 +227,10 @@
                   {{ displayShippingFee === 0 ? 'Free' : '$' + displayShippingFee.toFixed(2) }}
                 </span>
               </div>
+              <div v-if="order.discount && Number(order.discount) > 0" class="summary-line discount-line">
+                <span class="summary-label">Discount {{ (order.discountCode || order.discount_code) ? `(${order.discountCode || order.discount_code})` : '' }}</span>
+                <span class="summary-value discount-val">-${{ Number(order.discount).toFixed(2) }}</span>
+              </div>
               <div class="summary-line">
                 <span class="summary-label">Estimated Tax</span>
                 <span class="summary-value">$0.00</span>
@@ -402,8 +406,9 @@
       </div>
     </div>
   </div>
-  <section v-else class="container" role="status">
-    <p>{{ ordersStore.loading ? 'Loading order...' : (ordersStore.error || 'Order not found') }}</p>
+  <OrderDetailSkeleton v-else-if="ordersStore.loading" />
+  <section v-else class="container not-found-section" role="status">
+    <p>{{ ordersStore.error || 'Order not found' }}</p>
     <router-link to="/shop">Return to shop</router-link>
   </section>
 </template>
@@ -414,6 +419,7 @@ import { useRoute } from 'vue-router'
 import axios from 'axios'
 import { orderRequest } from '@/utils/orderAccess'
 import { useAuthStore } from '@/stores/auth'
+import OrderDetailSkeleton from '@/components/common/OrderDetailSkeleton.vue'
 import { useOrdersStore } from '@/stores/orders'
 import { useNotificationStore } from '@/stores/notification'
 import AccountSidebar from '@/components/account/AccountSidebar.vue'
@@ -1037,6 +1043,12 @@ function openReviewFor(item) {
 
 .free-text {
   color: #2E7D32;
+  font-weight: 600;
+}
+
+.discount-line,
+.discount-val {
+  color: #D32F2F !important;
   font-weight: 600;
 }
 

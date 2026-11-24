@@ -157,9 +157,8 @@
 
     <!-- Reviews Grid -->
     <section class="container reviews-grid-section">
-      <div v-if="loading" class="reviews-loading-state">
-        <div class="loading-spinner"></div>
-        <p>Loading community reviews...</p>
+      <div v-if="loading" class="reviews-masonry-grid">
+        <ReviewCardSkeleton v-for="n in 6" :key="n" />
       </div>
 
       <div v-else-if="filteredReviews.length === 0" class="reviews-empty-state">
@@ -275,6 +274,7 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import axios from 'axios'
+import ReviewCardSkeleton from '@/components/common/ReviewCardSkeleton.vue'
 import {
   Star,
   ShieldCheck,

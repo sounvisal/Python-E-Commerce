@@ -1,6 +1,7 @@
 <script setup>
 import apiClient from '@/api/client'
-import { ref, computed, reactive, onMounted } from 'vue'
+import { ref, computed, reactive, onMounted, watch } from 'vue'
+import { useRoute } from 'vue-router'
 import { useAdminStore } from '@/stores/admin'
 import { validateProduct } from '@/utils/validation'
 import ConfirmDialog from '@/components/common/ConfirmDialog.vue'
@@ -97,11 +98,23 @@ const productForm = reactive({
 const previewProduct = ref(null)
 const showPreviewModal = ref(false)
 
+const route = useRoute()
+
 onMounted(async () => {
+  if (route.query.q) {
+    searchQuery.value = String(route.query.q)
+  }
   await Promise.all([
     adminStore.fetchProducts(),
     adminStore.fetchCategories()
   ])
+})
+
+watch(() => route.query.q, (newQ) => {
+  if (newQ !== undefined) {
+    searchQuery.value = String(newQ || '')
+    currentPage.value = 1
+  }
 })
 
 // Brand options
@@ -1636,12 +1649,15 @@ const toggleSkinConcern = (concern) => {
   background: #FFFFFF;
   border: 1px solid #EFE7E0;
   border-radius: 14px;
-  overflow: hidden;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  max-width: 100%;
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.02);
 }
 
 .atelier-table {
   width: 100%;
+  min-width: 900px;
   border-collapse: collapse;
   font-size: 12.5px;
 }
@@ -2572,6 +2588,20 @@ const toggleSkinConcern = (concern) => {
 @media (max-width: 1100px) {
   .editor-grid-layout {
     grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 640px) {
+  .hero-banner-inner {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  .filter-toolbar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .filter-dropdowns {
+    flex-wrap: wrap;
   }
 }
 </style>

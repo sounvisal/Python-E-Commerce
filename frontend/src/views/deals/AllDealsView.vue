@@ -160,9 +160,14 @@
             </div>
           </div>
 
+          <!-- Loading Skeleton Grid -->
+          <div v-if="productStore.loading && filteredProducts.length === 0" class="deals-catalog-grid">
+            <ProductCardSkeleton v-for="n in 8" :key="n" />
+          </div>
+
           <!-- Product Grid using standardized ProductCard matching HomeView -->
           <div
-            v-if="filteredProducts.length > 0"
+            v-else-if="filteredProducts.length > 0"
             :class="viewMode === 'list' ? 'deals-list-container' : 'deals-catalog-grid'"
           >
             <ProductCard
@@ -279,6 +284,7 @@ import {
   List
 } from 'lucide-vue-next'
 import ProductCard from '@/components/ProductCard.vue'
+import ProductCardSkeleton from '@/components/common/ProductCardSkeleton.vue'
 
 const route = useRoute()
 const router = useRouter()

@@ -1,7 +1,10 @@
 /**
  * Luméa Atelier CSV Exporter Utility
  * Converts tabular dataset into downloadable UTF-8 CSV spreadsheet.
+ * Complies with OWASP CSV/Formula Injection prevention guidelines.
  */
+
+const FORMULA_PREFIXES = ['=', '+', '-', '@', '\t', '\r']
 
 export function exportToCSV(filename, rows, headers) {
   if (!rows || !rows.length) {
@@ -34,6 +37,14 @@ function escapeCSVField(val) {
   if (typeof val === 'object') {
     try { str = JSON.stringify(val) } catch { str = String(val) }
   }
+
+  // OWASP CSV / Formula Injection Mitigation:
+  // If user-controlled text starts with an executable spreadsheet operator (=, +, -, @, \t, \r),
+  // prepend a single quote (') so spreadsheet engines (Excel, Calc) treat it as pure literal text.
+  if (FORMULA_PREFIXES.some(prefix => str.startsWith(prefix))) {
+    str = `'${str}`
+  }
+
   str = str.replace(/"/g, '""')
   return `"${str}"`
 }

@@ -1,7 +1,10 @@
 <template>
   <div class="lumea-return-status-page">
-    <p v-if="loading" role="status">Loading return...</p>
-    <p v-else-if="loadError" role="alert">{{ loadError }}</p>
+    <ReturnStatusSkeleton v-if="loading" />
+    <div v-else-if="loadError" class="container status-container error-wrap" role="alert">
+      <p class="error-msg">{{ loadError }}</p>
+      <router-link to="/returns" class="btn-back">Back to Returns</router-link>
+    </div>
     <div v-else-if="returnData" class="container status-container">
       <!-- Breadcrumbs -->
       <nav class="status-breadcrumb" aria-label="Breadcrumb">
@@ -206,6 +209,7 @@
 import axios from 'axios'
 import { ref, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
+import ReturnStatusSkeleton from '@/components/common/ReturnStatusSkeleton.vue'
 import {
   Download,
   Check,

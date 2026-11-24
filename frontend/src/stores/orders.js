@@ -22,6 +22,7 @@ function mapOrder(o) {
     userId: o.user_id, orderNumber: o.order_number, placedAt: new Date(o.created_at).toLocaleString(),
     date: o.created_at, status: o.status, statusType: o.status.toLowerCase(), paymentStatus: o.payment_status,
     statusText: `${o.status} · ${o.payment_status}`, total: o.total, subtotal: o.subtotal, discount: o.discount,
+    discountCode: o.discount_code,
     shippingFee: calcShipping, tax: 0, rewardPointsEarned: o.payment_status === 'Paid' ? Math.floor(o.total) : 0,
     shippingCarrier: o.shipping_carrier || 'vet_express',
     deliveryMethod: carrierName,

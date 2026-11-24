@@ -4,6 +4,7 @@ import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { useAdminStore } from '@/stores/admin'
 import { getStorefrontUrl } from '@/utils/storefront'
+import ProfileAvatar from '@/components/common/ProfileAvatar.vue'
 import {
   Search,
   Bell,
@@ -33,13 +34,18 @@ const notifications = ref([
 ])
 
 function handleSearch() {
-  if (!searchQuery.value.trim()) return
-  const q = searchQuery.value.trim().toLowerCase()
-  // Navigate based on query prefix or default to products
-  if (q.startsWith('#lum-') || q.startsWith('lum-')) {
-    router.push({ path: '/orders', query: { q: searchQuery.value } })
+  const val = searchQuery.value.trim()
+  if (!val) return
+  const q = val.toLowerCase()
+  // Navigate intelligently based on query pattern
+  if (q.startsWith('#lum-') || q.startsWith('lum-') || (q.startsWith('#') && /\d/.test(q))) {
+    router.push({ path: '/orders', query: { q: val } })
+  } else if (q.includes('@') || q.startsWith('+855') || q.startsWith('cust-') || /^\d{8,11}$/.test(q)) {
+    router.push({ path: '/customers', query: { q: val } })
+  } else if (q.startsWith('rr-') || q.startsWith('rt-') || q.startsWith('#rr') || q.startsWith('#rt')) {
+    router.push({ path: '/returns', query: { q: val } })
   } else {
-    router.push({ path: '/products', query: { q: searchQuery.value } })
+    router.push({ path: '/products', query: { q: val } })
   }
 }
 
@@ -115,15 +121,10 @@ async function handleLogout() {
           class="admin-profile-chip"
           @click="showUserDropdown = !showUserDropdown; showNotifications = false"
         >
-          <img
-            src="/images/avatar-super-admin.jpg"
-            alt="Super Admin"
-            class="admin-avatar-img"
-            @error="$event.target.src = '/images/avatar-sreynich.jpg'"
-          />
+          <ProfileAvatar :src="authStore.user?.avatar" :name="authStore.user?.name" class="admin-avatar-img" />
           <div class="admin-meta-text">
-            <span class="admin-name">Admin</span>
-            <span class="admin-role">Super Admin</span>
+            <span class="admin-name">{{ authStore.user?.name || 'Admin' }}</span>
+            <span class="admin-role">Administrator</span>
           </div>
           <ChevronDown :size="14" class="chevron-arrow" />
         </button>
@@ -131,8 +132,8 @@ async function handleLogout() {
         <!-- Profile Popover Menu -->
         <div v-if="showUserDropdown" class="dropdown-popover profile-popover">
           <div class="user-popover-header">
-            <strong>Administrator</strong>
-            <span>admin@lumea.com</span>
+            <strong>{{ authStore.user?.name || 'Administrator' }}</strong>
+            <span>{{ authStore.user?.email }}</span>
           </div>
 
           <div class="popover-divider"></div>

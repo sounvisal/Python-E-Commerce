@@ -124,6 +124,24 @@
           </div>
         </div>
 
+        <!-- Financial Breakdown matching invoice -->
+        <div class="order-finance-breakdown">
+          <div class="finance-row">
+            <span>Subtotal</span>
+            <span>${{ Number(order.subtotal != null ? order.subtotal : order.total).toFixed(2) }}</span>
+          </div>
+          <div class="finance-row">
+            <span>Shipping Fee</span>
+            <span :class="{ 'free-shipping-badge': Number(order.shipping_fee || 0) === 0 }">
+              {{ Number(order.shipping_fee || 0) === 0 ? 'Free' : `$${Number(order.shipping_fee).toFixed(2)}` }}
+            </span>
+          </div>
+          <div v-if="order.discount && Number(order.discount) > 0" class="finance-row discount-row">
+            <span>Discount {{ order.discount_code ? `(${order.discount_code})` : '' }}</span>
+            <span class="discount-amount">-${{ Number(order.discount).toFixed(2) }}</span>
+          </div>
+        </div>
+
         <div class="order-total-bar">
           <span>Order Total</span>
           <span class="final-amount">${{ Number(order.total).toFixed(2) }}</span>
@@ -553,6 +571,37 @@ onMounted(async () => {
 .recap-price {
   font-weight: 600;
   font-size: 0.95rem;
+}
+
+.order-finance-breakdown {
+  margin-top: 1.25rem;
+  padding: 0.85rem 0;
+  border-top: 1px dashed #E5E7EB;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.finance-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 0.9rem;
+  color: #6B7280;
+}
+
+.finance-row.discount-row {
+  color: #D32F2F;
+}
+
+.free-shipping-badge {
+  color: #16A34A;
+  font-weight: 600;
+}
+
+.discount-amount {
+  font-weight: 600;
+  color: #D32F2F;
 }
 
 .order-total-bar {

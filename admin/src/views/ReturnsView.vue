@@ -121,6 +121,19 @@ const filteredReturns = computed(() => {
   return list
 })
 
+// Pagination
+const currentPage = ref(1)
+const itemsPerPage = ref(10)
+const totalPages = computed(() => Math.ceil(filteredReturns.value.length / itemsPerPage.value) || 1)
+const paginatedReturns = computed(() => {
+  const start = (currentPage.value - 1) * itemsPerPage.value
+  return filteredReturns.value.slice(start, start + itemsPerPage.value)
+})
+
+watch([activeTab, selectedStatusFilter, selectedReasonFilter, searchQuery], () => {
+  currentPage.value = 1
+})
+
 // Counts for Tabs
 const countAll = computed(() => returns.value.length)
 const countPending = computed(() => returns.value.filter(r => (r.status || '').toLowerCase() === 'under review').length)
@@ -130,14 +143,14 @@ const countRejected = computed(() => returns.value.filter(r => (r.status || '').
 
 // Multi-select
 const allSelected = computed(() => {
-  return filteredReturns.value.length > 0 && selectedReturns.value.length === filteredReturns.value.length
+  return paginatedReturns.value.length > 0 && selectedReturns.value.length === paginatedReturns.value.length
 })
 
 function toggleSelectAll() {
   if (allSelected.value) {
     selectedReturns.value = []
   } else {
-    selectedReturns.value = filteredReturns.value.map(r => r.id)
+    selectedReturns.value = paginatedReturns.value.map(r => r.id)
   }
 }
 
@@ -155,16 +168,31 @@ async function updateStatus(returnItem, newStatus) {
   activeDropdown.value = null
   isUpdating.value = true
   try {
+    const isRefundFinal = ['refunded', 'Refund Completed', 'refund completed'].includes(newStatus)
+    let refundRef = null
+    if (isRefundFinal) {
+      refundRef = prompt('Enter the completed manual refund reference (e.g. TXN-REFUND-001):')
+      if (!refundRef?.trim()) {
+        adminStore.addToast('Refund reference is required to complete refund.', 'warning')
+        isUpdating.value = false
+        return
+      }
+    }
     const res = await apiClient.patch(`/returns/${returnItem.id}/status`, {
       status: newStatus,
-      refund_reference: ['refunded', 'Refund Completed'].includes(newStatus) ? prompt('Enter the completed manual refund reference:') : null,
+      refund_reference: refundRef?.trim() || null,
       note: `Status updated to ${newStatus} from Atelier Console`
     })
-    if (res.data?.success) {
-      adminStore.addToast(`Return #${returnItem.request_number} updated to ${newStatus}`, 'success')
-      Object.assign(returnItem, res.data)
+    const updatedRecord = res.data?.data || res.data
+    if (updatedRecord && (updatedRecord.id || updatedRecord.status || res.status === 200)) {
+      adminStore.addToast(`Return #${returnItem.request_number || returnItem.id} updated to ${updatedRecord.status || newStatus}`, 'success')
+      Object.assign(returnItem, updatedRecord)
       if (inspectingReturn.value?.id === returnItem.id) {
-        Object.assign(inspectingReturn.value, res.data)
+        Object.assign(inspectingReturn.value, updatedRecord)
+      }
+      const idx = returns.value.findIndex(r => r.id === returnItem.id)
+      if (idx !== -1) {
+        Object.assign(returns.value[idx], updatedRecord)
       }
     }
   } catch (err) {
@@ -204,30 +232,34 @@ async function submitProcessReturn() {
   }
 }
 
+import { exportToCSV } from '@/utils/exporter'
+
 // Export CSV
 function exportReturnsCSV() {
   const items = filteredReturns.value
   if (!items || items.length === 0) return
-  const headers = ['Request #', 'Order #', 'Customer', 'Product', 'Variant', 'Price', 'Reason', 'Status', 'Date']
-  const rows = items.map(r => [
-    `"${r.request_number}"`,
-    `"${r.order_number}"`,
-    `"${r.customer_name}"`,
-    `"${r.product_name}"`,
-    `"${r.product_variant}"`,
-    r.price,
-    `"${r.reason}"`,
-    r.status,
-    `"${r.submitted_date}"`
+  const data = items.map(r => ({
+    request_number: r.request_number,
+    order_number: r.order_number,
+    customer_name: r.customer_name,
+    product_name: r.product_name,
+    product_variant: r.product_variant || 'Standard',
+    price: r.price,
+    reason: r.reason,
+    status: r.status,
+    submitted_date: r.submitted_date
+  }))
+  exportToCSV('Lumea_Returns_Register', data, [
+    { key: 'request_number', label: 'Request #' },
+    { key: 'order_number', label: 'Order #' },
+    { key: 'customer_name', label: 'Customer' },
+    { key: 'product_name', label: 'Product' },
+    { key: 'product_variant', label: 'Variant' },
+    { key: 'price', label: 'Price ($)' },
+    { key: 'reason', label: 'Reason' },
+    { key: 'status', label: 'Status' },
+    { key: 'submitted_date', label: 'Requested Date' }
   ])
-  const csvContent = 'data:text/csv;charset=utf-8,' + [headers.join(','), ...rows.map(e => e.join(','))].join('\n')
-  const encodedUri = encodeURI(csvContent)
-  const link = document.createElement('a')
-  link.setAttribute('href', encodedUri)
-  link.setAttribute('download', `lumea_returns_${Date.now()}.csv`)
-  document.body.appendChild(link)
-  link.click()
-  document.body.removeChild(link)
   adminStore.addToast('Returns exported (CSV)', 'success')
 }
 
@@ -509,7 +541,7 @@ function formatRequestedDate(dateStr) {
                 </tr>
 
                 <tr
-                  v-for="(item, index) in filteredReturns"
+                  v-for="(item, index) in paginatedReturns"
                   :key="item.id"
                   :class="{ 'row-selected': selectedReturns.includes(item.id) }"
                 >
@@ -602,25 +634,25 @@ function formatRequestedDate(dateStr) {
 
                         <div v-if="activeDropdown === item.id" class="dropdown-menu">
                           <button
-                            v-if="(item.status || '').toLowerCase() !== 'approved'"
+                            v-if="nextReturnStatus(item)"
                             class="dropdown-item text-green"
-                            @click="updateStatus(item, 'approved')"
+                            @click="updateStatus(item, nextReturnStatus(item))"
                           >
                             <CheckCircle2 class="w-4 h-4 mr-2" />
-                            <span>Advance to next stage</span>
+                            <span>Advance to: {{ nextReturnStatus(item) }}</span>
                           </button>
                           <button
-                            v-if="(item.status || '').toLowerCase() !== 'refunded'"
+                            v-if="['refund processing', 'item received', 'return in transit'].includes((item.status || '').toLowerCase())"
                             class="dropdown-item text-blue"
-                            @click="updateStatus(item, 'refunded')"
+                            @click="updateStatus(item, 'Refund Completed')"
                           >
                             <DollarSign class="w-4 h-4 mr-2" />
-                            <span>Record manual refund</span>
+                            <span>Complete refund</span>
                           </button>
                           <button
-                            v-if="(item.status || '').toLowerCase() !== 'rejected'"
+                            v-if="(item.status || '').toLowerCase() === 'under review'"
                             class="dropdown-item text-red"
-                            @click="updateStatus(item, 'rejected')"
+                            @click="updateStatus(item, 'Rejected')"
                           >
                             <XCircle class="w-4 h-4 mr-2" />
                             <span>Reject Return</span>
@@ -635,18 +667,35 @@ function formatRequestedDate(dateStr) {
 
             <!-- Table Footer -->
             <div class="table-footer">
-              <span class="footer-count">Showing 1 to {{ filteredReturns.length }} of 48 returns</span>
+              <span class="footer-count">Showing {{ filteredReturns.length ? (currentPage - 1) * itemsPerPage + 1 : 0 }} to {{ Math.min(currentPage * itemsPerPage, filteredReturns.length) }} of {{ filteredReturns.length }} returns</span>
               <div class="pagination-bar">
-                <button class="btn-page-nav" disabled aria-label="Previous page"><ChevronLeft :size="13" /></button>
-                <button class="btn-page-num active">1</button>
-                <button class="btn-page-num">2</button>
-                <button class="btn-page-num">3</button>
-                <button class="btn-page-num">4</button>
-                <button class="btn-page-num">5</button>
-                <button class="btn-page-nav" aria-label="Next page"><ChevronRight :size="13" /></button>
+                <button
+                  class="btn-page-nav"
+                  :disabled="currentPage === 1"
+                  @click="currentPage--"
+                  aria-label="Previous page"
+                >
+                  <ChevronLeft :size="13" />
+                </button>
+                <button
+                  v-for="p in totalPages"
+                  :key="p"
+                  class="btn-page-num"
+                  :class="{ active: currentPage === p }"
+                  @click="currentPage = p"
+                >
+                  {{ p }}
+                </button>
+                <button
+                  class="btn-page-nav"
+                  :disabled="currentPage === totalPages"
+                  @click="currentPage++"
+                  aria-label="Next page"
+                >
+                  <ChevronRight :size="13" />
+                </button>
                 <span class="page-size-label">
-                  <span>10 / page</span>
-                  <ChevronDown :size="12" class="page-size-arrow" />
+                  <span>{{ itemsPerPage }} / page</span>
                 </span>
               </div>
             </div>
@@ -1130,12 +1179,16 @@ function formatRequestedDate(dateStr) {
   grid-template-columns: 1fr 320px;
   gap: 1.25rem;
   align-items: flex-start;
+  min-width: 0;
+  max-width: 100%;
 }
 
 .returns-main-pane {
   display: flex;
   flex-direction: column;
   gap: 1rem;
+  min-width: 0;
+  max-width: 100%;
 }
 
 /* Filter Toolbar */
@@ -1270,11 +1323,14 @@ function formatRequestedDate(dateStr) {
   background: #FFFFFF;
   border: 1px solid #EBE1D7;
   border-radius: 10px;
-  overflow: hidden;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  max-width: 100%;
 }
 
 .returns-table {
   width: 100%;
+  min-width: 900px;
   border-collapse: collapse;
   font-size: 0.8125rem;
 }
@@ -1981,12 +2037,33 @@ function formatRequestedDate(dateStr) {
   cursor: pointer;
 }
 
-@media (max-width: 1200px) {
+@media (max-width: 1366px) {
   .returns-split-layout {
     grid-template-columns: 1fr;
   }
+}
+
+@media (max-width: 1024px) {
   .kpi-grid {
     grid-template-columns: repeat(3, 1fr);
+  }
+  .filter-toolbar {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+@media (max-width: 640px) {
+  .kpi-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .filter-toolbar {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 480px) {
+  .kpi-grid {
+    grid-template-columns: 1fr;
   }
 }
 </style>

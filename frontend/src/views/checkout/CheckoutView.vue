@@ -312,7 +312,7 @@
                     class="sr-only-radio"
                   />
                   <div class="courier-top-row">
-                    <span class="courier-tag tag-concierge">SHOP BEST VALUE • $1.00</span>
+                    <span class="courier-tag tag-concierge">SHOP BEST VALUE</span>
                     <span class="courier-price" :class="{ 'free-price': cartStore.carrierQuoteMap.lumea_concierge.isFree }">
                       <span v-if="cartStore.carrierQuoteMap.lumea_concierge.isFree" class="strike-original">{{ localeStore.formatPrice(cartStore.carrierQuoteMap.lumea_concierge.baseFee) }}</span>
                       {{ cartStore.carrierQuoteMap.lumea_concierge.isFree ? localeStore.t('common.free') : localeStore.formatPrice(cartStore.carrierQuoteMap.lumea_concierge.fee) }}
@@ -320,7 +320,10 @@
                   </div>
                   <div class="courier-title-line">
                     <span class="courier-radio-circle" :class="{ active: form.shipping_carrier === 'lumea_concierge' }"></span>
-                    <div class="courier-names-wrap" style="padding-left: 2px;">
+                    <div class="courier-logo-box">
+                      <Truck :size="16" style="color: #8B2E24;" />
+                    </div>
+                    <div class="courier-names-wrap">
                       <span class="courier-brand-name">{{ localeStore.t('checkout.concierge_name') || 'Luméa Direct' }}</span>
                       <span class="courier-sub-name">Shop Courier</span>
                     </div>
@@ -1695,22 +1698,17 @@ function handleKHQRCancelled({ closed, message } = {}) {
   margin-right: 3px;
 }
 
-/* Couriers 4-Grid matching mockup */
+/* Couriers 2-Grid: Generous layout matching Payment Methods & mockup proportions */
 .couriers-four-grid {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 10px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
 }
 
-@media (max-width: 900px) {
-  .couriers-four-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-}
-
-@media (max-width: 540px) {
+@media (max-width: 620px) {
   .couriers-four-grid {
     grid-template-columns: 1fr;
+    gap: 10px;
   }
 }
 
@@ -1718,14 +1716,20 @@ function handleKHQRCancelled({ closed, message } = {}) {
   background: #FFFFFF;
   border: 1px solid #E5E7EB;
   border-radius: 10px;
-  padding: 10px 12px;
+  padding: 12px 14px;
   cursor: pointer;
   transition: all 0.15s ease;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
-  min-height: 94px;
+  min-height: 104px;
   box-sizing: border-box;
+  overflow: hidden;
+}
+
+.courier-card:hover:not(.disabled) {
+  border-color: #D1D5DB;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.04);
 }
 
 .courier-card.selected {
@@ -1735,9 +1739,9 @@ function handleKHQRCancelled({ closed, message } = {}) {
 }
 
 .courier-card.disabled {
-  opacity: 0.55;
+  opacity: 0.6;
   cursor: not-allowed;
-  background: #F9FAFB;
+  background: #FAFAFA;
   border-color: #E5E7EB;
 }
 
@@ -1745,29 +1749,43 @@ function handleKHQRCancelled({ closed, message } = {}) {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 4px;
-  margin-bottom: 6px;
+  gap: 8px;
+  margin-bottom: 8px;
 }
 
 .courier-tag {
-  font-size: 9px;
+  font-size: 9.5px;
   font-weight: 800;
-  padding: 2px 5px;
+  padding: 2.5px 7px;
   border-radius: 4px;
   letter-spacing: 0.3px;
   white-space: nowrap;
+  flex-shrink: 0;
 }
 
 .tag-vet { background: #FEE2E2; color: #991B1B; }
 .tag-jt { background: #FFEDD5; color: #C2410C; }
 .tag-grab { background: #DCFCE7; color: #15803D; }
 .tag-concierge { background: #FEF9C3; color: #854D0E; }
-.tag-pp-only { background: #FEE2E2; color: #DC2626; font-size: 8.5px; }
+.tag-pp-only { background: #FEE2E2; color: #DC2626; font-size: 9px; font-weight: 700; }
 
 .courier-price {
-  font-size: 13px;
+  font-size: 13.5px;
   font-weight: 800;
   color: #1C1917;
+  display: inline-flex;
+  align-items: baseline;
+  gap: 5px;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.courier-price .strike-original {
+  text-decoration: line-through;
+  color: #9CA3AF;
+  font-size: 11px;
+  font-weight: 500;
+  margin-right: 0;
 }
 
 .courier-price.free-price {
@@ -1778,13 +1796,13 @@ function handleKHQRCancelled({ closed, message } = {}) {
 .courier-title-line {
   display: flex;
   align-items: center;
-  gap: 6px;
-  margin-bottom: 6px;
+  gap: 8px;
+  margin-bottom: 8px;
 }
 
 .courier-logo-box {
-  height: 18px;
-  max-width: 50px;
+  height: 20px;
+  max-width: 55px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1792,15 +1810,15 @@ function handleKHQRCancelled({ closed, message } = {}) {
 }
 
 .courier-logo-img {
-  max-height: 18px;
-  max-width: 50px;
+  max-height: 20px;
+  max-width: 55px;
   object-fit: contain;
   display: block;
 }
 
 .courier-radio-circle {
-  width: 14px;
-  height: 14px;
+  width: 15px;
+  height: 15px;
   border: 2px solid #D1D5DB;
   border-radius: 50%;
   display: inline-flex;
@@ -1824,12 +1842,13 @@ function handleKHQRCancelled({ closed, message } = {}) {
 .courier-names-wrap {
   display: flex;
   flex-direction: column;
-  line-height: 1.15;
+  line-height: 1.25;
   min-width: 0;
+  flex: 1;
 }
 
 .courier-brand-name {
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 700;
   color: #1C1917;
   white-space: nowrap;
@@ -1838,7 +1857,7 @@ function handleKHQRCancelled({ closed, message } = {}) {
 }
 
 .courier-sub-name {
-  font-size: 10px;
+  font-size: 10.5px;
   color: #6B7280;
   white-space: nowrap;
   overflow: hidden;
@@ -1848,12 +1867,13 @@ function handleKHQRCancelled({ closed, message } = {}) {
 .courier-eta {
   display: flex;
   align-items: center;
-  gap: 4px;
-  font-size: 10px;
-  font-weight: 600;
-  color: #374151;
-  padding-top: 5px;
+  gap: 5px;
+  font-size: 11px;
+  font-weight: 500;
+  color: #4B5563;
+  padding-top: 6px;
   border-top: 1px dashed #E5E7EB;
+  margin-top: auto;
 }
 
 .courier-eta.eta-warn {
@@ -1863,6 +1883,7 @@ function handleKHQRCancelled({ closed, message } = {}) {
 
 .eta-icon {
   color: #78716C;
+  flex-shrink: 0;
 }
 
 /* Card 03: Payment Methods 2-Grid */

@@ -22,14 +22,26 @@ import {
 } from 'lucide-vue-next'
 
 const adminStore = useAdminStore()
-const selectedTimeframe = ref('Aug 1, 2025 - Aug 31, 2025')
+const showDateDropdown = ref(false)
+const timeframeOptions = [
+  'Last 7 Days',
+  'Last 30 Days',
+  'This Quarter (Q4 2026)',
+  'Year to Date (2026)'
+]
+const selectedTimeframe = ref('Last 30 Days')
 const revenueMetric = ref('revenue')
 const growthInterval = ref('Daily')
 
+function selectTimeframe(tf) {
+  selectedTimeframe.value = tf
+  showDateDropdown.value = false
+  adminStore.addToast(`Analytics filtered to: ${tf}`, 'info')
+  adminStore.fetchStats()
+}
+
 onMounted(async () => {
-  if (!adminStore.stats) {
-    await adminStore.fetchStats()
-  }
+  await adminStore.fetchStats()
 })
 
 // Format helpers
@@ -42,9 +54,9 @@ const formatCurrency = (val) => {
 
 // 4 Top KPIs
 const kpiStats = computed(() => {
-  const rev = adminStore.stats?.metrics?.total_revenue || 24850
-  const orders = adminStore.stats?.metrics?.total_orders || 892
-  const customers = adminStore.stats?.metrics?.total_customers || 624
+  const rev = adminStore.stats?.metrics?.total_revenue ?? 0
+  const orders = adminStore.stats?.metrics?.total_orders ?? 0
+  const customers = adminStore.stats?.metrics?.total_customers ?? 0
 
   return [
     {
@@ -206,16 +218,16 @@ const recentActivities = ref([
 import { exportToCSV } from '@/utils/exporter'
 
 const exportReport = () => {
-  const data = (categorySales || []).map(c => ({
-    category: c.name,
-    sales: c.sales,
-    percentage: c.percentage,
+  const data = (salesByCategory.value || []).map(c => ({
+    category: c.category,
+    revenue: c.revenue,
+    orders: c.orders,
     growth: c.growth,
   }))
   exportToCSV('Lumea_Executive_Analytics', data, [
     { key: 'category', label: 'Category' },
-    { key: 'sales', label: 'Sales ($)' },
-    { key: 'percentage', label: 'Share (%)' },
+    { key: 'revenue', label: 'Revenue ($)' },
+    { key: 'orders', label: 'Orders Count' },
     { key: 'growth', label: 'Growth YoY' }
   ])
 }
@@ -246,12 +258,31 @@ const exportReport = () => {
           </div>
         </div>
 
-        <div class="hero-actions">
-          <button class="date-range-picker-btn">
+        <div class="hero-actions" style="position: relative;">
+          <button class="date-range-picker-btn" @click="showDateDropdown = !showDateDropdown">
             <Calendar :size="15" />
             <span>{{ selectedTimeframe }}</span>
             <ChevronDown :size="14" />
           </button>
+
+          <!-- Timeframe Dropdown Menu -->
+          <div
+            v-if="showDateDropdown"
+            class="timeframe-dropdown"
+            style="position: absolute; top: calc(100% + 6px); left: 0; background: #fff; border: 1px solid var(--border-subtle, #EFECE6); border-radius: 8px; box-shadow: 0 4px 16px rgba(0,0,0,0.08); z-index: 50; min-width: 180px; padding: 6px 0;"
+          >
+            <button
+              v-for="tf in timeframeOptions"
+              :key="tf"
+              @click="selectTimeframe(tf)"
+              style="display: block; width: 100%; text-align: left; padding: 8px 14px; background: none; border: none; font-size: 0.8125rem; cursor: pointer; color: #2D2A26; transition: background 0.15s;"
+              onmouseover="this.style.background='#F9F6F0'"
+              onmouseout="this.style.background='none'"
+            >
+              {{ tf }}
+            </button>
+          </div>
+
           <button class="btn-export-report" @click="exportReport">
             <Download :size="15" />
             <span>Export Report</span>

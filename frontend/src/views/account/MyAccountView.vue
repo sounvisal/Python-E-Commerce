@@ -592,6 +592,7 @@
       </div>
     </div>
   </div>
+  <AccountSkeleton v-else />
 </template>
 
 <script setup>
@@ -604,6 +605,7 @@ import { useWishlistStore } from '@/stores/wishlist'
 import { useNotificationStore } from '@/stores/notification'
 import AccountSidebar from '@/components/account/AccountSidebar.vue'
 import ProductCard from '@/components/ProductCard.vue'
+import AccountSkeleton from '@/components/common/AccountSkeleton.vue'
 import {
   Calendar,
   Heart,

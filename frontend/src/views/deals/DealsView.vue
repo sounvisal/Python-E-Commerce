@@ -188,7 +188,11 @@
       </div>
 
       <!-- 6 Featured Deals Cards Grid using standardized ProductCard matching HomeView -->
-      <div class="featured-deals-grid">
+      <div v-if="productStore.loading && featuredDealsList.length === 0" class="featured-deals-grid">
+        <ProductCardSkeleton v-for="n in 6" :key="n" />
+      </div>
+
+      <div v-else class="featured-deals-grid">
         <div
           v-for="(deal, idx) in featuredDealsList"
           :key="deal.id"
@@ -263,6 +267,7 @@
 
 <script setup>
 import ProductCard from '@/components/ProductCard.vue'
+import ProductCardSkeleton from '@/components/common/ProductCardSkeleton.vue'
 import { useCartStore } from '@/stores/cart'
 import { useNotificationStore } from '@/stores/notification'
 import { useWishlistStore } from '@/stores/wishlist'
@@ -286,6 +291,7 @@ import { onMounted, onUnmounted, ref, computed } from 'vue'
 const cartStore = useCartStore()
 const wishlistStore = useWishlistStore()
 const notificationStore = useNotificationStore()
+const productStore = useProductStore()
 
 const selectedFilter = ref('all')
 

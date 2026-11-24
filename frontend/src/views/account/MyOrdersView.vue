@@ -122,8 +122,13 @@
             </div>
           </div>
 
+          <!-- Loading Skeleton Stack -->
+          <div v-if="ordersStore.loading && filteredOrders.length === 0" class="orders-cards-stack">
+            <OrderCardSkeleton v-for="n in 3" :key="n" />
+          </div>
+
           <!-- Empty State -->
-          <div v-if="filteredOrders.length === 0" class="empty-orders-box">
+          <div v-else-if="filteredOrders.length === 0" class="empty-orders-box">
             <div class="empty-icon-circle">
               <Package :size="32" class="empty-svg" />
             </div>
@@ -299,6 +304,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useOrdersStore } from '@/stores/orders'
+import OrderCardSkeleton from '@/components/common/OrderCardSkeleton.vue'
 import { useAuthStore } from '@/stores/auth'
 import { useNotificationStore } from '@/stores/notification'
 import AccountSidebar from '@/components/account/AccountSidebar.vue'

@@ -6,7 +6,7 @@ from datetime import datetime, timedelta, timezone
 from typing import Optional, List, Dict, Any
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from pydantic import BaseModel, Field
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 from sqlalchemy import func, desc, asc, or_
 
 from app.core.database import get_db
@@ -17,6 +17,7 @@ from app.models.user import User
 from app.models.brand import Brand
 from app.models.review import Review
 from app.models.quiz import Quiz
+from app.models.return_request import ReturnRequest
 from app.api.settings import load_settings, save_settings
 
 router = APIRouter(prefix="/admin", tags=["Admin Atelier"], dependencies=[Depends(require_admin)])
@@ -123,6 +124,8 @@ def format_order(order: Order) -> dict:
     return {
         "id": order.id,
         "order_number": order.order_number,
+        "user_id": order.user_id,
+        "customer_avatar": order.user_rel.avatar if order.user_rel else None,
         "customer_name": order.customer_name,
         "customer_email": order.customer_email,
         "customer_phone": order.customer_phone,
@@ -131,6 +134,7 @@ def format_order(order: Order) -> dict:
         "shipping_postal_code": order.shipping_postal_code,
         "subtotal": order.subtotal,
         "discount": order.discount,
+        "discount_code": order.discount_code,
         "shipping_fee": order.shipping_fee,
         "total": order.total,
         "status": order.status,
@@ -176,21 +180,16 @@ def get_admin_stats(db: Session = Depends(get_db)):
         or 0.0
     )
     total_products = db.query(Product).count()
-    total_customers = db.query(User).count()
+    total_customers = db.query(User).filter(User.role == "customer").count()
     low_stock_count = db.query(Product).filter(Product.stock <= 5).count()
     paid_count = db.query(Order).filter(Order.payment_status == "Paid", Order.status != "Payment Review").count()
     avg_order_val = round(revenue_sum / paid_count, 2) if paid_count else 0.0
 
     # Orders grouped by status
-    statuses = ["pending", "confirmed", "processing", "shipped", "delivered", "cancelled"]
-    orders_by_status = {}
-    for s in statuses:
-        count = (
-            db.query(Order)
-            .filter(func.lower(Order.status) == s)
-            .count()
-        )
-        orders_by_status[s] = count
+    order_status = func.lower(Order.status)
+    orders_by_status = dict(db.query(order_status, func.count(Order.id)).group_by(order_status).all())
+    for name in ("pending", "confirmed", "processing", "shipped", "delivered", "cancelled"):
+        orders_by_status.setdefault(name, 0)
 
     # Categories breakdown
     categories_list = []
@@ -200,10 +199,33 @@ def get_admin_stats(db: Session = Depends(get_db)):
         categories_list.append({"name": c.name, "count": cnt})
 
     # Recent orders (top 10)
-    recent_orders_db = db.query(Order).order_by(Order.id.desc()).limit(10).all()
+    recent_orders_db = (
+        db.query(Order).options(joinedload(Order.user_rel), joinedload(Order.items))
+        .order_by(Order.id.desc()).limit(10).all()
+    )
     recent_orders = [format_order(o) for o in recent_orders_db]
 
-    # Timeline (mocked 7-day revenue/orders series based on real total)
+    sold = func.sum(OrderItem.quantity)
+    sales = func.sum(OrderItem.total)
+    top_products = (
+        db.query(Product.id, Product.name, Product.image_url, sold, sales)
+        .join(OrderItem, OrderItem.product_id == Product.id)
+        .join(Order, Order.id == OrderItem.order_id)
+        .filter(Order.payment_status == "Paid", Order.status != "Payment Review")
+        .group_by(Product.id, Product.name, Product.image_url)
+        .order_by(sold.desc(), Product.id)
+        .limit(5).all()
+    )
+    low_stock = (
+        db.query(Product).filter(Product.stock <= 5)
+        .order_by(Product.stock, Product.id).limit(4).all()
+    )
+    recent_returns = (
+        db.query(ReturnRequest.request_number, ReturnRequest.reason, ReturnRequest.status)
+        .order_by(ReturnRequest.created_at.desc(), ReturnRequest.id.desc()).limit(4).all()
+    )
+
+    # Seven-day order and revenue series
     timeline = []
     today = datetime.now(timezone.utc)
     for i in range(6, -1, -1):
@@ -229,6 +251,18 @@ def get_admin_stats(db: Session = Depends(get_db)):
             "timeline": timeline,
             "categories": categories_list,
             "recent_orders": recent_orders,
+            "top_products": [
+                {"id": pid, "name": name, "image_url": image, "sold": qty, "sales": round(amount, 2)}
+                for pid, name, image, qty, amount in top_products
+            ],
+            "low_stock_products": [
+                {"id": p.id, "name": p.name, "stock": p.stock, "image_url": p.image_url}
+                for p in low_stock
+            ],
+            "recent_returns": [
+                {"request_number": number, "reason": reason, "status": state}
+                for number, reason, state in recent_returns
+            ],
         }
     }
 
@@ -237,7 +271,7 @@ def get_admin_orders(
     status: Optional[str] = Query(None),
     search: Optional[str] = Query(None),
     page: int = Query(1, ge=1),
-    limit: int = Query(20, ge=1, le=100),
+    limit: int = Query(20, ge=1, le=500),
     db: Session = Depends(get_db)
 ):
     """
@@ -246,10 +280,17 @@ def get_admin_orders(
     query = db.query(Order)
 
     if status and status.lower() != "all":
-        query = query.filter(func.lower(Order.status) == status.lower())
+        # Support tab-level aliases (e.g. pending includes 'awaiting confirmation' and 'pending')
+        s = status.lower().strip()
+        if s == "pending":
+            query = query.filter(func.lower(Order.status).in_(["pending", "awaiting confirmation"]))
+        elif s == "processing":
+            query = query.filter(func.lower(Order.status).in_(["processing", "confirmed"]))
+        else:
+            query = query.filter(func.lower(Order.status) == s)
 
     if search:
-        pattern = f"%{search}%"
+        pattern = f"%{search.strip()}%"
         query = query.filter(
             or_(
                 Order.order_number.ilike(pattern),
@@ -262,7 +303,24 @@ def get_admin_orders(
     total = query.count()
     last_page = max(1, math.ceil(total / limit))
     offset = (page - 1) * limit
-    orders = query.order_by(Order.id.desc()).offset(offset).limit(limit).all()
+    orders = query.options(joinedload(Order.user_rel), joinedload(Order.items)).order_by(Order.id.desc()).offset(offset).limit(limit).all()
+
+    # Calculate overall tab counts across all orders
+    status_counts = dict(
+        db.query(func.lower(Order.status), func.count(Order.id))
+        .group_by(func.lower(Order.status))
+        .all()
+    )
+    all_count = db.query(func.count(Order.id)).scalar() or 0
+    tab_counts = {
+        "all": all_count,
+        "pending": status_counts.get("awaiting confirmation", 0) + status_counts.get("pending", 0),
+        "processing": status_counts.get("confirmed", 0) + status_counts.get("processing", 0),
+        "shipped": status_counts.get("shipped", 0),
+        "delivered": status_counts.get("delivered", 0),
+        "cancelled": status_counts.get("cancelled", 0),
+        "returned": status_counts.get("returned", 0),
+    }
 
     return {
         "status": "success",
@@ -272,6 +330,7 @@ def get_admin_orders(
             "last_page": last_page,
             "total": total,
             "per_page": limit,
+            "tab_counts": tab_counts,
         }
     }
 
@@ -561,19 +620,26 @@ def get_admin_customers(
     limit: int = Query(50, ge=1, le=500),
     offset: int = Query(0, ge=0),
     q: Optional[str] = Query(None),
-    db: Session = Depends(get_db)
+    tab: Optional[str] = Query("all"),
+    group: Optional[str] = Query(None),
+    db: Session = Depends(get_db),
+    customer_id: Optional[int] = Query(None, ge=1),
 ):
     """
-    Retrieve registered patrons and clientele with bounded SQL aggregation and optional search filtering.
+    Retrieve registered patrons and clientele with bounded SQL aggregation, tab filtering, and tab counts.
     """
     from sqlalchemy import case
+    orders_count_expr = func.count(case((Order.user_id == User.id, Order.id), else_=None))
+    total_spent_expr = func.coalesce(func.sum(case(((Order.user_id == User.id) & (Order.payment_status == "Paid"), Order.total), else_=0)), 0)
+
     base_query = db.query(
         User,
-        func.count(case((Order.user_id == User.id, Order.id), else_=None)).label("orders_count"),
-        func.coalesce(func.sum(case(((Order.user_id == User.id) & (Order.payment_status == "Paid"), Order.total), else_=0)), 0).label("total_spent")
-    ).outerjoin(Order, User.id == Order.user_id)
+        orders_count_expr.label("orders_count"),
+        total_spent_expr.label("total_spent")
+    ).outerjoin(Order, User.id == Order.user_id).group_by(User.id)
 
-    count_query = db.query(func.count(User.id))
+    if customer_id is not None:
+        base_query = base_query.filter(User.id == customer_id)
 
     if q and q.strip():
         search_filter = or_(
@@ -582,17 +648,55 @@ def get_admin_customers(
             User.phone.ilike(f"%{q.strip()}%")
         )
         base_query = base_query.filter(search_filter)
-        count_query = count_query.filter(search_filter)
+
+    # Calculate overall tab counts across all customers
+    all_summary = db.query(
+        User.id,
+        User.tier,
+        orders_count_expr.label("orders_count"),
+        total_spent_expr.label("total_spent")
+    ).outerjoin(Order, User.id == Order.user_id).group_by(User.id).all()
+
+    tab_counts = {"all": len(all_summary), "new": 0, "vip": 0, "inactive": 0}
+    for _, tier, oc, ts in all_summary:
+        t_lower = (tier or "").lower()
+        is_vip = ("gold" in t_lower or "radiant" in t_lower or float(ts or 0) >= 100 or int(oc or 0) >= 3)
+        if is_vip:
+            tab_counts["vip"] += 1
+        if int(oc or 0) <= 2:
+            tab_counts["new"] += 1
+        if int(oc or 0) == 0:
+            tab_counts["inactive"] += 1
+
+    # Apply tab/group filter before pagination
+    active_tab = (tab or "all").lower().strip()
+    active_group = (group or "").lower().strip()
+
+    if active_tab == "vip" or active_group in ["vip", "gold"]:
+        base_query = base_query.having(
+            or_(
+                func.lower(User.tier).like("%gold%"),
+                func.lower(User.tier).like("%radiant%"),
+                total_spent_expr >= 100,
+                orders_count_expr >= 3
+            )
+        )
+    elif active_tab == "new":
+        base_query = base_query.having(orders_count_expr <= 2)
+    elif active_tab == "inactive":
+        base_query = base_query.having(orders_count_expr == 0)
+
+    # Calculate total matching count
+    subq = base_query.subquery()
+    total_matching = db.query(func.count()).select_from(subq).scalar() or 0
 
     results = (
         base_query
-        .group_by(User.id)
         .order_by(desc(User.id))
         .offset(offset)
         .limit(limit)
         .all()
     )
-    total_users = count_query.scalar() or 0
     out = []
     for u, orders_count, total_spent in results:
         out.append({
@@ -609,12 +713,37 @@ def get_admin_customers(
             "total_spent": round(float(total_spent), 2),
         })
 
+    if customer_id is not None and out:
+        profile = results[0][0].profile_data
+        addresses = profile.get("addresses", []) if isinstance(profile, dict) else []
+        address_fields = ("name", "tag", "street", "commune", "district", "city", "postalCode", "country", "phone", "isDefault")
+        out[0]["addresses"] = [
+            {key: address[key] for key in address_fields if key in address}
+            for address in addresses if isinstance(address, dict)
+        ] if isinstance(addresses, list) else []
+        recent = (
+            db.query(Order.order_number, Order.total, Order.status, Order.created_at)
+            .filter(Order.user_id == customer_id)
+            .order_by(Order.id.desc()).limit(5).all()
+        )
+        out[0]["recent_orders"] = [
+            {"order_number": number, "total": total, "status": state,
+             "created_at": created.isoformat() if created else None}
+            for number, total, state, created in recent
+        ]
+
     return {
         "status": "success",
         "data": out,
-        "total": total_users,
+        "total": total_matching,
         "limit": limit,
-        "offset": offset
+        "offset": offset,
+        "meta": {
+            "total": total_matching,
+            "tab_counts": tab_counts,
+            "limit": limit,
+            "offset": offset,
+        }
     }
 
 # --- Brands Management Endpoints ---

@@ -75,6 +75,8 @@ class SettingsUpdatePayload(BaseModel):
     store_phone: Optional[str] = None
     store_language: Optional[str] = None
     store_description: Optional[str] = None
+    store_logo: Optional[str] = None
+    store_favicon: Optional[str] = None
     company_name: Optional[str] = None
     business_reg_number: Optional[str] = None
     business_address: Optional[str] = None
@@ -102,6 +104,8 @@ def get_public_settings():
             "store_name": s.get("store_name"),
             "store_email": s.get("store_email"),
             "store_phone": s.get("store_phone"),
+            "store_logo": s.get("store_logo"),
+            "store_favicon": s.get("store_favicon"),
             "currency": s.get("currency"),
             "currency_symbol": s.get("currency_symbol", "$"),
             "free_shipping_enabled": s.get("free_shipping_enabled", True),

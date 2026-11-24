@@ -1,7 +1,17 @@
 <template>
   <transition name="pill-fade">
     <div
-      v-if="productStore.isOffline"
+      v-if="isWakingUp && !productStore.isOffline"
+      class="atelier-offline-pill atelier-awakening-pill"
+      role="status"
+      aria-live="polite"
+    >
+      <div class="pill-dot-pulse pulse-crimson"></div>
+      <span class="pill-text">Awakening Atelier Services…</span>
+      <span class="pill-sub-hint">Warming up cloud laboratory</span>
+    </div>
+    <div
+      v-else-if="productStore.isOffline"
       class="atelier-offline-pill"
       role="status"
       aria-live="polite"
@@ -22,7 +32,7 @@
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { ref, watch, onUnmounted } from 'vue'
 import { RefreshCw } from 'lucide-vue-next'
 import { useProductStore } from '@/stores/products'
 import { useBannerStore } from '@/stores/banners'
@@ -30,6 +40,30 @@ import { useBannerStore } from '@/stores/banners'
 const productStore = useProductStore()
 const bannerStore = useBannerStore()
 const isRetrying = ref(false)
+const isWakingUp = ref(false)
+let wakeupTimer = null
+
+watch(
+  () => productStore.loading,
+  (loading) => {
+    if (loading) {
+      if (wakeupTimer) clearTimeout(wakeupTimer)
+      wakeupTimer = setTimeout(() => {
+        if (productStore.loading && !productStore.isOffline) {
+          isWakingUp.value = true
+        }
+      }, 2500)
+    } else {
+      if (wakeupTimer) clearTimeout(wakeupTimer)
+      isWakingUp.value = false
+    }
+  },
+  { immediate: true }
+)
+
+onUnmounted(() => {
+  if (wakeupTimer) clearTimeout(wakeupTimer)
+})
 
 async function retryConnection() {
   if (isRetrying.value) return
@@ -76,6 +110,18 @@ async function retryConnection() {
   background: #E09F3E;
   box-shadow: 0 0 0 0 rgba(224, 159, 62, 0.7);
   animation: dotPulse 2s infinite;
+}
+
+.pulse-crimson {
+  background: #C44331 !important;
+  box-shadow: 0 0 0 0 rgba(196, 67, 49, 0.7) !important;
+}
+
+.pill-sub-hint {
+  font-size: 0.7rem;
+  color: #D6CBC1;
+  padding-left: 0.35rem;
+  border-left: 1px solid rgba(255, 255, 255, 0.2);
 }
 
 @keyframes dotPulse {

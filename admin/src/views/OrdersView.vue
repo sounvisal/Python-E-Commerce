@@ -1,5 +1,8 @@
 <script setup>
+import ProfileAvatar from '@/components/common/ProfileAvatar.vue'
 import { ref, computed, reactive, onMounted, watch } from 'vue'
+import { useRoute } from 'vue-router'
+import apiClient from '@/api/client'
 import { useAdminStore } from '@/stores/admin'
 import { getStorefrontUrl } from '@/utils/storefront'
 import {
@@ -58,9 +61,30 @@ const selectAll = ref(false)
 // Updating status
 const isUpdatingStatus = ref(false)
 
+const route = useRoute()
+
+async function loadOrders() {
+  const params = {
+    page: currentPage.value,
+    limit: itemsPerPage.value,
+  }
+  if (activeTab.value !== 'all') {
+    params.status = activeTab.value
+  } else if (selectedOrderStatus.value !== 'All Statuses') {
+    params.status = selectedOrderStatus.value
+  }
+  if (searchQuery.value && searchQuery.value.trim()) {
+    params.search = searchQuery.value.trim()
+  }
+  await adminStore.fetchOrders(params)
+}
+
 onMounted(async () => {
+  if (route.query.q) {
+    searchQuery.value = String(route.query.q)
+  }
   await Promise.all([
-    adminStore.fetchOrders(),
+    loadOrders(),
     adminStore.fetchStats()
   ])
 })
@@ -68,19 +92,6 @@ onMounted(async () => {
 function openNewOrderModal() {
   window.open(getStorefrontUrl('/shop'), '_blank')
   adminStore.addToast('Opened atelier storefront for concierge order placement.', 'info')
-}
-
-// Avatar mapping
-const getAvatar = (name) => {
-  const hash = (name || '').charCodeAt(0) % 5
-  const avatars = [
-    '/images/avatar-sreynich.jpg',
-    '/images/avatar-super-admin.jpg',
-    '/images/avatar-sreynich.jpg',
-    '/images/avatar-super-admin.jpg',
-    '/images/avatar-sreynich.jpg'
-  ]
-  return avatars[hash] || '/images/avatar-sreynich.jpg'
 }
 
 // Format Currency
@@ -143,42 +154,19 @@ const formatCarrierName = (c) => {
   return map[c] || 'VET Logistics'
 }
 
-// Filtered orders list
-const filteredOrders = computed(() => {
-  let list = [...(adminStore.orders || [])]
+// Filtered & Paginated orders from backend API
+const paginatedOrders = computed(() => adminStore.orders || [])
+const totalOrdersCount = computed(() => adminStore.ordersMeta?.total ?? (adminStore.orders?.length || 0))
+const totalPages = computed(() => adminStore.ordersMeta?.last_page || Math.ceil(totalOrdersCount.value / itemsPerPage.value) || 1)
 
-  // Filter by Tab
-  if (activeTab.value !== 'all') {
-    list = list.filter(o => orderTab(o) === activeTab.value)
-  }
-
-  // Filter by Search Query
-  if (searchQuery.value) {
-    const q = searchQuery.value.toLowerCase()
-    list = list.filter(o =>
-      o.order_number?.toLowerCase().includes(q) ||
-      o.customer_name?.toLowerCase().includes(q) ||
-      o.customer_email?.toLowerCase().includes(q) ||
-      o.shipping_city?.toLowerCase().includes(q)
-    )
-  }
-
-  // Filter by Order Status dropdown
-  if (selectedOrderStatus.value !== 'All Statuses') {
-    list = list.filter(o => (o.status || '').toLowerCase() === selectedOrderStatus.value.toLowerCase())
-  }
-
-  if (selectedPaymentStatus.value !== 'All Payments') {
-    list = list.filter(o => selectedPaymentStatus.value === 'COD' ? o.payment_method === 'cod' : o.payment_status === selectedPaymentStatus.value)
-  }
-  return list
-})
-
-// Tab counts
+// Tab counts: uses server meta tab_counts if available, otherwise fallback
 const tabCounts = computed(() => {
+  if (adminStore.ordersMeta?.tab_counts) {
+    return adminStore.ordersMeta.tab_counts
+  }
   const all = adminStore.orders || []
   return {
-    all: all.length,
+    all: totalOrdersCount.value,
     pending: all.filter(o => orderTab(o) === 'pending').length,
     processing: all.filter(o => (o.status || '').toLowerCase() === 'processing').length,
     shipped: all.filter(o => (o.status || '').toLowerCase() === 'shipped').length,
@@ -188,18 +176,25 @@ const tabCounts = computed(() => {
   }
 })
 
-// Paginated view
-const paginatedOrders = computed(() => {
-  const start = (currentPage.value - 1) * itemsPerPage.value
-  return filteredOrders.value.slice(start, start + itemsPerPage.value)
+let searchTimer = null
+watch(searchQuery, () => {
+  clearTimeout(searchTimer)
+  searchTimer = setTimeout(() => {
+    currentPage.value = 1
+    loadOrders()
+  }, 250)
 })
 
-const totalPages = computed(() => {
-  return Math.ceil(filteredOrders.value.length / itemsPerPage.value) || 1
+watch([activeTab, selectedOrderStatus, currentPage, itemsPerPage], () => {
+  loadOrders()
 })
 
-watch([activeTab, searchQuery, selectedOrderStatus, selectedPaymentStatus], () => {
-  currentPage.value = 1
+watch(() => route.query.q, (newQ) => {
+  if (newQ !== undefined && newQ !== searchQuery.value) {
+    searchQuery.value = String(newQ || '')
+    currentPage.value = 1
+    loadOrders()
+  }
 })
 
 const resetFilters = () => {
@@ -209,6 +204,7 @@ const resetFilters = () => {
   selectedDeliveryStatus.value = 'All Deliveries'
   activeTab.value = 'all'
   currentPage.value = 1
+  loadOrders()
 }
 
 const toggleSelectAll = () => {
@@ -353,17 +349,29 @@ const printInvoice = () => {
 
 import { exportToCSV } from '@/utils/exporter'
 
-const exportOrders = () => {
-  const data = (filteredOrders.value || []).map(o => ({
-    order_number: o.id || o.order_number,
-    customer_name: o.customer?.name || o.customer_name,
-    customer_email: o.customer?.email || o.customer_email,
+const exportOrders = async () => {
+  let exportList = adminStore.orders || []
+  try {
+    const params = { page: 1, limit: 500 }
+    if (activeTab.value !== 'all') params.status = activeTab.value
+    else if (selectedOrderStatus.value !== 'All Statuses') params.status = selectedOrderStatus.value
+    if (searchQuery.value && searchQuery.value.trim()) params.search = searchQuery.value.trim()
+    const res = await apiClient.get('/admin/orders', { params })
+    if (res.data?.status === 'success' && Array.isArray(res.data.data)) {
+      exportList = res.data.data
+    }
+  } catch (_) {}
+
+  const data = exportList.map(o => ({
+    order_number: o.order_number || (o.id ? `LUM-${String(o.id).padStart(6, '0')}` : 'N/A'),
+    customer_name: o.customer?.name || o.customer_name || 'Anonymous Guest',
+    customer_email: o.customer?.email || o.customer_email || 'N/A',
     date: o.date || o.created_at,
     total: o.total,
     status: o.status,
-    payment_status: o.paymentStatus || o.payment_status,
-    payment_method: o.paymentMethod || o.payment_method,
-    carrier: o.shippingCarrier || o.shipping_carrier || 'vet_express'
+    payment_status: o.paymentStatus || o.payment_status || 'Unpaid',
+    payment_method: o.paymentMethod || o.payment_method || 'cod',
+    carrier: o.shippingCarrier || o.shipping_carrier || 'lumea_concierge'
   }))
   exportToCSV('Lumea_Orders_Archive', data, [
     { key: 'order_number', label: 'Order Number' },
@@ -599,11 +607,7 @@ const exportOrders = () => {
               </td>
               <td>
                 <div class="customer-cell">
-                  <img
-                    :src="getAvatar(order.customer_name)"
-                    alt="Customer"
-                    class="customer-avatar-mini"
-                  />
+                  <ProfileAvatar :src="order.customer_avatar" :name="order.customer_name" class="customer-avatar-mini" />
                   <div class="customer-meta-wrap">
                     <strong class="customer-name-txt">{{ order.customer_name }}</strong>
                     <span class="customer-email-txt">{{ order.customer_email }}</span>
@@ -688,7 +692,7 @@ const exportOrders = () => {
         <!-- Pagination Footer -->
         <div class="pagination-footer">
           <span class="pagination-summary">
-            Showing {{ filteredOrders.length ? (currentPage - 1) * itemsPerPage + 1 : 0 }} to {{ Math.min(currentPage * itemsPerPage, filteredOrders.length) }} of {{ filteredOrders.length }} orders
+            Showing {{ totalOrdersCount ? (currentPage - 1) * itemsPerPage + 1 : 0 }} to {{ Math.min(currentPage * itemsPerPage, totalOrdersCount) }} of {{ totalOrdersCount }} orders
           </span>
 
           <div class="pagination-controls">
@@ -969,19 +973,21 @@ const exportOrders = () => {
               <div class="financial-summary-block">
                 <div class="fin-row">
                   <span>Subtotal</span>
-                  <strong>${{ Number(activeOrder.subtotal || 64.00).toFixed(2) }}</strong>
+                  <strong>${{ Number(activeOrder.subtotal != null ? activeOrder.subtotal : (activeOrder.total || 0)).toFixed(2) }}</strong>
                 </div>
                 <div class="fin-row">
                   <span>Shipping Fee</span>
-                  <span>${{ Number(activeOrder.shipping_fee || 3.00).toFixed(2) }}</span>
+                  <span :class="{ 'free-shipping-text': Number(activeOrder.shipping_fee || 0) === 0 }">
+                    {{ Number(activeOrder.shipping_fee || 0) === 0 ? 'Free' : `$${Number(activeOrder.shipping_fee).toFixed(2)}` }}
+                  </span>
                 </div>
-                <div class="fin-row text-red">
-                  <span>Discount (WELCOME10)</span>
-                  <span>-${{ Number(activeOrder.discount || 6.40).toFixed(2) }}</span>
+                <div v-if="activeOrder.discount && Number(activeOrder.discount) > 0" class="fin-row text-red">
+                  <span>Discount {{ activeOrder.discount_code ? `(${activeOrder.discount_code})` : '' }}</span>
+                  <span>-${{ Number(activeOrder.discount).toFixed(2) }}</span>
                 </div>
                 <div class="fin-row-total">
                   <strong>Total</strong>
-                  <strong class="grand-total">${{ Number(activeOrder.total || 60.60).toFixed(2) }}</strong>
+                  <strong class="grand-total">${{ Number(activeOrder.total || 0).toFixed(2) }}</strong>
                 </div>
               </div>
             </div>
@@ -1015,7 +1021,7 @@ const exportOrders = () => {
               </div>
 
               <div class="customer-info-box">
-                <img :src="getAvatar(activeOrder.customer_name)" class="cust-profile-avatar" />
+                <ProfileAvatar :src="activeOrder.customer_avatar" :name="activeOrder.customer_name" class="cust-profile-avatar" />
                 <div class="cust-profile-texts">
                   <strong class="cust-name-main">{{ activeOrder.customer_name }}</strong>
                   <span class="cust-email-main">{{ activeOrder.customer_email }}</span>
@@ -1038,7 +1044,7 @@ const exportOrders = () => {
                 </div>
               </div>
 
-              <router-link to="/customers" class="btn-view-customer-profile">
+              <router-link v-if="activeOrder.user_id" :to="{ name: 'customers', query: { customerId: activeOrder.user_id } }" class="btn-view-customer-profile">
                 <User :size="14" />
                 <span>View Customer Profile</span>
               </router-link>
@@ -1444,11 +1450,14 @@ const exportOrders = () => {
   background: #FFFFFF;
   border: 1px solid #EFE7E0;
   border-radius: 14px;
-  overflow: hidden;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  max-width: 100%;
 }
 
 .atelier-table {
   width: 100%;
+  min-width: 900px;
   border-collapse: collapse;
   font-size: 12.5px;
 }
@@ -2161,6 +2170,11 @@ const exportOrders = () => {
   color: #D32F2F;
 }
 
+.free-shipping-text {
+  color: #16A34A;
+  font-weight: 600;
+}
+
 .fin-row-total {
   display: flex;
   justify-content: space-between;
@@ -2458,6 +2472,19 @@ const exportOrders = () => {
   }
   .kpi-grid-4 {
     grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 640px) {
+  .kpi-grid-4 {
+    grid-template-columns: 1fr;
+  }
+  .filter-toolbar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .filter-dropdowns {
+    flex-wrap: wrap;
   }
 }
 </style>

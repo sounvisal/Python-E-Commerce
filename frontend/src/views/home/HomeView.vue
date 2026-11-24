@@ -15,7 +15,7 @@
             <span>{{ currentSlide.eyebrow }}</span>
           </div>
 
-          <h1 class="hero-headline animate-fade-in-up" :key="'headline-' + activeSlide" v-html="currentSlide.headline"></h1>
+          <h1 class="hero-headline animate-fade-in-up" :key="'headline-' + activeSlide">{{ currentSlide.headline }}</h1>
 
           <p class="hero-description animate-fade-in-up delay-1" :key="'desc-' + activeSlide">
             {{ currentSlide.description }}
@@ -61,7 +61,7 @@
           <div class="hero-image-stage">
             <!-- Floating Editorial Callout -->
             <div class="floating-script-callout" :key="'script-' + activeSlide">
-              <span class="script-phrase" v-html="currentSlide.script"></span>
+              <span class="script-phrase">{{ currentSlide.script }}</span>
             </div>
 
             <!-- Main Beauty Bottles Visual matching exact composition -->
@@ -503,38 +503,42 @@ const productStore = useProductStore()
 const homeBanner = computed(() =>
   bannerStore.getBanner('home', {
     image_url: '/images/banner-home.jpg',
-    title: 'Your Skincare Destination',
   })
 )
+
+const homeBannerLink = computed(() => {
+  const path = homeBanner.value.cta_link?.trim() || ''
+  return /^\/(?![\/\\])[^\\\s]*$/.test(path) ? path : '/shop'
+})
 
 const slides = computed(() => [
   {
     id: 1,
-    eyebrow: 'DISCOVER A BRIGHTER YOU',
-    headline: 'Your Skincare<br>Destination.',
-    description: 'Explore 100+ trusted skincare brands in one place. Real products. Real results. A healthier, happier you.',
+    eyebrow: homeBanner.value.badge_text || 'DISCOVER A BRIGHTER YOU',
+    headline: homeBanner.value.title || 'Your Skincare\nDestination.',
+    description: homeBanner.value.subtitle || 'Explore 100+ trusted skincare brands in one place. Real products. Real results. A healthier, happier you.',
     image: homeBanner.value.image_url || '/images/banner-home.jpg',
-    script: 'More Brands.<br>Healthier Skin.',
-    cta: 'Shop Now',
-    link: '/shop',
+    script: homeBanner.value.script_text || 'More Brands.\nHealthier Skin.',
+    cta: homeBanner.value.cta_text || 'Shop Now',
+    link: homeBannerLink.value,
   },
   {
     id: 2,
     eyebrow: 'BARRIER SCIENCE & BOTANICALS',
-    headline: 'Nurture Your<br>Natural Glow.',
+    headline: 'Nurture Your\nNatural Glow.',
     description: 'Clean, clinically-proven botanical actives formulated to repair lipid barriers and restore lasting skin balance.',
     image: '/images/banner-shop-all.jpg',
-    script: 'Clean Actives.<br>Radiant Life.',
+    script: 'Clean Actives.\nRadiant Life.',
     cta: 'Explore Serums',
     link: '/shop?category=serums',
   },
   {
     id: 3,
     eyebrow: 'PERSONALIZED DIAGNOSTIC',
-    headline: 'Formulated for<br>Your Skin Profile.',
+    headline: 'Formulated for\nYour Skin Profile.',
     description: 'Take our interactive dermatological diagnostic to receive an evidence-based morning and evening regimen.',
     image: '/images/cat-masks.jpg',
-    script: 'Custom Routine.<br>Proven Results.',
+    script: 'Custom Routine.\nProven Results.',
     cta: 'Take Skin Quiz',
     link: '/quiz',
   },
@@ -897,6 +901,7 @@ async function handleSubscribe() {
 }
 
 .hero-headline {
+  white-space: pre-line;
   font-family: var(--font-serif);
   font-size: clamp(2.3rem, 3.5vw, 3.2rem);
   font-weight: 500;
@@ -1081,6 +1086,7 @@ async function handleSubscribe() {
 }
 
 .script-phrase {
+  white-space: pre-line;
   font-family: var(--font-script);
   font-style: italic;
   font-size: 1.45rem;

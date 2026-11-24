@@ -1,12 +1,11 @@
 <script setup>
-import { ref, onMounted, reactive } from 'vue'
+import { computed, ref, onMounted, reactive } from 'vue'
 import apiClient from '@/api/client'
 import { useAdminStore } from '@/stores/admin'
 import { getStorefrontUrl } from '@/utils/storefront'
 import {
   ExternalLink,
   Edit2,
-  MoreHorizontal,
   Plus,
   GripVertical,
   CheckCircle2,
@@ -31,6 +30,7 @@ const canUploadMedia = computed(() => !hostedDeployment && adminStore.uploadStat
 // State
 const banners = ref([])
 const loading = ref(false)
+const loadError = ref('')
 const showEditModal = ref(false)
 const isSubmitting = ref(false)
 
@@ -38,7 +38,7 @@ const isSubmitting = ref(false)
 const pageTitle = ref('Luméa - Beauty Lives Here')
 const metaDescription = ref('Discover authentic beauty products, expert advice, and personalized skincare solutions at Luméa.')
 const metaImage = ref('/images/admin-hero-bottles.jpg')
-const lastPublished = ref('Aug 28, 2025 at 10:24 AM')
+const lastPublished = ref('')
 
 // Homepage Sections matching Luméa Homepage Management Dashboard.png
 const sections = ref([])
@@ -46,11 +46,11 @@ const sections = ref([])
 // Banner Edit Form
 const bannerForm = reactive({
   id: null,
-  section_title: '',
   title: '',
   subtitle: '',
   badge: '',
   image_url: '',
+  cta_text: '',
   link: '',
   is_active: true
 })
@@ -61,16 +61,19 @@ onMounted(async () => {
 
 async function fetchBanners() {
   loading.value = true
+  loadError.value = ''
   try {
     const res = await apiClient.get('/banners?active_only=false')
-    if (res.data?.status === 'success') {
+    if (res.data?.status === 'success' && Array.isArray(res.data.data)) {
       banners.value = res.data.data
       sections.value = banners.value.map(b => ({ id: b.id, order: b.display_order, title: b.title, type: b.page,
         type_badge: 'badge-banner', description: b.subtitle, is_active: b.is_active, thumb: b.image_url, banner: b }))
-      lastPublished.value = banners.value.map(b => b.updated_at || b.created_at || '').sort().at(-1) || 'No banners yet'
+      lastPublished.value = banners.value.map(b => b.updated_at || b.created_at || '').sort().at(-1) || ''
+    } else {
+      throw new Error('Unexpected banner response')
     }
   } catch (err) {
-    console.error('Failed to load banners:', err)
+    loadError.value = 'Could not load banners. Try refreshing the list.'
   } finally {
     loading.value = false
   }
@@ -99,8 +102,8 @@ async function handleBannerUpload(e) {
     const res = await apiClient.post('/upload', formData, {
       headers: { 'Content-Type': 'multipart/form-data' }
     })
-    if (res.data?.status === 'success' && res.data.url) {
-      bannerForm.image_url = res.data.url
+    if (res.data?.status === 'success' && res.data.data?.url) {
+      bannerForm.image_url = res.data.data.url
       adminStore.addToast('Section banner image uploaded successfully!', 'success')
     }
   } catch (err) {
@@ -113,21 +116,29 @@ async function handleBannerUpload(e) {
 
 function openEditSection(sec) {
   bannerForm.id = sec.id
-  bannerForm.section_title = sec.title
   bannerForm.title = sec.banner.title
   bannerForm.subtitle = sec.description
   bannerForm.badge = sec.banner.badge_text || ''
   bannerForm.image_url = sec.thumb
-  bannerForm.link = sec.banner.cta_link || '/'
+  bannerForm.cta_text = sec.banner.cta_text || ''
+  bannerForm.link = sec.banner.cta_link || ''
   bannerForm.is_active = sec.is_active
   showEditModal.value = true
 }
 
 async function saveSection() {
+  if (isSubmitting.value) return
+  const title = bannerForm.title.trim()
+  const link = bannerForm.link.trim()
+  if (!title || (link && !/^\/(?![\/\\])[^\\\s]*$/.test(link))) {
+    adminStore.addToast('Enter a title and a storefront path such as /shop.', 'warning')
+    return
+  }
   isSubmitting.value = true
   try {
-    await apiClient.put(`/banners/${bannerForm.id}`, { title: bannerForm.title, subtitle: bannerForm.subtitle,
-      badge_text: bannerForm.badge, image_url: bannerForm.image_url, cta_link: bannerForm.link, is_active: bannerForm.is_active })
+    await apiClient.put(`/banners/${bannerForm.id}`, { title, subtitle: bannerForm.subtitle,
+      badge_text: bannerForm.badge, image_url: bannerForm.image_url, cta_text: bannerForm.cta_text.trim(),
+      cta_link: link, is_active: bannerForm.is_active })
     await fetchBanners()
     showEditModal.value = false
     adminStore.addToast('Banner saved to the storefront.', 'success')
@@ -221,7 +232,7 @@ function applyTemplate(name) {
           <div class="card-header-row">
             <div>
               <h3 class="panel-card-title">Homepage Sections</h3>
-              <p class="panel-sub">Drag and drop to reorder sections. Changes will be visible after publishing.</p>
+              <p class="panel-sub">Choose the Home banner to edit the first storefront slide.</p>
             </div>
             <button disabled title="Custom sections are not available yet" class="btn-add-section opacity-60 cursor-not-allowed">
               <Plus :size="14" />
@@ -231,6 +242,12 @@ function applyTemplate(name) {
 
           <!-- Section List Rows -->
           <div class="sections-list">
+            <p v-if="loading" role="status">Loading banners…</p>
+            <div v-else-if="loadError" role="alert">
+              <p>{{ loadError }}</p>
+              <button type="button" class="btn-sec-edit" @click="fetchBanners">Retry</button>
+            </div>
+            <p v-else-if="!sections.length">No saved banners.</p>
             <div
               v-for="sec in sections"
               :key="sec.id"
@@ -280,9 +297,6 @@ function applyTemplate(name) {
                   <span>Edit</span>
                 </button>
 
-                <button class="btn-more-dots">
-                  <MoreHorizontal :size="15" />
-                </button>
               </div>
             </div>
           </div>
@@ -343,14 +357,12 @@ function applyTemplate(name) {
         <!-- 2. Publish Section -->
         <div class="card panel-sidebar-card">
           <div class="card-header-row">
-            <h3 class="panel-card-title">Publish Section</h3>
-            <span class="status-pill badge-active">Published</span>
+            <h3 class="panel-card-title">Storefront banners</h3>
           </div>
 
           <div class="publish-meta">
-            <span class="pub-lbl">Last Published</span>
-            <strong class="pub-time">{{ lastPublished }}</strong>
-            <span class="pub-author">Saved on the server</span>
+            <span class="pub-lbl">Last saved</span>
+            <strong class="pub-time">{{ lastPublished ? new Date(lastPublished).toLocaleString() : '—' }}</strong>
           </div>
 
           <div class="publish-buttons-row">
@@ -418,7 +430,7 @@ function applyTemplate(name) {
       <div class="section-modal-dialog" @click.stop>
         <div class="modal-header-clean">
           <div>
-            <h3 class="modal-title">Edit Section: {{ bannerForm.section_title }}</h3>
+            <h3 class="modal-title">Edit banner</h3>
             <p class="modal-sub">Update section headline, layout description, and visual asset.</p>
           </div>
           <button class="btn-close-modal" @click="showEditModal = false">
@@ -428,13 +440,21 @@ function applyTemplate(name) {
 
         <div class="modal-form-body">
           <div class="form-group-clean">
-            <label class="form-lbl">Section Title</label>
-            <input v-model="bannerForm.section_title" type="text" class="atelier-input" />
+            <label class="form-lbl" for="banner-title">Section Title</label>
+            <input id="banner-title" v-model="bannerForm.title" type="text" class="atelier-input" />
           </div>
 
           <div class="form-group-clean">
             <label class="form-lbl">Subtitle / Description</label>
             <textarea v-model="bannerForm.subtitle" rows="3" class="atelier-textarea"></textarea>
+          </div>
+          <div class="form-group-clean">
+            <label class="form-lbl" for="banner-cta-text">Button label</label>
+            <input id="banner-cta-text" v-model="bannerForm.cta_text" type="text" class="atelier-input" />
+          </div>
+          <div class="form-group-clean">
+            <label class="form-lbl" for="banner-cta-link">Button destination</label>
+            <input id="banner-cta-link" v-model="bannerForm.link" type="text" class="atelier-input" placeholder="/shop" />
           </div>
 
           <div class="form-group-clean">
@@ -484,7 +504,7 @@ function applyTemplate(name) {
 
         <div class="modal-footer-clean">
           <button class="btn-cancel" @click="showEditModal = false">Cancel</button>
-          <button class="btn-save-modal" @click="saveSection">
+          <button class="btn-save-modal" :disabled="isSubmitting || isUploadingBanner" @click="saveSection">
             <Save :size="15" />
             <span>Save Section</span>
           </button>
@@ -1100,6 +1120,16 @@ function applyTemplate(name) {
 @media (max-width: 1100px) {
   .homepage-grid-layout {
     grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 640px) {
+  .templates-grid {
+    grid-template-columns: 1fr;
+  }
+  .actions-top-bar {
+    flex-wrap: wrap;
+    gap: 0.5rem;
   }
 }
 </style>

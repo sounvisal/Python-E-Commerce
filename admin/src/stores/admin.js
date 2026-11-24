@@ -29,6 +29,7 @@ export const useAdminStore = defineStore('admin', () => {
   // Customers
   const customers = ref([])
   const customersTotal = ref(0)
+  const customersMeta = ref({ total: 0, tab_counts: { all: 0, new: 0, vip: 0, inactive: 0 } })
   const customersLoading = ref(false)
 
   // Reviews
@@ -318,7 +319,8 @@ export const useAdminStore = defineStore('admin', () => {
       const res = await apiClient.get('/admin/customers', { params })
       if (res.data?.status === 'success') {
         customers.value = res.data.data
-        customersTotal.value = res.data.total ?? res.data.data.length
+        customersTotal.value = res.data.meta?.total ?? res.data.total ?? res.data.data.length
+        if (res.data.meta) customersMeta.value = res.data.meta
         backendConnected.value = true
         return res.data
       }
@@ -574,6 +576,7 @@ export const useAdminStore = defineStore('admin', () => {
     brandsLoading,
     customers,
     customersTotal,
+    customersMeta,
     customersLoading,
     reviews,
     reviewsKpis,

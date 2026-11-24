@@ -80,8 +80,15 @@ const form = reactive({
   free_shipping_carriers: ['vet_express', 'jt_express', 'lumea_concierge'],
   grab_subsidy_enabled: true,
   tax_rate: 10.0,
-  online_status: 'Online'
+  online_status: 'Online',
+  store_logo: '',
+  store_favicon: ''
 })
+
+const staffMembers = ref([
+  { id: 1, name: 'Sreynich Chan', email: 'sreynich.chan@example.com', role: 'Super Admin · Full Access', avatar: '/images/avatar-sreynich.jpg', status: 'Active' },
+  { id: 2, name: 'Luméa Operations', email: 'ops@lumea.com', role: 'Store Manager', avatar: '/images/avatars/avatar-default.png', status: 'Active' },
+])
 
 const uploadStatus = ref({
   enabled: null,
@@ -138,6 +145,8 @@ async function loadSettings() {
       form.grab_subsidy_enabled = d.grab_subsidy_enabled ?? form.grab_subsidy_enabled
       form.tax_rate = d.tax_rate ?? form.tax_rate
       form.online_status = d.online_status || form.online_status
+      form.store_logo = d.store_logo || ''
+      form.store_favicon = d.store_favicon || ''
     }
   } catch (err) {
     console.error('Failed to load settings:', err)
@@ -154,6 +163,8 @@ async function saveSettings() {
       store_phone: `${form.phone_country_code} ${form.store_phone}`,
       store_language: form.store_language,
       store_description: form.store_description,
+      store_logo: form.store_logo,
+      store_favicon: form.store_favicon,
       company_name: form.company_name,
       business_reg_number: form.business_reg_number,
       business_address: form.business_address,
@@ -323,40 +334,77 @@ function changeStoreLogo() {
   const input = document.createElement('input')
   input.type = 'file'
   input.accept = 'image/*'
-  input.onchange = (e) => {
-    const file = e.target.files[0]
+  input.onchange = async (e) => {
+    const file = e.target.files?.[0]
     if (file) {
-      adminStore.addToast('Store logo updated successfully', 'success')
+      try {
+        const formData = new FormData()
+        formData.append('file', file)
+        const res = await apiClient.post('/upload', formData, {
+          headers: { 'Content-Type': 'multipart/form-data' }
+        })
+        const url = res.data?.data?.url || res.data?.url
+        if (url) {
+          form.store_logo = url
+          adminStore.addToast('Store logo uploaded! Click Save to apply.', 'success')
+        }
+      } catch (err) {
+        adminStore.addToast('Failed to upload store logo', 'error')
+      }
     }
   }
   input.click()
 }
 
 function removeStoreLogo() {
-  adminStore.addToast('Store logo reset to default Luméa emblem', 'info')
+  form.store_logo = ''
+  adminStore.addToast('Store logo reset to default Luméa typography. Click Save to apply.', 'info')
 }
 
 function changeFavicon() {
   const input = document.createElement('input')
   input.type = 'file'
-  input.accept = '.ico,.png,.svg'
-  input.onchange = (e) => {
-    const file = e.target.files[0]
+  input.accept = '.ico,.png,.svg,.jpg'
+  input.onchange = async (e) => {
+    const file = e.target.files?.[0]
     if (file) {
-      adminStore.addToast('Favicon updated successfully', 'success')
+      try {
+        const formData = new FormData()
+        formData.append('file', file)
+        const res = await apiClient.post('/upload', formData, {
+          headers: { 'Content-Type': 'multipart/form-data' }
+        })
+        const url = res.data?.data?.url || res.data?.url
+        if (url) {
+          form.store_favicon = url
+          adminStore.addToast('Store favicon uploaded! Click Save to apply.', 'success')
+        }
+      } catch (err) {
+        adminStore.addToast('Failed to upload store favicon', 'error')
+      }
     }
   }
   input.click()
 }
 
 function removeFavicon() {
-  adminStore.addToast('Favicon reset to default', 'info')
+  form.store_favicon = ''
+  adminStore.addToast('Store favicon reset to default. Click Save to apply.', 'info')
 }
 
 function inviteStaffMember() {
   const email = prompt('Enter staff member email address:')
-  if (email?.trim()) {
-    adminStore.addToast(`Staff invitation sent to ${email.trim()}`, 'success')
+  if (email && email.trim()) {
+    const role = prompt('Assign role (Administrator, Order Fulfillment, Content Editor):', 'Order Fulfillment') || 'Staff Member'
+    staffMembers.value.push({
+      id: Date.now(),
+      name: email.split('@')[0].replace(/[._]/g, ' '),
+      email: email.trim(),
+      role: role.trim(),
+      avatar: '/images/avatar-sreynich.jpg',
+      status: 'Invited'
+    })
+    adminStore.addToast(`Invitation dispatched to ${email.trim()} as ${role.trim()}`, 'success')
   }
 }
 </script>
@@ -489,7 +537,8 @@ function inviteStaffMember() {
                   <label class="field-label">Store Logo</label>
                   <div class="logo-box-row">
                     <div class="logo-preview-card">
-                      <span class="logo-text-display">Luméa</span>
+                      <img v-if="form.store_logo" :src="form.store_logo" alt="Store Logo" class="max-h-8 max-w-full object-contain" />
+                      <span v-else class="logo-text-display">Luméa</span>
                     </div>
                     <div class="logo-btn-col">
                       <button class="btn-change-box" @click="changeStoreLogo">
@@ -510,7 +559,8 @@ function inviteStaffMember() {
                   <label class="field-label">Store Favicon</label>
                   <div class="logo-box-row">
                     <div class="favicon-preview-card">
-                      <svg viewBox="0 0 24 24" class="w-5 h-5 text-crimson fill-crimson">
+                      <img v-if="form.store_favicon" :src="form.store_favicon" alt="Store Favicon" class="w-6 h-6 object-contain" />
+                      <svg v-else viewBox="0 0 24 24" class="w-5 h-5 text-crimson fill-crimson">
                         <path d="M12 2C6.5 2 2 6.5 2 12c0 5.5 4.5 10 10 10s10-4.5 10-10c0-5.5-4.5-10-10-10zm-1 14.5c-2.5 0-4.5-2-4.5-4.5S8.5 7.5 11 7.5s4.5 2 4.5 4.5-2 4.5-4.5 4.5z"/>
                       </svg>
                     </div>
@@ -1018,13 +1068,13 @@ function inviteStaffMember() {
               </button>
             </div>
             <div class="staff-list mt-4">
-              <div class="staff-card">
-                <img src="/images/avatar-sreynich.jpg" class="w-10 h-10 rounded-full object-cover" />
+              <div v-for="staff in staffMembers" :key="staff.id" class="staff-card mb-2">
+                <img :src="staff.avatar" class="w-10 h-10 rounded-full object-cover" />
                 <div class="ml-3 flex-1">
-                  <span class="font-semibold text-sm text-charcoal block">Sreynich Chan</span>
-                  <span class="text-xs text-taupe">Super Admin · Full Access</span>
+                  <span class="font-semibold text-sm text-charcoal block">{{ staff.name }}</span>
+                  <span class="text-xs text-taupe">{{ staff.role }} · {{ staff.email }}</span>
                 </div>
-                <span class="badge-status status-active">Active</span>
+                <span class="badge-status" :class="staff.status === 'Active' ? 'status-active' : 'status-pending'">{{ staff.status }}</span>
               </div>
             </div>
           </div>
@@ -2151,9 +2201,35 @@ input:checked + .slider-round:before {
   font-size: 0.8125rem;
 }
 
-@media (max-width: 1200px) {
+@media (max-width: 1400px) {
+  .settings-workspace {
+    grid-template-columns: 240px 1fr;
+  }
+  .right-widgets-column {
+    grid-column: 1 / -1;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 1rem;
+  }
+}
+
+@media (max-width: 900px) {
   .settings-workspace {
     grid-template-columns: 1fr;
+  }
+  .shipping-modes-grid {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+@media (max-width: 640px) {
+  .form-row-two {
+    grid-template-columns: 1fr;
+  }
+  .courier-config-item {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.75rem;
   }
 }
 </style>
