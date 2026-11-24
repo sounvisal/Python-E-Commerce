@@ -2019,6 +2019,10 @@ function exportQuizzesCSV() {
   border-radius: 12px;
   width: 100%;
   max-width: 600px;
+  max-height: 90vh;
+  max-height: 90dvh;
+  display: flex;
+  flex-direction: column;
   overflow: hidden;
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
   border: 1px solid #EBE1D7;
@@ -2031,6 +2035,7 @@ function exportQuizzesCSV() {
   align-items: center;
   justify-content: space-between;
   background: #FAF6F2;
+  flex-shrink: 0;
 }
 
 .preview-tag {
@@ -2058,6 +2063,9 @@ function exportQuizzesCSV() {
 
 .preview-body {
   padding: 1.5rem;
+  flex: 1;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
 }
 
 .preview-step-counter {
@@ -2131,6 +2139,19 @@ function exportQuizzesCSV() {
   }
   .kpi-grid {
     grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 640px) {
+  .modal-preview-card {
+    max-height: 95vh;
+    max-height: 95dvh;
+  }
+  .preview-body {
+    padding: 1rem;
+  }
+  .preview-header {
+    padding: 1rem;
   }
 }
 </style>

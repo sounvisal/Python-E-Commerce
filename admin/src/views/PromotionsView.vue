@@ -1268,13 +1268,18 @@ const deletePromo = async promo => {
   justify-content: center;
   z-index: 1000;
   backdrop-filter: blur(2px);
+  padding: 16px;
 }
 
 .promo-modal-dialog {
   background: #FFFFFF;
   border-radius: 16px;
-  width: 90%;
+  width: 100%;
   max-width: 560px;
+  max-height: 90vh;
+  max-height: 90dvh;
+  display: flex;
+  flex-direction: column;
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
   overflow: hidden;
 }
@@ -1283,19 +1288,24 @@ const deletePromo = async promo => {
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
-  padding: 20px 24px;
+  padding: 18px 24px;
   border-bottom: 1px solid #EFE7E0;
+  flex-shrink: 0;
 }
 
 .modal-title { font-size: 17px; font-weight: 700; color: #2D2621; }
 .modal-sub { font-size: 12px; color: #8C847E; margin-top: 2px; }
-.btn-close-modal { background: none; border: none; color: #8C847E; cursor: pointer; }
+.btn-close-modal { background: none; border: none; color: #8C847E; cursor: pointer; padding: 4px; }
+.btn-close-modal:hover { color: #84261B; }
 
 .modal-form-body {
-  padding: 24px;
+  padding: 20px 24px;
   display: flex;
   flex-direction: column;
   gap: 16px;
+  flex: 1;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
 }
 
 .form-row-2 {
@@ -1342,6 +1352,26 @@ const deletePromo = async promo => {
   padding: 16px 24px;
   background: #FAF7F4;
   border-top: 1px solid #EFE7E0;
+  flex-shrink: 0;
+}
+
+@media (max-width: 640px) {
+  .modal-backdrop {
+    padding: 8px;
+  }
+  .promo-modal-dialog {
+    max-height: 95vh;
+    max-height: 95dvh;
+    border-radius: 12px;
+  }
+  .modal-header-clean,
+  .modal-form-body,
+  .modal-footer-clean {
+    padding: 14px 16px;
+  }
+  .form-row-2 {
+    grid-template-columns: 1fr;
+  }
 }
 
 .btn-cancel {

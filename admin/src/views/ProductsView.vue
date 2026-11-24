@@ -2524,7 +2524,11 @@ const toggleSkinConcern = (concern) => {
   border-radius: 16px;
   width: 90%;
   max-width: 560px;
+  max-height: 90vh;
+  max-height: 90dvh;
   padding: 24px;
+  display: flex;
+  flex-direction: column;
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
 }
 
@@ -2533,6 +2537,7 @@ const toggleSkinConcern = (concern) => {
   justify-content: space-between;
   align-items: center;
   margin-bottom: 18px;
+  flex-shrink: 0;
 }
 
 .btn-close-modal {
@@ -2545,6 +2550,8 @@ const toggleSkinConcern = (concern) => {
 .modal-body-preview {
   display: flex;
   gap: 20px;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
 }
 
 .quick-view-img {
@@ -2602,6 +2609,19 @@ const toggleSkinConcern = (concern) => {
   }
   .filter-dropdowns {
     flex-wrap: wrap;
+  }
+  .preview-modal-dialog {
+    padding: 16px;
+    max-height: 95vh;
+    max-height: 95dvh;
+  }
+  .modal-body-preview {
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+  }
+  .quick-stock-stat {
+    align-items: center;
   }
 }
 </style>

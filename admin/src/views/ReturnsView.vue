@@ -1882,6 +1882,10 @@ function formatRequestedDate(dateStr) {
   border-radius: 12px;
   width: 100%;
   max-width: 520px;
+  max-height: 90vh;
+  max-height: 90dvh;
+  display: flex;
+  flex-direction: column;
   overflow: hidden;
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
   border: 1px solid #EBE1D7;
@@ -1921,6 +1925,9 @@ function formatRequestedDate(dateStr) {
 
 .modal-body {
   padding: 1.5rem;
+  flex: 1;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
 }
 
 .inspect-details-grid {
