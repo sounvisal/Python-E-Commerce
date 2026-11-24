@@ -1,0 +1,1379 @@
+{
+  "categories": [
+    {
+      "id": 1,
+      "name": "Cleansers",
+      "slug": "cleansers",
+      "count": 234,
+      "icon": "Sparkles",
+      "desc": "The first step to healthy, radiant skin. Remove impurities, excess oil, and makeup while keeping your skin balanced and refreshed."
+    },
+    {
+      "id": 2,
+      "name": "Toners",
+      "slug": "toners",
+      "count": 112,
+      "icon": "Droplets",
+      "desc": "Hydrating, balancing and soothing liquid elixirs that prep skin for optimal nutrient absorption."
+    },
+    {
+      "id": 3,
+      "name": "Serums",
+      "slug": "serums",
+      "count": 342,
+      "icon": "Flame",
+      "desc": "High-potency active formulations targeting fine lines, hyperpigmentation, hydration, and glow."
+    },
+    {
+      "id": 4,
+      "name": "Moisturizers",
+      "slug": "moisturizers",
+      "count": 298,
+      "icon": "Shield",
+      "desc": "Rich barrier-replenishing creams and weightless lotions that seal in essential moisture."
+    },
+    {
+      "id": 5,
+      "name": "Sunscreens",
+      "slug": "sunscreens",
+      "count": 166,
+      "icon": "Sun",
+      "desc": "Broad-spectrum UVA/UVB mineral and chemical sun shields that protect without white cast."
+    },
+    {
+      "id": 6,
+      "name": "Masks",
+      "slug": "masks",
+      "count": 87,
+      "icon": "Smile",
+      "desc": "Deep-acting wash-off, overnight, and bio-cellulose sheet treatments for intensive replenishment."
+    },
+    {
+      "id": 7,
+      "name": "Treatments",
+      "slug": "treatments",
+      "count": 121,
+      "icon": "Zap",
+      "desc": "Targeted clinical exfoliants, clarifying peel pads, and corrective spot formulations."
+    },
+    {
+      "id": 8,
+      "name": "Kits & Sets",
+      "slug": "kits",
+      "count": 98,
+      "icon": "Gift",
+      "desc": "Curated routine rituals and starter discovery bundles for yourself or someone special."
+    }
+  ],
+  "products": [
+    {
+      "id": 101,
+      "name": "Hydrating Facial Cleanser",
+      "brand": "CeraVe",
+      "category": "cleansers",
+      "category_name": "Cleansers",
+      "subcategory": "Cream Cleanser",
+      "product_type": "Cream",
+      "price": 16.0,
+      "compare_at_price": null,
+      "rating": 4.8,
+      "reviews": 12400,
+      "badge": "Best Seller",
+      "badge_type": "bestseller",
+      "skin_type": [
+        "Dry",
+        "Normal",
+        "Sensitive"
+      ],
+      "skin_concern": [
+        "Dryness",
+        "Sensitivity"
+      ],
+      "stock": 45,
+      "image_url": "/images/prod-cerave-cleanser.jpg",
+      "slug": "cerave-hydrating-facial-cleanser",
+      "is_featured": true
+    },
+    {
+      "id": 102,
+      "name": "Effaclar Purifying Foaming Gel",
+      "brand": "La Roche-Posay",
+      "category": "cleansers",
+      "category_name": "Cleansers",
+      "subcategory": "Gel Cleanser",
+      "product_type": "Gel",
+      "price": 18.0,
+      "compare_at_price": null,
+      "rating": 4.7,
+      "reviews": 6200,
+      "badge": null,
+      "badge_type": null,
+      "skin_type": [
+        "Oily",
+        "Combination"
+      ],
+      "skin_concern": [
+        "Acne & Blemishes",
+        "Oiliness"
+      ],
+      "stock": 28,
+      "image_url": "/images/prod-laroche-effaclar.jpg",
+      "slug": "la-roche-posay-effaclar-purifying-foaming-gel",
+      "is_featured": true
+    },
+    {
+      "id": 103,
+      "name": "Facial Treatment Gentle Cleanser",
+      "brand": "SK-II",
+      "category": "cleansers",
+      "category_name": "Cleansers",
+      "subcategory": "Cream Cleanser",
+      "product_type": "Cream",
+      "price": 75.0,
+      "compare_at_price": null,
+      "rating": 4.8,
+      "reviews": 3100,
+      "badge": null,
+      "badge_type": null,
+      "skin_type": [
+        "Normal",
+        "Dry",
+        "Combination",
+        "Sensitive"
+      ],
+      "skin_concern": [
+        "Dullness",
+        "Uneven Texture"
+      ],
+      "stock": 14,
+      "image_url": "/images/prod-sk2.jpg",
+      "slug": "sk-ii-facial-treatment-gentle-cleanser",
+      "is_featured": true
+    },
+    {
+      "id": 104,
+      "name": "Green Tea Amino Acid Cleansing Foam",
+      "brand": "innisfree",
+      "category": "cleansers",
+      "category_name": "Cleansers",
+      "subcategory": "Foam Cleanser",
+      "product_type": "Foam",
+      "price": 14.0,
+      "compare_at_price": null,
+      "rating": 4.6,
+      "reviews": 1200,
+      "badge": "New",
+      "badge_type": "new",
+      "skin_type": [
+        "Combination",
+        "Normal"
+      ],
+      "skin_concern": [
+        "Dryness",
+        "Dullness"
+      ],
+      "stock": 35,
+      "image_url": "/images/prod-innisfree-cleanser.jpg",
+      "slug": "innisfree-green-tea-amino-acid-cleansing-foam",
+      "is_featured": true
+    },
+    {
+      "id": 105,
+      "name": "Squalane Cleanser",
+      "brand": "The Ordinary",
+      "category": "cleansers",
+      "category_name": "Cleansers",
+      "subcategory": "Cleansing Balm",
+      "product_type": "Balm",
+      "price": 10.4,
+      "compare_at_price": 13.0,
+      "rating": 4.5,
+      "reviews": 980,
+      "badge": "20% OFF",
+      "badge_type": "sale",
+      "skin_type": [
+        "Normal",
+        "Dry",
+        "Sensitive"
+      ],
+      "skin_concern": [
+        "Dryness",
+        "Sensitivity"
+      ],
+      "stock": 60,
+      "image_url": "/images/prod-ordinary.jpg",
+      "slug": "the-ordinary-squalane-cleanser",
+      "is_featured": true
+    },
+    {
+      "id": 106,
+      "name": "Low pH Good Morning Gel Cleanser",
+      "brand": "COSRX",
+      "category": "cleansers",
+      "category_name": "Cleansers",
+      "subcategory": "Gel Cleanser",
+      "product_type": "Gel",
+      "price": 14.0,
+      "compare_at_price": null,
+      "rating": 4.8,
+      "reviews": 8700,
+      "badge": null,
+      "badge_type": null,
+      "skin_type": [
+        "Oily",
+        "Sensitive",
+        "Combination"
+      ],
+      "skin_concern": [
+        "Acne & Blemishes",
+        "Sensitivity"
+      ],
+      "stock": 50,
+      "image_url": "/images/prod-cosrx-cleanser.jpg",
+      "slug": "cosrx-low-ph-good-morning-gel-cleanser",
+      "is_featured": true
+    },
+    {
+      "id": 107,
+      "name": "Sensibio H2O Micellar Water",
+      "brand": "BIODERMA",
+      "category": "cleansers",
+      "category_name": "Cleansers",
+      "subcategory": "Micellar Water",
+      "product_type": "Micellar Water",
+      "price": 18.0,
+      "compare_at_price": null,
+      "rating": 4.8,
+      "reviews": 1100,
+      "badge": null,
+      "badge_type": null,
+      "skin_type": [
+        "Sensitive",
+        "Normal",
+        "Dry"
+      ],
+      "skin_concern": [
+        "Sensitivity",
+        "Redness"
+      ],
+      "stock": 40,
+      "image_url": "/images/prod-bioderma-micellar.jpg",
+      "slug": "bioderma-sensibio-h2o-micellar-water",
+      "is_featured": true
+    },
+    {
+      "id": 108,
+      "name": "Cream Skin Milk Cleanser",
+      "brand": "LANEIGE",
+      "category": "cleansers",
+      "category_name": "Cleansers",
+      "subcategory": "Cream Cleanser",
+      "product_type": "Cream",
+      "price": 24.0,
+      "compare_at_price": null,
+      "rating": 4.6,
+      "reviews": 1900,
+      "badge": null,
+      "badge_type": null,
+      "skin_type": [
+        "Dry",
+        "Normal",
+        "Sensitive"
+      ],
+      "skin_concern": [
+        "Dryness",
+        "Dullness"
+      ],
+      "stock": 22,
+      "image_url": "/images/prod-laneige.jpg",
+      "slug": "laneige-cream-skin-milk-cleanser",
+      "is_featured": true
+    },
+    {
+      "id": 109,
+      "name": "Heartleaf Quercetinol Pore Deep Cleansing Foam",
+      "brand": "Anua",
+      "category": "cleansers",
+      "category_name": "Cleansers",
+      "subcategory": "Foam Cleanser",
+      "product_type": "Foam",
+      "price": 16.0,
+      "compare_at_price": null,
+      "rating": 4.7,
+      "reviews": 2800,
+      "badge": null,
+      "badge_type": null,
+      "skin_type": [
+        "Oily",
+        "Combination"
+      ],
+      "skin_concern": [
+        "Acne & Blemishes",
+        "Oiliness",
+        "Uneven Texture"
+      ],
+      "stock": 30,
+      "image_url": "/images/prod-anua-cleanser.jpg",
+      "slug": "anua-heartleaf-quercetinol-pore-deep-cleansing-foam",
+      "is_featured": true
+    },
+    {
+      "id": 110,
+      "name": "Special Cleansing Gel",
+      "brand": "Dermalogica",
+      "category": "cleansers",
+      "category_name": "Cleansers",
+      "subcategory": "Gel Cleanser",
+      "product_type": "Gel",
+      "price": 38.0,
+      "compare_at_price": null,
+      "rating": 4.8,
+      "reviews": 1500,
+      "badge": "Value Set",
+      "badge_type": "value",
+      "skin_type": [
+        "Normal",
+        "Combination",
+        "Oily"
+      ],
+      "skin_concern": [
+        "Oiliness",
+        "Uneven Texture"
+      ],
+      "stock": 18,
+      "image_url": "/images/prod-dermalogica.jpg",
+      "slug": "dermalogica-special-cleansing-gel",
+      "is_featured": true
+    },
+    {
+      "id": 201,
+      "name": "Facial Treatment Essence",
+      "brand": "SK-II",
+      "category": "toners",
+      "category_name": "Toners",
+      "subcategory": "Essence",
+      "product_type": "Essence",
+      "price": 99.0,
+      "compare_at_price": null,
+      "rating": 4.8,
+      "reviews": 1200,
+      "badge": "Best Seller",
+      "badge_type": "bestseller",
+      "skin_type": [
+        "Normal",
+        "Dry",
+        "Combination",
+        "Sensitive"
+      ],
+      "skin_concern": [
+        "Dullness",
+        "Uneven Texture",
+        "Aging"
+      ],
+      "stock": 25,
+      "image_url": "/images/prod-sk2.jpg",
+      "slug": "sk-ii-facial-treatment-essence",
+      "is_featured": true
+    },
+    {
+      "id": 202,
+      "name": "Niacinamide 10% + Zinc 1%",
+      "brand": "The Ordinary",
+      "category": "serums",
+      "category_name": "Serums",
+      "subcategory": "Clarifying Serum",
+      "product_type": "Serum",
+      "price": 8.9,
+      "compare_at_price": 11.0,
+      "rating": 4.7,
+      "reviews": 980,
+      "badge": "20% OFF",
+      "badge_type": "sale",
+      "skin_type": [
+        "Oily",
+        "Combination",
+        "Normal"
+      ],
+      "skin_concern": [
+        "Acne & Blemishes",
+        "Oiliness",
+        "Uneven Texture"
+      ],
+      "stock": 80,
+      "image_url": "/images/prod-ordinary.jpg",
+      "slug": "the-ordinary-niacinamide-10-zinc-1",
+      "is_featured": true
+    },
+    {
+      "id": 203,
+      "name": "Lip Sleeping Mask",
+      "brand": "LANEIGE",
+      "category": "masks",
+      "category_name": "Masks",
+      "subcategory": "Lip Treatment",
+      "product_type": "Lip Mask",
+      "price": 24.0,
+      "compare_at_price": null,
+      "rating": 4.9,
+      "reviews": 2100,
+      "badge": null,
+      "badge_type": null,
+      "skin_type": [
+        "Dry",
+        "Normal",
+        "Sensitive"
+      ],
+      "skin_concern": [
+        "Dryness"
+      ],
+      "stock": 45,
+      "image_url": "/images/prod-laneige.jpg",
+      "slug": "laneige-lip-sleeping-mask",
+      "is_featured": true
+    },
+    {
+      "id": 204,
+      "name": "Moisturizing Cream",
+      "brand": "CeraVe",
+      "category": "moisturizers",
+      "category_name": "Moisturizers",
+      "subcategory": "Barrier Cream",
+      "product_type": "Cream",
+      "price": 24.0,
+      "compare_at_price": null,
+      "rating": 4.7,
+      "reviews": 1500,
+      "badge": null,
+      "badge_type": null,
+      "skin_type": [
+        "Dry",
+        "Sensitive",
+        "Normal"
+      ],
+      "skin_concern": [
+        "Dryness",
+        "Sensitivity"
+      ],
+      "stock": 55,
+      "image_url": "/images/prod-cerave.jpg",
+      "slug": "cerave-moisturizing-cream",
+      "is_featured": true
+    },
+    {
+      "id": 205,
+      "name": "Effaclar Duo+ Anti-Imperfections",
+      "brand": "La Roche-Posay",
+      "category": "treatments",
+      "category_name": "Treatments",
+      "subcategory": "Spot Treatment",
+      "product_type": "Cream",
+      "price": 22.0,
+      "compare_at_price": null,
+      "rating": 4.6,
+      "reviews": 892,
+      "badge": null,
+      "badge_type": null,
+      "skin_type": [
+        "Oily",
+        "Combination"
+      ],
+      "skin_concern": [
+        "Acne & Blemishes",
+        "Dark Spots"
+      ],
+      "stock": 32,
+      "image_url": "/images/prod-laroche-effaclar.jpg",
+      "slug": "la-roche-posay-effaclar-duo",
+      "is_featured": true
+    },
+    {
+      "id": 206,
+      "name": "Advanced Snail 96 Mucin Power Essence",
+      "brand": "COSRX",
+      "category": "toners",
+      "category_name": "Toners",
+      "subcategory": "Essence",
+      "product_type": "Essence",
+      "price": 25.0,
+      "compare_at_price": null,
+      "rating": 4.8,
+      "reviews": 1800,
+      "badge": null,
+      "badge_type": null,
+      "skin_type": [
+        "All Skin Types",
+        "Dry",
+        "Sensitive"
+      ],
+      "skin_concern": [
+        "Dryness",
+        "Uneven Texture",
+        "Dullness"
+      ],
+      "stock": 40,
+      "image_url": "/images/prod-cosrx-snail.jpg",
+      "slug": "cosrx-advanced-snail-96-mucin-essence",
+      "is_featured": true
+    },
+    {
+      "id": 208,
+      "name": "Green Tea Seed Hyaluronic Serum",
+      "brand": "innisfree",
+      "category": "serums",
+      "category_name": "Serums",
+      "subcategory": "Hydrating Serum",
+      "product_type": "Serum",
+      "price": 28.0,
+      "compare_at_price": null,
+      "rating": 4.7,
+      "reviews": 934,
+      "badge": null,
+      "badge_type": null,
+      "skin_type": [
+        "Dry",
+        "Combination",
+        "Normal"
+      ],
+      "skin_concern": [
+        "Dryness",
+        "Dullness"
+      ],
+      "stock": 25,
+      "image_url": "/images/prod-innisfree-cleanser.jpg",
+      "slug": "innisfree-green-tea-seed-serum",
+      "is_featured": true
+    },
+    {
+      "id": 209,
+      "name": "Heartleaf 77% Soothing Toner",
+      "brand": "Anua",
+      "category": "toners",
+      "category_name": "Toners",
+      "subcategory": "Soothing Toner",
+      "product_type": "Toner",
+      "price": 23.0,
+      "compare_at_price": 27.0,
+      "rating": 4.8,
+      "reviews": 2300,
+      "badge": "New",
+      "badge_type": "new",
+      "skin_type": [
+        "Sensitive",
+        "Acne-Prone",
+        "Combination"
+      ],
+      "skin_concern": [
+        "Sensitivity",
+        "Redness",
+        "Acne & Blemishes"
+      ],
+      "stock": 45,
+      "image_url": "/images/prod-anua-toner.jpg",
+      "slug": "anua-heartleaf-77-soothing-toner",
+      "is_featured": true
+    },
+    {
+      "id": 210,
+      "name": "Cicapair Tiger Grass Color Correcting Treatment",
+      "brand": "Dr.Jart+",
+      "category": "treatments",
+      "category_name": "Treatments",
+      "subcategory": "Color Corrector",
+      "product_type": "Cream",
+      "price": 38.0,
+      "compare_at_price": null,
+      "rating": 4.7,
+      "reviews": 874,
+      "badge": "Value Set",
+      "badge_type": "value",
+      "skin_type": [
+        "Sensitive",
+        "Normal",
+        "Combination"
+      ],
+      "skin_concern": [
+        "Redness",
+        "Sensitivity",
+        "Uneven Texture"
+      ],
+      "stock": 20,
+      "image_url": "/images/prod-laneige.jpg",
+      "slug": "dr-jart-cicapair-tiger-grass-treatment",
+      "is_featured": true
+    },
+    {
+      "id": 211,
+      "name": "AGE-R Booster Pro Cellular Glow Device",
+      "brand": "Medicube",
+      "category": "treatments",
+      "category_name": "Treatments",
+      "subcategory": "Beauty Device",
+      "product_type": "Device",
+      "price": 179.0,
+      "compare_at_price": null,
+      "rating": 4.6,
+      "reviews": 620,
+      "badge": null,
+      "badge_type": null,
+      "skin_type": [
+        "All Skin Types"
+      ],
+      "skin_concern": [
+        "Aging",
+        "Dullness",
+        "Uneven Texture"
+      ],
+      "stock": 12,
+      "image_url": "/images/prod-sk2.jpg",
+      "slug": "medicube-age-r-booster-pro",
+      "is_featured": true
+    },
+    {
+      "id": 212,
+      "name": "First Care Activating Serum VI",
+      "brand": "Sulwhasoo",
+      "category": "serums",
+      "category_name": "Serums",
+      "subcategory": "Activating Serum",
+      "product_type": "Serum",
+      "price": 89.0,
+      "compare_at_price": 105.0,
+      "rating": 4.9,
+      "reviews": 710,
+      "badge": "15% OFF",
+      "badge_type": "sale",
+      "skin_type": [
+        "Normal",
+        "Dry",
+        "Aging"
+      ],
+      "skin_concern": [
+        "Aging",
+        "Dullness",
+        "Dryness"
+      ],
+      "stock": 16,
+      "image_url": "/images/prod-sulwhasoo.jpg",
+      "slug": "sulwhasoo-first-care-activating-serum",
+      "is_featured": true
+    },
+    {
+      "id": 213,
+      "name": "Relief Sun: Rice + Probiotics SPF 50+",
+      "brand": "Beauty of Joseon",
+      "category": "sunscreens",
+      "category_name": "Sunscreens",
+      "subcategory": "Daily SPF",
+      "product_type": "Sunscreen",
+      "price": 22.0,
+      "compare_at_price": null,
+      "rating": 4.9,
+      "reviews": 1900,
+      "badge": "Best Seller",
+      "badge_type": "bestseller",
+      "skin_type": [
+        "Dry",
+        "Sensitive",
+        "Normal",
+        "Combination"
+      ],
+      "skin_concern": [
+        "Sensitivity",
+        "Dullness"
+      ],
+      "stock": 75,
+      "image_url": "/images/prod-boj.jpg",
+      "slug": "beauty-of-joseon-relief-sun-spf50",
+      "is_featured": true
+    },
+    {
+      "id": 214,
+      "name": "Skinpower Advanced Cream",
+      "brand": "SK-II",
+      "category": "moisturizers",
+      "category_name": "Moisturizers",
+      "subcategory": "Firming Cream",
+      "product_type": "Cream",
+      "price": 135.0,
+      "compare_at_price": 155.0,
+      "rating": 4.9,
+      "reviews": 840,
+      "badge": "Best Seller",
+      "badge_type": "bestseller",
+      "skin_type": [
+        "Dry",
+        "Normal",
+        "Aging"
+      ],
+      "skin_concern": [
+        "Aging",
+        "Dullness",
+        "Loss of Firmness"
+      ],
+      "stock": 22,
+      "image_url": "/images/prod-sk2.jpg",
+      "slug": "sk-ii-skinpower-advanced-cream",
+      "is_featured": true
+    },
+    {
+      "id": 215,
+      "name": "GenOptics Ultraura Essence Serum",
+      "brand": "SK-II",
+      "category": "serums",
+      "category_name": "Serums",
+      "subcategory": "Brightening Serum",
+      "product_type": "Serum",
+      "price": 185.0,
+      "compare_at_price": null,
+      "rating": 4.9,
+      "reviews": 620,
+      "badge": "Award Winner",
+      "badge_type": "value",
+      "skin_type": [
+        "All Skin Types",
+        "Dull"
+      ],
+      "skin_concern": [
+        "Dullness",
+        "Dark Spots",
+        "Uneven Texture"
+      ],
+      "stock": 18,
+      "image_url": "/images/prod-sk2.jpg",
+      "slug": "sk-ii-genoptics-ultraura-essence",
+      "is_featured": true
+    },
+    {
+      "id": 216,
+      "name": "Facial Treatment Clear Lotion Toner",
+      "brand": "SK-II",
+      "category": "toners",
+      "category_name": "Toners",
+      "subcategory": "Clarifying Toner",
+      "product_type": "Toner",
+      "price": 80.0,
+      "compare_at_price": null,
+      "rating": 4.7,
+      "reviews": 780,
+      "badge": null,
+      "badge_type": null,
+      "skin_type": [
+        "All Skin Types"
+      ],
+      "skin_concern": [
+        "Uneven Texture",
+        "Pores"
+      ],
+      "stock": 30,
+      "image_url": "/images/prod-sk2.jpg",
+      "slug": "sk-ii-facial-treatment-clear-lotion",
+      "is_featured": false
+    },
+    {
+      "id": 217,
+      "name": "Overnight Miracle Capsule Mask (6-Pack)",
+      "brand": "SK-II",
+      "category": "masks",
+      "category_name": "Masks",
+      "subcategory": "Sleeping Mask",
+      "product_type": "Mask",
+      "price": 110.0,
+      "compare_at_price": null,
+      "rating": 4.8,
+      "reviews": 430,
+      "badge": "Limited Edition",
+      "badge_type": "new",
+      "skin_type": [
+        "All Skin Types",
+        "Tired Skin"
+      ],
+      "skin_concern": [
+        "Dullness",
+        "Dryness"
+      ],
+      "stock": 15,
+      "image_url": "/images/prod-sk2.jpg",
+      "slug": "sk-ii-overnight-miracle-mask",
+      "is_featured": false
+    },
+    {
+      "id": 218,
+      "name": "Pure Niacinamide 10 Serum",
+      "brand": "La Roche-Posay",
+      "category": "serums",
+      "category_name": "Serums",
+      "subcategory": "Clarifying Serum",
+      "product_type": "Serum",
+      "price": 39.99,
+      "compare_at_price": 45.0,
+      "rating": 4.7,
+      "reviews": 812,
+      "badge": "Editor Pick",
+      "badge_type": "value",
+      "skin_type": [
+        "Sensitive",
+        "Normal",
+        "Combination"
+      ],
+      "skin_concern": [
+        "Dark Spots",
+        "Uneven Texture",
+        "Sensitivity"
+      ],
+      "stock": 28,
+      "image_url": "/images/prod-laroche-effaclar.jpg",
+      "slug": "la-roche-posay-pure-niacinamide-10",
+      "is_featured": true
+    },
+    {
+      "id": 219,
+      "name": "Niacinamide 10% + TXA 4% Dark Spot Correcting Serum",
+      "brand": "Anua",
+      "category": "serums",
+      "category_name": "Serums",
+      "subcategory": "Correcting Serum",
+      "product_type": "Serum",
+      "price": 24.0,
+      "compare_at_price": null,
+      "rating": 4.8,
+      "reviews": 1450,
+      "badge": "Trending",
+      "badge_type": "bestseller",
+      "skin_type": [
+        "All Skin Types",
+        "Sensitive"
+      ],
+      "skin_concern": [
+        "Dark Spots",
+        "Hyperpigmentation",
+        "Dullness"
+      ],
+      "stock": 40,
+      "image_url": "/images/prod-anua-toner.jpg",
+      "slug": "anua-niacinamide-10-txa-4-serum",
+      "is_featured": true
+    },
+    {
+      "id": 220,
+      "name": "Glow Serum: Propolis + Niacinamide",
+      "brand": "Beauty of Joseon",
+      "category": "serums",
+      "category_name": "Serums",
+      "subcategory": "Glow Serum",
+      "product_type": "Serum",
+      "price": 17.0,
+      "compare_at_price": null,
+      "rating": 4.8,
+      "reviews": 2400,
+      "badge": "Best Seller",
+      "badge_type": "bestseller",
+      "skin_type": [
+        "Acne-Prone",
+        "Normal",
+        "Combination"
+      ],
+      "skin_concern": [
+        "Acne & Blemishes",
+        "Pores",
+        "Dullness"
+      ],
+      "stock": 65,
+      "image_url": "/images/prod-boj.jpg",
+      "slug": "beauty-of-joseon-glow-serum-propolis-niacinamide",
+      "is_featured": true
+    },
+    {
+      "id": 221,
+      "name": "PM Facial Moisturizing Lotion with Niacinamide",
+      "brand": "CeraVe",
+      "category": "moisturizers",
+      "category_name": "Moisturizers",
+      "subcategory": "Night Lotion",
+      "product_type": "Lotion",
+      "price": 19.99,
+      "compare_at_price": null,
+      "rating": 4.7,
+      "reviews": 3200,
+      "badge": null,
+      "badge_type": null,
+      "skin_type": [
+        "All Skin Types",
+        "Sensitive"
+      ],
+      "skin_concern": [
+        "Dryness",
+        "Barrier Repair"
+      ],
+      "stock": 50,
+      "image_url": "/images/prod-cerave.jpg",
+      "slug": "cerave-pm-facial-moisturizing-lotion",
+      "is_featured": true
+    },
+    {
+      "id": 222,
+      "name": "Velvet Ceramide Barrier Cream",
+      "brand": "The Ordinary",
+      "category": "cleansers",
+      "category_name": "Cleansers",
+      "subcategory": null,
+      "product_type": null,
+      "price": 48.0,
+      "compare_at_price": null,
+      "rating": 5.0,
+      "reviews": 0,
+      "badge": null,
+      "badge_type": null,
+      "skin_type": [],
+      "skin_concern": [],
+      "stock": 45,
+      "image_url": "/images/prod-sk2.jpg",
+      "slug": "velvet-ceramide-barrier-cream",
+      "is_featured": false
+    },
+    {
+      "id": 301,
+      "name": "Relief Sun: Rice + Probiotics SPF50+ PA++++",
+      "brand": "Beauty of Joseon",
+      "category": "sunscreens",
+      "category_name": "Sunscreens",
+      "subcategory": "Daily SPF Protection",
+      "product_type": "Chemical & Probiotic Sunscreen",
+      "price": 18.0,
+      "compare_at_price": 22.0,
+      "rating": 4.9,
+      "reviews": 3240,
+      "badge": "Best Seller",
+      "badge_type": "bestseller",
+      "skin_type": [
+        "All Skin Types",
+        "Dry",
+        "Sensitive",
+        "Normal"
+      ],
+      "skin_concern": [
+        "Sun Protection",
+        "Dehydration",
+        "Dullness"
+      ],
+      "stock": 65,
+      "image_url": "/images/prod-boj.jpg",
+      "slug": "beauty-of-joseon-relief-sun-rice-probiotics-spf50",
+      "is_featured": true
+    },
+    {
+      "id": 302,
+      "name": "Birch Juice Moisturizing Sun Cream SPF50+ PA++++",
+      "brand": "Round Lab",
+      "category": "sunscreens",
+      "category_name": "Sunscreens",
+      "subcategory": "Hydrating Sunscreen",
+      "product_type": "Essence Sunscreen",
+      "price": 21.0,
+      "compare_at_price": 26.0,
+      "rating": 4.8,
+      "reviews": 1890,
+      "badge": "Award Winner",
+      "badge_type": "award",
+      "skin_type": [
+        "Dry",
+        "Combination",
+        "Dehydrated",
+        "Sensitive"
+      ],
+      "skin_concern": [
+        "Sun Protection",
+        "Dryness",
+        "Barrier Repair"
+      ],
+      "stock": 42,
+      "image_url": "/images/article-thumb-sunscreen.jpg",
+      "slug": "round-lab-birch-juice-moisturizing-sun-cream-spf50",
+      "is_featured": true
+    },
+    {
+      "id": 303,
+      "name": "Anthelios UVMune 400 Invisible Fluid SPF50+",
+      "brand": "La Roche-Posay",
+      "category": "sunscreens",
+      "category_name": "Sunscreens",
+      "subcategory": "Clinical Sun Protection",
+      "product_type": "Ultra-Light Sun Fluid",
+      "price": 29.5,
+      "compare_at_price": 34.0,
+      "rating": 4.7,
+      "reviews": 2150,
+      "badge": "Derm Pick",
+      "badge_type": "staff_pick",
+      "skin_type": [
+        "All Skin Types",
+        "Oily",
+        "Sensitive",
+        "Acne-Prone"
+      ],
+      "skin_concern": [
+        "Sun Protection",
+        "Hyperpigmentation",
+        "Premature Aging"
+      ],
+      "stock": 50,
+      "image_url": "/images/prod-laroche-effaclar.jpg",
+      "slug": "la-roche-posay-anthelios-uvmune-400-invisible-fluid",
+      "is_featured": false
+    },
+    {
+      "id": 304,
+      "name": "Madagascar Centella Hyalu-Cica Water-Fit Sun Serum SPF50+",
+      "brand": "SKIN1004",
+      "category": "sunscreens",
+      "category_name": "Sunscreens",
+      "subcategory": "Soothing Sun Serum",
+      "product_type": "Sun Serum",
+      "price": 19.0,
+      "compare_at_price": 24.0,
+      "rating": 4.9,
+      "reviews": 2780,
+      "badge": "Trending",
+      "badge_type": "trending",
+      "skin_type": [
+        "Sensitive",
+        "Combination",
+        "Oily",
+        "Acne-Prone"
+      ],
+      "skin_concern": [
+        "Redness & Sensitivity",
+        "Sun Protection",
+        "Oil Control"
+      ],
+      "stock": 58,
+      "image_url": "/images/article-thumb-centella.jpg",
+      "slug": "skin1004-madagascar-centella-hyalu-cica-sun-serum",
+      "is_featured": true
+    },
+    {
+      "id": 305,
+      "name": "Water Bank Blue Hyaluronic Cream",
+      "brand": "LANEIGE",
+      "category": "moisturizers",
+      "category_name": "Moisturizers",
+      "subcategory": "Barrier Repair Moisturizer",
+      "product_type": "Rich Hydrating Cream",
+      "price": 40.0,
+      "compare_at_price": 45.0,
+      "rating": 4.8,
+      "reviews": 1420,
+      "badge": "Best Seller",
+      "badge_type": "bestseller",
+      "skin_type": [
+        "Dry",
+        "Normal",
+        "Sensitive",
+        "Dehydrated"
+      ],
+      "skin_concern": [
+        "Dryness & Flaking",
+        "Barrier Damage",
+        "Dullness"
+      ],
+      "stock": 35,
+      "image_url": "/images/prod-laneige.jpg",
+      "slug": "laneige-water-bank-blue-hyaluronic-cream",
+      "is_featured": true
+    },
+    {
+      "id": 306,
+      "name": "DIVE-IN Low Molecular Hyaluronic Acid Soothing Cream",
+      "brand": "Torriden",
+      "category": "moisturizers",
+      "category_name": "Moisturizers",
+      "subcategory": "Water Gel Cream",
+      "product_type": "Soothing Gel Cream",
+      "price": 23.0,
+      "compare_at_price": 28.0,
+      "rating": 4.8,
+      "reviews": 1670,
+      "badge": "Clean Beauty",
+      "badge_type": "clean",
+      "skin_type": [
+        "Oily",
+        "Combination",
+        "Sensitive",
+        "Dehydrated"
+      ],
+      "skin_concern": [
+        "Dehydration",
+        "Excess Oil",
+        "Sensitive Barrier"
+      ],
+      "stock": 48,
+      "image_url": "/images/prod-cream.jpg",
+      "slug": "torriden-dive-in-low-molecular-hyaluronic-acid-cream",
+      "is_featured": false
+    },
+    {
+      "id": 307,
+      "name": "Concentrated Ginseng Renewing Cream Classic",
+      "brand": "Sulwhasoo",
+      "category": "moisturizers",
+      "category_name": "Moisturizers",
+      "subcategory": "Luxury Prestige Anti-Aging",
+      "product_type": "Sculpting Regenerative Cream",
+      "price": 260.0,
+      "compare_at_price": 290.0,
+      "rating": 4.9,
+      "reviews": 890,
+      "badge": "Atelier Prestige",
+      "badge_type": "luxury",
+      "skin_type": [
+        "Mature",
+        "Dry",
+        "Normal"
+      ],
+      "skin_concern": [
+        "Fine Lines & Wrinkles",
+        "Loss of Elasticity",
+        "Dryness"
+      ],
+      "stock": 15,
+      "image_url": "/images/prod-sulwhasoo.jpg",
+      "slug": "sulwhasoo-concentrated-ginseng-renewing-cream",
+      "is_featured": true
+    },
+    {
+      "id": 308,
+      "name": "Advanced Snail 92 All in One Cream",
+      "brand": "COSRX",
+      "category": "moisturizers",
+      "category_name": "Moisturizers",
+      "subcategory": "Repair & Nourish",
+      "product_type": "Gel-Cream",
+      "price": 22.0,
+      "compare_at_price": 26.0,
+      "rating": 4.7,
+      "reviews": 2450,
+      "badge": "Cult Favorite",
+      "badge_type": "bestseller",
+      "skin_type": [
+        "All Skin Types",
+        "Acne-Prone",
+        "Sensitive"
+      ],
+      "skin_concern": [
+        "Acne Scars",
+        "Dehydration",
+        "Redness"
+      ],
+      "stock": 60,
+      "image_url": "/images/prod-cosrx-snail.jpg",
+      "slug": "cosrx-advanced-snail-92-all-in-one-cream",
+      "is_featured": false
+    },
+    {
+      "id": 309,
+      "name": "Luméa Glass Skin Ritual Discovery Set (4-Piece Regimen)",
+      "brand": "Luméa Atelier",
+      "category": "kits",
+      "category_name": "Kits & Sets",
+      "subcategory": "Complete Diagnostic Regimen",
+      "product_type": "Curated Discovery Bundle",
+      "price": 78.0,
+      "compare_at_price": 98.0,
+      "rating": 5.0,
+      "reviews": 340,
+      "badge": "Exclusive",
+      "badge_type": "exclusive",
+      "skin_type": [
+        "All Skin Types",
+        "Dry",
+        "Combination",
+        "Normal"
+      ],
+      "skin_concern": [
+        "Dullness",
+        "Texture Refinement",
+        "Barrier Strengthening"
+      ],
+      "stock": 25,
+      "image_url": "/images/cat-kits.jpg",
+      "slug": "lumea-glass-skin-ritual-discovery-set",
+      "is_featured": true
+    },
+    {
+      "id": 310,
+      "name": "Pitera™ First Experience Atelier Discovery Kit",
+      "brand": "SK-II",
+      "category": "kits",
+      "category_name": "Kits & Sets",
+      "subcategory": "Prestige Travel Set",
+      "product_type": "Luxury Intro Kit",
+      "price": 115.0,
+      "compare_at_price": 135.0,
+      "rating": 4.9,
+      "reviews": 580,
+      "badge": "Prestige Pick",
+      "badge_type": "luxury",
+      "skin_type": [
+        "All Skin Types",
+        "Mature",
+        "Dull"
+      ],
+      "skin_concern": [
+        "Uneven Texture",
+        "Fine Lines",
+        "Loss of Radiance"
+      ],
+      "stock": 20,
+      "image_url": "/images/prod-sk2.jpg",
+      "slug": "sk-ii-pitera-first-experience-atelier-discovery-kit",
+      "is_featured": true
+    },
+    {
+      "id": 311,
+      "name": "The Daily Set: Squalane, HA & NMF",
+      "brand": "The Ordinary",
+      "category": "kits",
+      "category_name": "Kits & Sets",
+      "subcategory": "Essential Daily Starter",
+      "product_type": "3-Piece Regimen",
+      "price": 24.9,
+      "compare_at_price": 30.0,
+      "rating": 4.6,
+      "reviews": 1120,
+      "badge": "Value Set",
+      "badge_type": "sale",
+      "skin_type": [
+        "Normal",
+        "Dry",
+        "Combination"
+      ],
+      "skin_concern": [
+        "Dehydration",
+        "Daily Maintenance",
+        "Dryness"
+      ],
+      "stock": 45,
+      "image_url": "/images/prod-ordinary.jpg",
+      "slug": "the-ordinary-the-daily-set",
+      "is_featured": false
+    },
+    {
+      "id": 312,
+      "name": "Heartleaf Soothing & Calming Barrier Starter Trio",
+      "brand": "Anua",
+      "category": "kits",
+      "category_name": "Kits & Sets",
+      "subcategory": "Sensitive Skin Set",
+      "product_type": "3-Piece Soothing Kit",
+      "price": 54.0,
+      "compare_at_price": 65.0,
+      "rating": 4.8,
+      "reviews": 760,
+      "badge": "Trending",
+      "badge_type": "trending",
+      "skin_type": [
+        "Sensitive",
+        "Acne-Prone",
+        "Irritated",
+        "Oily"
+      ],
+      "skin_concern": [
+        "Redness & Sensitivity",
+        "Acne & Blemishes",
+        "Pore Care"
+      ],
+      "stock": 30,
+      "image_url": "/images/prod-anua-toner.jpg",
+      "slug": "anua-heartleaf-soothing-calming-starter-trio",
+      "is_featured": true
+    },
+    {
+      "id": 313,
+      "name": "Facial Treatment Mask (Box of 6 Restorative Sheets)",
+      "brand": "SK-II",
+      "category": "masks",
+      "category_name": "Masks",
+      "subcategory": "Prestige Sheet Masks",
+      "product_type": "Intensive Cotton Sheet Mask",
+      "price": 105.0,
+      "compare_at_price": 120.0,
+      "rating": 4.9,
+      "reviews": 940,
+      "badge": "Luxury Bridal Pick",
+      "badge_type": "luxury",
+      "skin_type": [
+        "All Skin Types",
+        "Dry",
+        "Fatigued"
+      ],
+      "skin_concern": [
+        "Dullness",
+        "Dehydration",
+        "Rough Texture"
+      ],
+      "stock": 22,
+      "image_url": "/images/cat-masks.jpg",
+      "slug": "sk-ii-facial-treatment-mask-box-of-6",
+      "is_featured": true
+    },
+    {
+      "id": 314,
+      "name": "Overnight Vitalizing Radiance Mask",
+      "brand": "Sulwhasoo",
+      "category": "masks",
+      "category_name": "Masks",
+      "subcategory": "Overnight Sleeping Mask",
+      "product_type": "Herbal Sleeping Mask",
+      "price": 58.0,
+      "compare_at_price": 68.0,
+      "rating": 4.8,
+      "reviews": 810,
+      "badge": "Staff Pick",
+      "badge_type": "staff_pick",
+      "skin_type": [
+        "Dry",
+        "Normal",
+        "Dull",
+        "Mature"
+      ],
+      "skin_concern": [
+        "Dullness",
+        "Morning Fatigue",
+        "Dehydration"
+      ],
+      "stock": 28,
+      "image_url": "/images/prod-nightcream.jpg",
+      "slug": "sulwhasoo-overnight-vitalizing-radiance-mask",
+      "is_featured": false
+    },
+    {
+      "id": 316,
+      "name": "1025 Dokdo Mineral Water Exfoliating Toner",
+      "brand": "Round Lab",
+      "category": "toners",
+      "category_name": "Toners",
+      "subcategory": "Gentle Exfoliating Toner",
+      "product_type": "Mineral Toner",
+      "price": 22.0,
+      "compare_at_price": 26.0,
+      "rating": 4.7,
+      "reviews": 2240,
+      "badge": "Award Winner",
+      "badge_type": "award",
+      "skin_type": [
+        "Sensitive",
+        "Dry",
+        "Combination",
+        "Normal"
+      ],
+      "skin_concern": [
+        "Flakiness & Rough Texture",
+        "Dullness",
+        "Dehydration"
+      ],
+      "stock": 55,
+      "image_url": "/images/cat-toners.jpg",
+      "slug": "round-lab-1025-dokdo-mineral-toner",
+      "is_featured": false
+    }
+  ]
+}

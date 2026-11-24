@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { buildRoutine } from './frontend/src/utils/recommendations.js'
+import { buildRoutine } from '../src/utils/recommendations.js'
 const product = (id, category, type, concern, stock=5) => ({id,category,skin_type:[type],skin_concern:[concern],name:concern,stock})
 const catalog = [product(1,'cleansers','Dry','Hydration'),product(2,'cleansers','Oily','Breakouts'),product(3,'moisturizers','Dry','Hydration'),product(4,'moisturizers','Oily','Breakouts'),product(5,'sunscreens','All Skin Types','Protection'),product(6,'serums','Dry','Hydration'),product(7,'serums','Dry','Brighter Tone'),product(8,'toners','Dry','Hydration'),product(9,'serums','Dry','Hydration',0)]
 const profile = {skinType:'Dry',goals:['Hydration'],concerns:[],routineLevel:'Essential (3-4 Steps)'}

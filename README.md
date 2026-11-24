@@ -1,6 +1,7 @@
 # LUMÉA — Contemporary Skincare & Beauty Atelier E-Commerce Platform
 
-> A full-stack, enterprise-grade e-commerce application featuring a **Python 3.12 FastAPI REST API** backend, a **Vue 3 + Vite** storefront, and a dedicated **Vue 3 + Vite** Admin Atelier Console.
+> **University Computer Science Capstone Project**  
+> A full-stack, enterprise-grade e-commerce application featuring a **Python 3.12 FastAPI REST API** backend, a **Vue 3 + Vite** Storefront, a dedicated **Vue 3 + Vite** Admin Atelier Console, and curated dermatological datasets.
 
 [![CI/CD Pipeline](https://github.com/sounvisal/Python-E-Commerce/actions/workflows/ci.yml/badge.svg)](https://github.com/sounvisal/Python-E-Commerce/actions)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.115+-009688?style=flat&logo=fastapi)](https://fastapi.tiangolo.com)
@@ -8,164 +9,231 @@
 [![Vite](https://img.shields.io/badge/Vite-6.0+-646CFF?style=flat&logo=vite)](https://vitejs.dev)
 [![SQLAlchemy](https://img.shields.io/badge/SQLAlchemy-2.0+-D71F00?style=flat)](https://www.sqlalchemy.org)
 [![Python](https://img.shields.io/badge/Python-3.12+-3776AB?style=flat&logo=python)](https://python.org)
+[![Tests Passing](https://img.shields.io/badge/Tests-157%20Passed-brightgreen?style=flat)](https://github.com/sounvisal/Python-E-Commerce)
 
 ---
 
-## 🌟 1. System Architecture & Live Hosting
+## 🏛️ 1. Deliverables & Repository Structure
 
-The Luméa system consists of three decoupled components communicating via RESTful JSON APIs:
+As required for university final evaluation, this repository is organized into distinct, modular deliverables:
+
+```
+d:\lumea/
+├── datasets/                        # 📊 Evaluation Datasets & Fixtures
+│   ├── catalog_products.json        # 100+ items, categories, brands, clientele, quizzes
+│   ├── store_settings.json          # Atelier operational profile, tax rates, logistics
+│   └── README.md                    # Data dictionaries, schemas & ingestion documentation
+│
+├── python-backend/                  # 🐍 Python 3.12 FastAPI REST API Service
+│   ├── app/                         # Layered Architecture (api, core, models, schemas, services, seed)
+│   ├── tests/                       # 114 Automated PyTest Unit & Security Tests
+│   ├── requirements.txt             # Pip dependency specifications
+│   ├── test_api.py                  # 30 Comprehensive End-to-End API Integration Tests
+│   └── run.py                       # ASGI entrypoint (Uvicorn on Port 8000)
+│
+├── frontend/                        # 🛍️ Vue 3 Luxury Storefront SPA (Port 5173)
+│   ├── src/                         # 40 views, Pinia stores, custom CSS design system
+│   ├── tests/                       # 13 Node.js flow & recommendation engine tests
+│   └── package.json                 # Client dependencies
+│
+├── admin/                           # 🎛️ Vue 3 Admin Atelier Back-Office (Port 5174)
+│   ├── src/                         # 14 specialized management consoles & analytics
+│   └── package.json                 # Admin console dependencies
+│
+├── tests/                           # 🧪 System-Wide QA & Load Verification
+│   └── load/                        # k6 100-user concurrent realistic shopping script
+│
+├── requirements.txt                 # 📦 Root Python dependencies (mirrored for grading)
+├── DEPLOYMENT.md                    # ☁️ Production hosting guide (Render + Vercel)
+├── openapi.yaml                     # 📜 Standardized OpenAPI 3.1 Specification
+└── README.md                        # 📖 Comprehensive system documentation
+```
+
+---
+
+## 🌐 2. System Architecture & Port Mapping
+
+The Luméa system consists of decoupled frontend single-page applications communicating with the Python backend via authenticated RESTful JSON APIs:
 
 ```mermaid
 graph LR
-    subgraph Frontend Services (Vercel)
-        Storefront["Vue 3 Storefront SPA<br/>(Port 5173 / Root Domain)"]
+    subgraph Frontend Services
+        Storefront["Vue 3 Storefront SPA<br/>(Port 5173 / lumeastore.vercel.app)"]
         AdminApp["Vue 3 Admin Atelier<br/>(Port 5174 /atelier/)"]
     end
 
-    subgraph Backend Service (Render)
+    subgraph Backend Service
         FastAPI["Python FastAPI Server<br/>(Port 8000 /api/)<br/>ASGI / Uvicorn"]
-        DB[("PostgreSQL / SQLite<br/>SQLAlchemy 2.0 ORM")]
+        DB[("SQLite 3 / PostgreSQL<br/>SQLAlchemy 2.0 ORM")]
     end
 
-    Storefront -->|REST API| FastAPI
-    AdminApp -->|REST API| FastAPI
+    Storefront -->|Proxy /api| FastAPI
+    AdminApp -->|Proxy /api| FastAPI
     FastAPI --> DB
 ```
 
-| Component | Technology Stack | Local Development | Hosted Production | Notes |
+| Service | Technology | Local Dev URL | Hosted URL | Purpose |
 | :--- | :--- | :--- | :--- | :--- |
-| **Storefront** | Vue 3, Pinia, Vue Router, Vite | `http://localhost:5173` | Vercel SPA (Root `/`) | Luxury bisque aesthetic (`#F5EFEB`, `#7A2E22`) |
-| **Admin Console** | Vue 3, Pinia, Chart.js, Vite | `http://localhost:5174` | Vercel SPA (`/atelier/`) | Executive Atelier back-office console |
-| **Backend API** | Python 3.12, FastAPI, SQLAlchemy 2.0 | `http://127.0.0.1:8000` | Render Web Service | Interactive Swagger at `/docs` |
-| **Database** | SQLite 3 / PostgreSQL | `lumea.db` (File-based) | Managed PostgreSQL | Automated migrations and seeders |
-
-For complete step-by-step production setup on Render and Vercel, refer to [DEPLOYMENT.md](DEPLOYMENT.md).
+| **Storefront** | Vue 3, Pinia, Vue Router, Vite | `http://localhost:5173` | `https://lumeastore.vercel.app/` | Client shopping atelier, reels, quiz, checkout |
+| **Admin Console** | Vue 3, Pinia, Chart.js, Vite | `http://localhost:5174` | `https://lumeastore.vercel.app/atelier/` | Back-office management, CMS, analytics, moderation |
+| **Backend API** | Python 3.12, FastAPI, SQLAlchemy 2.0 | `http://127.0.0.1:8000` | Render Cloud API | RESTful service with Swagger at `/docs` |
+| **Database** | SQLite 3 (Dev) / PostgreSQL (Prod) | `lumea.db` | File / Managed Cloud DB | Zero-config portable database with auto-seeding |
 
 ---
 
-## 🎨 2. Feature Highlights & Module Inventory
+## 🎨 3. Key Feature Highlights
 
 ### A. Storefront Experience (40 Completed Views & Regimens)
-- **E-Commerce Catalog**: Filterable multi-attribute catalog (search, brand, category, skin type, concern, sort, and price bracket).
-- **Video Texture Reviews & UGC Sensory Reels**: Vertical 9:16 video reels with skin profile tags, duration chips, and a 1-Click Quick-Buy "Add to Bag" reel player.
-- **Dermatological Diagnostic Quiz**: 5-step diagnostic quiz mapping skin metrics to tailored morning and evening routine recommendations.
-- **Bakong KHQR & Cash-on-Delivery (COD)**: Dynamic National Bank of Cambodia (NBC) Bakong EMVCo TLV QR generation with dual USD/KHR currency conversion and real-time bank clearance polling.
-- **Customer Care & Regimen**: User account dashboard, order history invoice tracking, interactive return wizard (`/returns/request`), live return tracking timeline (`/returns/status/:id`), and private Skincare Journal diary.
+- **Luxury Asian Skincare Aesthetic**: Warm bisque palette (`#F5EFEB`, `#7A2E22`), Playfair serif typography, and tactile minimalist UI polish.
+- **Filterable Catalog**: Search by keyword, skin concern (`Dullness`, `Acne`, `Barrier Repair`), skin type (`Dry`, `Oily`, `Combination`), brand, and price bracket.
+- **UGC Sensory Video Reels**: 9:16 vertical video reviews showing product textures, reviewer skin profile chips, and a **1-Click Quick-Buy** drawer.
+- **Dermatological Diagnostic Quiz**: 5-step interactive diagnostic quiz mapping individual skin biomarkers to morning & evening personalized regimens.
+- **National Bank of Cambodia (NBC) Bakong KHQR**: Native EMVCo TLV payload generator with CCITT CRC16 verification, dual USD/KHR currency conversion, and instant bank clearance simulation.
+- **Clientele Suite**: Customer account dashboard, order invoice tracking, interactive 5-step return wizard (`/returns/request`), live 7-stage return status timeline, and private daily Skincare Journal.
 
 ### B. Admin Atelier Console (14 Specialized Modules)
-1. **Executive Dashboard**: KPI metric cards, revenue trends, quick action toggles, low stock alerts, and recent orders.
-2. **Advanced Analytics**: Sales by channel, customer growth trends, traffic sources, top product rankings, and real CSV exports.
-3. **Product Catalog Manager**: Rich text editor, skin attributes checklist, video demonstration uploader, and stock manager.
-4. **Brand Showcases**: Featured brand stores and brand masterclass heritage video manager.
-5. **Categories CMS**: Hierarchy ordering, thumbnail management, and navigation menu toggles.
-6. **Order Fulfillment Studio**: 6-stage delivery tracker, itemized invoice calculations, shipping label generation, and customer communication.
-7. **Clientele & VIP Customer Studio**: Customer spending tiers, addresses, order history, and concierge messaging.
-8. **Promotions & Coupons**: Rule-based discount codes, usage limits, and expiration tracking.
-9. **Homepage & Banner CMS**: Visual section manager, layout template presets, and real-time storefront synchronization.
-10. **Dermatological Journal CMS**: Article publishing workflow, tags, character counters, and reader preview mode.
-11. **Review Moderation Studio**: Customer review approval, star rating analyticsWidget, video stream inspection, and atelier reply composer.
-12. **Skin Quiz Builder**: 3-column Question Studio Builder with drag-and-drop reordering, question image uploads, and recommendation rule routing.
-13. **Returns & Refunds Studio**: Return policy compliance manager, reason breakdown donut chart, and stage inspection timeline.
-14. **System Settings**: 12 configuration tabs (general, shipping, tax rates, notifications, backup export/import, staff permissions, cache clearance).
+1. **Executive Dashboard**: Real-time sales curves, channel breakdown donut, low-stock threshold alerts, and recent order stream.
+2. **Advanced Analytics**: Category sales ranking, traffic acquisition channels, customer lifetime value segments, and CSV report exports.
+3. **Product Catalog Manager**: Formulation editor with rich attributes, skin concerns checklist, texture video uploader, and inventory controls.
+4. **Brand Showcases**: Multi-brand directory, featured brand toggles, and brand heritage masterclass video showcase.
+5. **Categories CMS**: Hierarchy ordering, visual badge uploads, and storefront navigation visibility toggles.
+6. **Order Fulfillment Studio**: 6-stage delivery lifecycle tracker, invoice calculation, and shipping carrier management.
+7. **Clientele & VIP Customer Studio**: Spending tiers (`Radiant Gold`, `Silver`, `Bronze`), reward points, addresses, and activity logging.
+8. **Promotions & Coupons**: Rule-based discount codes, usage limits, expiration dates, custom coupon banners, and **storefront Hero banner integration**.
+9. **Homepage CMS**: Section reordering, layout templates, live storefront preview links, and banner asset manager.
+10. **Dermatological Journal CMS**: Editorial publishing workflow, category filters, reading time estimator, and rich article editor.
+11. **Review Moderation Studio**: UGC review approval pipeline, video reel preview player, rating analytics, and official atelier reply composer.
+12. **Skin Quiz Builder**: 3-column Question Studio Builder with drag-and-drop handles, visual question options, and rule-based recommendation routing.
+13. **Returns & Refunds Studio**: 7-reason diagnostic donut chart, return request inspector, and refund clearance flow.
+14. **System Settings**: 12 operational configuration tabs (branding, logistics, tax rate, notifications, backup export/import, staff permissions).
 
 ---
 
-## 🚀 3. Quick Start Guide (Local Development)
+## 🚀 4. Quick Start Guide (Local Setup)
 
 ### Prerequisites:
-- Python 3.12+
-- Node.js 20+ and npm
+- **Python 3.12+**
+- **Node.js 20+** and **npm**
 
-### 1. Python FastAPI Backend:
+---
+
+### Step 1: Install Python Dependencies & Launch Backend
+You can install dependencies directly from the repository root:
+
 ```powershell
-cd python-backend
+# From repository root
+cd d:\lumea
 
-# Activate virtual environment
-.\venv\Scripts\Activate.ps1
+# 1. Create and activate virtual environment
+python -m venv python-backend/venv
+.\python-backend\venv\Scripts\Activate.ps1
 
-# Install requirements
+# 2. Install requirements (available at root or in python-backend/)
 pip install -r requirements.txt
 
-# Launch FastAPI server
+# 3. Start the FastAPI server
+cd python-backend
 python run.py
 ```
-- API Base URL: `http://127.0.0.1:8000/api`
-- Interactive Swagger UI: `http://127.0.0.1:8000/docs`
-- Service Health Check: `http://127.0.0.1:8000/api/health`
+* **API Base URL**: `http://127.0.0.1:8000/api`
+* **Interactive Swagger UI**: `http://127.0.0.1:8000/docs`
+* **Health Check**: `http://127.0.0.1:8000/api/health`
 
-### 2. Vue Storefront (Port 5173):
+---
+
+### Step 2: Launch Vue Storefront
+In a new terminal:
 ```powershell
-cd frontend
+cd d:\lumea\frontend
 npm install
 npm run dev
 ```
-- Storefront URL: `http://localhost:5173/`
+* **Storefront URL**: `http://localhost:5173/`
 
-### 3. Vue Admin Atelier (Port 5174):
+---
+
+### Step 3: Launch Admin Atelier Console
+In a new terminal:
 ```powershell
-cd admin
+cd d:\lumea\admin
 npm install
 npm run dev
 ```
-- Admin Console URL: `http://localhost:5174/`
+* **Admin Atelier URL**: `http://localhost:5174/`
 
 ---
 
-## 🔑 4. Demo Credentials for Evaluation
+## 🔑 5. Pre-Configured Demo Credentials
 
-- **Customer Demo Account (Storefront)**:
-  - **Email**: `sreynich.chan@example.com`
-  - **Password**: `password123`
-  - **Clientele Tier**: *Luméa Radiant Gold* (320 reward points)
+These accounts are seeded automatically for evaluation and grading:
 
-- **Administrator Demo Account (Admin Atelier)**:
-  - **Email**: `admin@lumea.com`
-  - **Password**: `password123`
-  - **Role**: `admin` / Super Administrator
+| Role | Email | Password | Access Level / Tier |
+| :--- | :--- | :--- | :--- |
+| **Storefront Customer** | `sreynich.chan@example.com` | `password123` | *Luméa Radiant Gold* (320 pts, order history, skin profile) |
+| **Super Administrator** | `admin@lumea.com` | `password123` | Atelier Full Access (CMS, orders, analytics, moderation) |
 
 ---
 
-## 🧪 5. Automated Verification & Test Suites
+## 🧪 6. Automated Testing & Quality Assurance
 
-The Luméa codebase is backed by an automated test suite executed in CI/CD on every push:
+The system includes **157 automated tests** spanning backend unit, security, integration, and client flows:
 
+### 1. Run Complete Backend PyTest Suite (114 Tests)
+Validates authentication, catalog filtering, COD stock reservation, transaction safety, payment verification, and security boundaries:
 ```powershell
-# 1. Run Complete Backend PyTest Suite (99 Tests)
-python -m pytest python-backend/tests test_flow_regressions.py test_security_transactions.py
+cd d:\lumea\python-backend
+.\venv\Scripts\python -m pytest tests
+```
 
-# 2. Run REST API Endpoint Verification (30 Tests)
-python python-backend/test_api.py
+### 2. Run REST API Verification Suite (30 Tests)
+End-to-end integration verification testing every endpoint against a disposable database:
+```powershell
+cd d:\lumea\python-backend
+.\venv\Scripts\python test_api.py
+```
 
-# 3. Run Storefront Client Flow Tests (8 Tests)
-node --test frontend/tests/flows.test.mjs test_recommendations.mjs
+### 3. Run Storefront Client & Recommendation Engine Tests (13 Tests)
+Validates routine generation algorithms, cart logic, session persistence, and error resilience:
+```powershell
+cd d:\lumea\frontend
+node --test tests/flows.test.mjs tests/recommendations.test.mjs
+```
 
-# 4. Run Responsive Split Build QA Check
-node .browser-qa/check-split.mjs
+### 4. Run Concurrency Load Testing (100 Simultaneous Shoppers)
+Simulates realistic human browsing, category filtering, cart operations, and checkout:
+```powershell
+k6 run tests/load/k6_load_test.js
 ```
 
 ---
 
-## 📡 6. Core REST API Endpoints
+## 📡 7. Core REST API Endpoints
 
 | Method | Endpoint | Description | Auth Required |
 | :--- | :--- | :--- | :--- |
-| `GET` | `/api/health` | Service health status and uptime | Public |
-| `GET` | `/api/categories` | Categories with dynamic product count | Public |
-| `GET` | `/api/products` | Filterable catalog with search & sorting | Public |
-| `GET` | `/api/products/{slug}` | Product details, ingredients & reviews | Public |
+| `GET` | `/api/health` | Service uptime and system health | Public |
+| `GET` | `/api/categories` | Categories catalog with product counters | Public |
+| `GET` | `/api/products` | Multi-attribute catalog (search, filter, sort) | Public |
+| `GET` | `/api/products/{slug}` | Product specification, ingredients, reviews | Public |
 | `POST` | `/api/auth/register` | Customer account registration | Public |
-| `POST` | `/api/auth/login` | Bcrypt login with JWT issuance (Email or Phone) | Public |
-| `POST` | `/api/auth/logout` | Session invalidation via token version increment | Authenticated |
-| `GET` | `/api/auth/me` | Customer profile and reward balance | Authenticated |
-| `POST` | `/api/orders` | Checkout submission (`LUM-XXXXXX` generator) | Public / Guest / User |
-| `GET` | `/api/orders/{orderNumber}` | Order status and fulfillment timeline | Public / Token |
-| `POST` | `/api/payments/khqr/generate` | Dynamic Bakong KHQR EMVCo TLV payload | Public |
-| `POST` | `/api/payments/khqr/simulate-approve` | Defense demo instant bank clearance | Public |
-| `POST` | `/api/returns` | Return request submission | Customer |
-| `GET` | `/api/returns/{request_number}` | 7-stage return status timeline | Customer / Admin |
+| `POST` | `/api/auth/login` | Bcrypt hashed login with JWT issuance | Public |
+| `GET` | `/api/auth/me` | Authenticated customer profile & reward points | Bearer Token |
+| `POST` | `/api/orders` | Checkout submission with order code generation | Public / Guest / User |
+| `GET` | `/api/orders/{orderNumber}` | Order fulfillment status & timeline | Public / Order Token |
+| `POST` | `/api/payments/khqr/generate` | NBC Bakong EMVCo dynamic QR payload | Public |
+| `POST` | `/api/payments/khqr/simulate-approve` | Defense demo instant bank approval | Public |
+| `GET` | `/api/promotions/featured` | Public active promotions for Hero banner & deals | Public |
 | `POST` | `/api/upload` | Validated image uploader (.jpg, .png, .webp) | Authenticated |
-| `POST` | `/api/upload/video` | Video review stream uploader (.mp4, .webm) | Authenticated |
-| `GET` | `/api/admin/stats` | Executive KPI and revenue aggregation | Admin |
-| `GET` | `/api/admin/orders` | Orders management with pagination | Admin |
-| `GET` | `/api/admin/customers` | Registered clientele database | Admin |
-| `GET` | `/api/admin/settings` | Store configuration and tax rates | Admin |
+| `POST` | `/api/upload/video` | Validated video review uploader (.mp4, .webm) | Authenticated |
+| `GET` | `/api/admin/stats` | Executive atelier KPIs and revenue metrics | Admin |
+| `GET` | `/api/admin/orders` | Comprehensive orders studio with pagination | Admin |
+| `GET` | `/api/admin/customers` | Registered clientele database & VIP metrics | Admin |
+| `GET` | `/api/admin/settings` | Operational settings, tax rates, logistics | Admin |
+
+---
+
+## 📄 8. Academic Integrity & Defense Statement
+
+* **Academic Level**: Computer Science Final Project / Capstone Evaluation.
+* **Architecture Compliance**: Adheres to Clean Layered Architecture, PEP 8 standards, strict Pydantic schema validation, and Vue 3 Composition API best practices.
+* **Defense Readiness**: Zero external paid third-party dependencies required; all Bakong KHQR generators, image streaming handlers, and SQLite databases run locally and portably on any evaluator's workstation.
