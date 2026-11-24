@@ -39,6 +39,12 @@ export const useCartStore = defineStore('cart', {
     deliveryLng: null,
     selectedCarrier: 'lumea_concierge',
     settingsLoaded: false,
+    announcementEnabled: true,
+    announcementText: 'Complimentary nationwide shipping on orders over $50 | 100% Authentic Guaranteed',
+    storeName: 'Luméa',
+    storeEmail: 'support@lumea.com',
+    storePhone: '+855 12 345 678',
+    maintenanceMode: false,
   }),
 
   getters: {
@@ -317,6 +323,24 @@ export const useCartStore = defineStore('cart', {
           }
           if (d.tax_rate !== undefined) {
             this.taxRate = Number(d.tax_rate)
+          }
+          if (d.announcement_enabled !== undefined) {
+            this.announcementEnabled = Boolean(d.announcement_enabled)
+          }
+          if (d.announcement_text !== undefined) {
+            this.announcementText = d.announcement_text
+          }
+          if (d.store_name) {
+            this.storeName = d.store_name
+          }
+          if (d.store_email) {
+            this.storeEmail = d.store_email
+          }
+          if (d.store_phone) {
+            this.storePhone = d.store_phone
+          }
+          if (d.maintenance_mode !== undefined) {
+            this.maintenanceMode = Boolean(d.maintenance_mode)
           }
           this.settingsLoaded = true
         }

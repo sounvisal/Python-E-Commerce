@@ -456,28 +456,67 @@
               <div class="sec-badge">03</div>
               <div class="sec-title-wrap">
                 <h2 class="sec-title">{{ localeStore.t('checkout.payment_selection') || 'Payment Method' }}</h2>
-                <p class="sec-subtitle">{{ localeStore.t('checkout.payment_sub_cod') || 'Cash on Delivery — Handover upon arrival at your doorstep.' }}</p>
+                <p class="sec-subtitle">{{ localeStore.t('checkout.payment_sub') || 'Choose a secure and convenient payment method.' }}</p>
               </div>
             </div>
 
-            <fieldset class="payment-two-grid single-option" role="radiogroup" aria-labelledby="payment-heading">
+            <fieldset class="payment-two-grid" role="radiogroup" aria-labelledby="payment-heading">
               <legend id="payment-heading" class="sr-only">{{ localeStore.t('checkout.payment_selection') || 'Payment Selection' }}</legend>
 
-              <!-- Dedicated Method: Cash on Delivery (COD) -->
+              <!-- Option 1: Bakong KHQR (ABA Mobile) -->
               <label
-                class="payment-option-card selected"
+                class="payment-option-card"
+                :class="{ selected: form.payment_method === 'khqr' }"
+                @click="form.payment_method = 'khqr'"
+              >
+                <input
+                  type="radio"
+                  name="payment_method"
+                  value="khqr"
+                  :checked="form.payment_method === 'khqr'"
+                  class="sr-only-radio"
+                />
+                <div class="payment-card-header">
+                  <div class="payment-radio-wrap">
+                    <span class="payment-radio-circle" :class="{ active: form.payment_method === 'khqr' }"></span>
+                    <QrCode :size="18" class="khqr-symbol-icon" />
+                    <strong class="payment-title">{{ localeStore.t('checkout.bakong_khqr') || 'Bakong KHQR - ABA Mobile' }}</strong>
+                  </div>
+                  <span class="payment-badge-tag tag-instant">
+                    <Zap :size="10" />
+                    {{ localeStore.t('checkout.instant_clearance') || 'INSTANT CLEARANCE' }}
+                  </span>
+                </div>
+
+                <p class="payment-card-desc">
+                  {{ localeStore.t('checkout.khqr_desc') || 'Scan with ABA Mobile, Bakong, Wing, ACLEDA, or any Cambodian banking app.' }}
+                </p>
+
+                <div class="bank-pill-row">
+                  <span class="bank-chip">ABA Mobile</span>
+                  <span class="bank-chip">Bakong</span>
+                  <span class="bank-chip">Wing</span>
+                  <span class="bank-chip">ACLEDA</span>
+                  <span class="bank-chip chip-more">{{ localeStore.t('checkout.all_banks') || '+ All Banks' }}</span>
+                </div>
+              </label>
+
+              <!-- Option 2: Cash on Delivery (COD) -->
+              <label
+                class="payment-option-card"
+                :class="{ selected: form.payment_method === 'cod' }"
+                @click="form.payment_method = 'cod'"
               >
                 <input
                   type="radio"
                   name="payment_method"
                   value="cod"
-                  checked
-                  readonly
+                  :checked="form.payment_method === 'cod'"
                   class="sr-only-radio"
                 />
                 <div class="payment-card-header">
                   <div class="payment-radio-wrap">
-                    <span class="payment-radio-circle active"></span>
+                    <span class="payment-radio-circle" :class="{ active: form.payment_method === 'cod' }"></span>
                     <Package :size="18" class="cod-box-icon-clean" />
                     <strong class="payment-title">{{ localeStore.t('checkout.cod_name') || 'Cash on Delivery (COD)' }}</strong>
                   </div>
@@ -681,6 +720,16 @@
         </aside>
       </form>
     </div>
+    <!-- KHQR Payment Modal -->
+    <KHQRModal
+      v-if="showKHQRModal && pendingKhqrOrder"
+      :order-number="pendingKhqrOrder.order_number"
+      :amount="pendingKhqrOrder.total"
+      :expires-at="pendingKhqrOrder.expires_at"
+      :merchant-name="'SUON VISAL'"
+      @approved="handleKHQRApproved"
+      @cancelled="handleKHQRCancelled"
+    />
   </div>
 </template>
 
@@ -737,7 +786,7 @@ const form = reactive({
   shipping_address: '',
   shipping_city: 'Krong Kampot (Kampot Town)',
   shipping_carrier: 'lumea_concierge',
-  payment_method: 'cod',
+  payment_method: 'khqr',
   delivery_lat: null,
   delivery_lng: null,
   delivery_notes: '',
@@ -854,6 +903,8 @@ onMounted(async () => {
     lat: form.delivery_lat,
     lng: form.delivery_lng
   })
+
+  restorePendingPayment()
 })
 
 function selectAddressMode(mode) {
@@ -996,10 +1047,16 @@ async function handleSubmitOrder() {
       return
     }
 
-    const response = await axios.post('/api/orders', { ...details, payment_method: 'cod', checkout_key, expected_total: quote.total })
+    const response = await axios.post('/api/orders', { ...details, payment_method: form.payment_method, checkout_key, expected_total: quote.total })
     const order = response.data.data
     rememberOrderAccess(order)
-    completeCheckout(order.order_number)
+    if (form.payment_method === 'khqr') {
+      pendingKhqrOrder.value = order
+      sessionStorage.setItem(pendingPaymentKey, JSON.stringify({ accountId: authStore.user?.id ?? null, order }))
+      showKHQRModal.value = true
+    } else {
+      completeCheckout(order.order_number)
+    }
   } catch (err) {
     const detail = err.response?.data?.detail
     if (detail?.quote && checkoutSignature.value === signature) {

@@ -86,18 +86,27 @@ async function fetchReturns() {
   }
 }
 
+function normalizeReturnStatus(s) {
+  const st = (s || '').toLowerCase().trim()
+  if (st === 'under review' || st === 'pending' || st === 'submitted') return 'pending'
+  if (st === 'approved') return 'approved'
+  if (st === 'refunded' || st === 'refund completed' || st === 'refund processing') return 'refunded'
+  if (st === 'rejected' || st === 'declined') return 'rejected'
+  return st
+}
+
 // Filtered Returns
 const filteredReturns = computed(() => {
   let list = returns.value || []
 
   // Tab filter
   if (activeTab.value !== 'all') {
-    list = list.filter(r => (r.status || '').toLowerCase() === ({ pending: 'under review', refunded: 'refund completed' }[activeTab.value] || activeTab.value))
+    list = list.filter(r => normalizeReturnStatus(r.status) === activeTab.value)
   }
 
   // Status dropdown filter
   if (selectedStatusFilter.value !== 'all') {
-    list = list.filter(r => (r.status || '').toLowerCase() === selectedStatusFilter.value.toLowerCase())
+    list = list.filter(r => normalizeReturnStatus(r.status) === selectedStatusFilter.value)
   }
 
   // Reason dropdown filter
@@ -136,10 +145,10 @@ watch([activeTab, selectedStatusFilter, selectedReasonFilter, searchQuery], () =
 
 // Counts for Tabs
 const countAll = computed(() => returns.value.length)
-const countPending = computed(() => returns.value.filter(r => (r.status || '').toLowerCase() === 'under review').length)
-const countApproved = computed(() => returns.value.filter(r => (r.status || '').toLowerCase() === 'approved').length)
-const countRefunded = computed(() => returns.value.filter(r => (r.status || '').toLowerCase() === 'refund completed').length)
-const countRejected = computed(() => returns.value.filter(r => (r.status || '').toLowerCase() === 'rejected').length)
+const countPending = computed(() => returns.value.filter(r => normalizeReturnStatus(r.status) === 'pending').length)
+const countApproved = computed(() => returns.value.filter(r => normalizeReturnStatus(r.status) === 'approved').length)
+const countRefunded = computed(() => returns.value.filter(r => normalizeReturnStatus(r.status) === 'refunded').length)
+const countRejected = computed(() => returns.value.filter(r => normalizeReturnStatus(r.status) === 'rejected').length)
 
 // Multi-select
 const allSelected = computed(() => {
@@ -327,12 +336,12 @@ function formatRequestedDate(dateStr) {
           </div>
           <div class="kpi-info">
             <div class="kpi-top">
-              <span class="kpi-num">48</span>
-              <span class="kpi-badge positive">↗ +12%</span>
+              <span class="kpi-num">{{ countAll }}</span>
+              <span class="kpi-badge positive">All Records</span>
             </div>
             <div class="kpi-sub">
               <span class="kpi-label">Total Return Requests</span>
-              <span class="kpi-compare">vs last month</span>
+              <span class="kpi-compare">Atelier catalog</span>
             </div>
           </div>
         </div>
@@ -344,12 +353,12 @@ function formatRequestedDate(dateStr) {
           </div>
           <div class="kpi-info">
             <div class="kpi-top">
-              <span class="kpi-num">12</span>
-              <span class="kpi-badge positive">↗ +33%</span>
+              <span class="kpi-num">{{ countPending }}</span>
+              <span class="kpi-badge" :class="countPending > 0 ? 'negative' : 'positive'">Action Needed</span>
             </div>
             <div class="kpi-sub">
               <span class="kpi-label">Pending Review</span>
-              <span class="kpi-compare">vs last month</span>
+              <span class="kpi-compare">Awaiting decision</span>
             </div>
           </div>
         </div>
@@ -361,12 +370,12 @@ function formatRequestedDate(dateStr) {
           </div>
           <div class="kpi-info">
             <div class="kpi-top">
-              <span class="kpi-num">32</span>
-              <span class="kpi-badge positive">↗ +8%</span>
+              <span class="kpi-num">{{ countApproved }}</span>
+              <span class="kpi-badge positive">Approved</span>
             </div>
             <div class="kpi-sub">
               <span class="kpi-label">Approved</span>
-              <span class="kpi-compare">vs last month</span>
+              <span class="kpi-compare">In transit / processing</span>
             </div>
           </div>
         </div>
@@ -378,12 +387,12 @@ function formatRequestedDate(dateStr) {
           </div>
           <div class="kpi-info">
             <div class="kpi-top">
-              <span class="kpi-num">3</span>
-              <span class="kpi-badge positive">↗ +50%</span>
+              <span class="kpi-num">{{ countRefunded }}</span>
+              <span class="kpi-badge positive">Completed</span>
             </div>
             <div class="kpi-sub">
               <span class="kpi-label">Refunded</span>
-              <span class="kpi-compare">vs last month</span>
+              <span class="kpi-compare">Settled with patron</span>
             </div>
           </div>
         </div>
@@ -395,12 +404,12 @@ function formatRequestedDate(dateStr) {
           </div>
           <div class="kpi-info">
             <div class="kpi-top">
-              <span class="kpi-num">1</span>
-              <span class="kpi-badge negative">↘ -50%</span>
+              <span class="kpi-num">{{ countRejected }}</span>
+              <span class="kpi-badge negative">Declined</span>
             </div>
             <div class="kpi-sub">
               <span class="kpi-label">Rejected</span>
-              <span class="kpi-compare">vs last month</span>
+              <span class="kpi-compare">Policy exclusions</span>
             </div>
           </div>
         </div>
@@ -472,7 +481,7 @@ function formatRequestedDate(dateStr) {
               </button>
               <button
                 class="tab-pill"
-                :class="{ active: activeTab === 'under review' }"
+                :class="{ active: activeTab === 'pending' }"
                 @click="activeTab = 'pending'"
               >
                 Pending ({{ countPending }})
@@ -486,7 +495,7 @@ function formatRequestedDate(dateStr) {
               </button>
               <button
                 class="tab-pill"
-                :class="{ active: activeTab === 'refund completed' }"
+                :class="{ active: activeTab === 'refunded' }"
                 @click="activeTab = 'refunded'"
               >
                 Refunded ({{ countRefunded }})
@@ -536,7 +545,15 @@ function formatRequestedDate(dateStr) {
                   <td colspan="9" class="td-empty">
                     <RotateCcw class="w-10 h-10 text-taupe mx-auto mb-2 opacity-50" />
                     <p class="font-serif text-lg text-charcoal">No return requests found</p>
-                    <p class="text-xs text-taupe">Adjust filter criteria to view records.</p>
+                    <p class="text-xs text-taupe mb-3">Adjust filter criteria to view records.</p>
+                    <div style="display: flex; gap: 8px; justify-content: center;">
+                      <button v-if="activeTab !== 'all' || selectedStatusFilter !== 'all' || searchQuery" type="button" class="btn-export-outline" @click="activeTab = 'all'; selectedStatusFilter = 'all'; selectedReasonFilter = 'all'; searchQuery = ''">
+                        Reset Filters
+                      </button>
+                      <button type="button" class="btn-export-outline" @click="fetchReturns">
+                        Refresh Records
+                      </button>
+                    </div>
                   </td>
                 </tr>
 

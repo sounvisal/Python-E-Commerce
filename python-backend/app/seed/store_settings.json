@@ -3,17 +3,48 @@
   "store_email": "support@lumea.com",
   "store_phone": "+855 12 345 678",
   "store_language": "English (Default)",
-  "store_description": "Premium skincare for a healthier, brighter you. Natural beauty, real results.",
+  "store_description": "Contemporary Clinical Skincare & Botanical Beauty Atelier. Natural beauty, clinically proven results.",
   "company_name": "Luméa Co., Ltd.",
   "business_reg_number": "KH-123456789",
-  "business_address": "Krong Kampot, Kampot Province, Cambodia",
+  "business_address": "#123, Norodom Blvd, Phnom Penh, Cambodia",
   "time_zone": "(UTC+07:00) Phnom Penh",
   "currency": "USD ($)",
   "currency_symbol": "$",
+  "store_logo": "/images/logo-lumea.png",
+  "store_favicon": "/favicon.ico",
+  "online_status": "Online",
+  "maintenance_mode": false,
+  "order_prefix": "LM-",
+  "low_stock_threshold": 5,
+  "auto_confirm_orders": true,
+  "allow_backorders": false,
+  "cart_expiration_minutes": 30,
+  "payment_methods": {
+    "aba_pay": {
+      "enabled": true,
+      "merchant_name": "LUMEA ATELIER",
+      "merchant_id": "lumea_khqr@aba",
+      "test_mode": false
+    },
+    "credit_card": {
+      "enabled": true,
+      "test_mode": false,
+      "require_3ds": true
+    },
+    "cod": {
+      "enabled": true,
+      "max_amount": 250,
+      "area": "all"
+    },
+    "wing": {
+      "enabled": true,
+      "account": "+855 12 345 678"
+    }
+  },
   "free_shipping_enabled": true,
-  "free_shipping_mode": "threshold",
+  "free_shipping_mode": "all_orders",
   "free_shipping_threshold": 50.0,
-  "free_shipping_promo_text": "Complimentary nationwide shipping on orders over $50",
+  "free_shipping_promo_text": "Atelier Special: Complimentary Free Delivery on All Orders!",
   "free_shipping_carriers": [
     "lumea_concierge",
     "vet_express",
@@ -21,7 +52,71 @@
   ],
   "grab_subsidy_enabled": true,
   "tax_rate": 10.0,
-  "online_status": "Online",
-  "maintenance_mode": false,
-  "last_updated": "Nov 23, 2026 07:56 AM"
+  "tax_inclusive": false,
+  "tax_id_number": "K008-902341254",
+  "auto_invoice": true,
+  "notifications": {
+    "order_confirmation_email": true,
+    "shipping_updates_email": true,
+    "return_status_email": true,
+    "admin_low_stock_email": true,
+    "admin_notification_email": "ops@lumea.com",
+    "telegram_alerts": true
+  },
+  "staff_members": [
+    {
+      "id": 1,
+      "name": "Sreynich Chan",
+      "email": "sreynich.chan@example.com",
+      "role": "Super Admin · Full Access",
+      "avatar": "/images/avatar-sreynich.jpg",
+      "status": "Active"
+    },
+    {
+      "id": 2,
+      "name": "Luméa Operations",
+      "email": "ops@lumea.com",
+      "role": "Store Manager",
+      "avatar": "/images/avatars/avatar-default.png",
+      "status": "Active"
+    },
+    {
+      "id": 3,
+      "name": "Sokunthea Keo",
+      "email": "sokunthea@lumea.com",
+      "role": "Customer Care Specialist",
+      "avatar": "/images/avatar-clientele-2.jpg",
+      "status": "Active"
+    }
+  ],
+  "integrations": {
+    "google_analytics_id": "G-LUMEA2026",
+    "facebook_pixel_id": "9876543210123",
+    "telegram_bot_token": "bot612849102:AAE-lumea-secure-token",
+    "telegram_chat_id": "@lumea_atelier_orders",
+    "telegram_enabled": true,
+    "klaviyo_api_key": "pk_live_lumea_botanical"
+  },
+  "seo": {
+    "meta_title": "Luméa — Luxury Clinical Skincare & Botanical Atelier",
+    "meta_description": "Discover pure, clinically backed botanical skincare crafted to nurture skin barrier resilience and reveal radiant luminescence.",
+    "og_image": "/images/banner-home.jpg",
+    "canonical_url": "https://lumeastore.vercel.app",
+    "indexing_enabled": true
+  },
+  "appearance": {
+    "announcement_enabled": true,
+    "announcement_text": "Complimentary nationwide shipping on orders over $50 | 100% Authentic Guaranteed",
+    "primary_brand_color": "#84261B",
+    "products_per_page": 12,
+    "show_stock_badge": true,
+    "show_discount_badge": true
+  },
+  "legal": {
+    "return_policy_days": 14,
+    "warranty_guarantee": "100% Authenticity Guarantee or Full Refund",
+    "support_hours": "Mon - Sun: 8:00 AM - 9:00 PM (ICT)"
+  },
+  "last_updated": "Nov 24, 2026 09:08 AM",
+  "phone_country_code": "+855"
 }

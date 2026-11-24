@@ -5,7 +5,7 @@ import math
 from datetime import datetime, timedelta, timezone
 from typing import Optional, List, Dict, Any
 from fastapi import APIRouter, Depends, HTTPException, Query, status
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, ConfigDict
 from sqlalchemy.orm import Session, joinedload
 from sqlalchemy import func, desc, asc, or_
 
@@ -1249,11 +1249,15 @@ def admin_toggle_quiz_status(quiz_id: int, db: Session = Depends(get_db)):
 # --- Atelier Settings Endpoints ---
 
 class AdminSettingsPayload(BaseModel):
+    model_config = ConfigDict(extra="allow")
+
     store_name: Optional[str] = None
     store_email: Optional[str] = None
     store_phone: Optional[str] = None
     store_language: Optional[str] = None
     store_description: Optional[str] = None
+    store_logo: Optional[str] = None
+    store_favicon: Optional[str] = None
     company_name: Optional[str] = None
     business_reg_number: Optional[str] = None
     business_address: Optional[str] = None
@@ -1267,6 +1271,7 @@ class AdminSettingsPayload(BaseModel):
     grab_subsidy_enabled: Optional[bool] = None
     tax_rate: Optional[float] = None
     online_status: Optional[str] = None
+    maintenance_mode: Optional[bool] = None
 
 # In-memory settings fallback with initial values
 STORE_SETTINGS = {
@@ -1308,42 +1313,10 @@ def admin_update_settings(payload: AdminSettingsPayload):
     Update atelier configuration and business details, persisting to disk.
     """
     settings_data = load_settings()
-    if payload.store_name is not None:
-        settings_data["store_name"] = payload.store_name
-    if payload.store_email is not None:
-        settings_data["store_email"] = payload.store_email
-    if payload.store_phone is not None:
-        settings_data["store_phone"] = payload.store_phone
-    if payload.store_language is not None:
-        settings_data["store_language"] = payload.store_language
-    if payload.store_description is not None:
-        settings_data["store_description"] = payload.store_description
-    if payload.company_name is not None:
-        settings_data["company_name"] = payload.company_name
-    if payload.business_reg_number is not None:
-        settings_data["business_reg_number"] = payload.business_reg_number
-    if payload.business_address is not None:
-        settings_data["business_address"] = payload.business_address
-    if payload.time_zone is not None:
-        settings_data["time_zone"] = payload.time_zone
-    if payload.currency is not None:
-        settings_data["currency"] = payload.currency
-    if payload.free_shipping_enabled is not None:
-        settings_data["free_shipping_enabled"] = payload.free_shipping_enabled
-    if payload.free_shipping_mode is not None:
-        settings_data["free_shipping_mode"] = payload.free_shipping_mode
-    if payload.free_shipping_threshold is not None:
-        settings_data["free_shipping_threshold"] = payload.free_shipping_threshold
-    if payload.free_shipping_promo_text is not None:
-        settings_data["free_shipping_promo_text"] = payload.free_shipping_promo_text
-    if payload.free_shipping_carriers is not None:
-        settings_data["free_shipping_carriers"] = payload.free_shipping_carriers
-    if payload.grab_subsidy_enabled is not None:
-        settings_data["grab_subsidy_enabled"] = payload.grab_subsidy_enabled
-    if payload.tax_rate is not None:
-        settings_data["tax_rate"] = payload.tax_rate
-    if payload.online_status is not None:
-        settings_data["online_status"] = payload.online_status
+    update_data = payload.model_dump(exclude_unset=True)
+    for k, v in update_data.items():
+        if v is not None:
+            settings_data[k] = v
 
     settings_data["last_updated"] = datetime.now(timezone.utc).strftime("%b %d, %Y %I:%M %p")
     save_settings(settings_data)

@@ -1,5 +1,12 @@
 <template>
   <header class="lumea-beauty-header" ref="headerRef">
+    <!-- Dynamic Storefront Announcement Bar -->
+    <div v-if="cartStore.announcementEnabled && cartStore.announcementText" class="top-announcement-strip">
+      <div class="container-fluid announcement-inner">
+        <span>{{ cartStore.announcementText }}</span>
+      </div>
+    </div>
+
     <!-- Format-matching Single-Row Header Bar -->
     <div class="header-main-row">
       <div class="container-fluid header-inner">
@@ -796,6 +803,28 @@ function handleAccountSubmit() {
 </script>
 
 <style scoped>
+/* ==========================================================================
+   DYNAMIC STOREFRONT ANNOUNCEMENT STRIP
+   ========================================================================== */
+.top-announcement-strip {
+  background: #84261B;
+  color: #FFFFFF;
+  font-size: 11.5px;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  padding: 6px 16px;
+  text-align: center;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.announcement-inner {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
 /* ==========================================================================
    FORMAT-MATCHING SINGLE-ROW HEADER
    ========================================================================== */

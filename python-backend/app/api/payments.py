@@ -213,6 +213,8 @@ def simulate_khqr_approval(req: KHQRSimulateRequest, db: Session = Depends(get_d
         or order.payway_gateway or order.order_number in ACTIVE_PAYMENT_PROCS
     ):
         raise HTTPException(409, "Order is not awaiting payment")
+
+    cancel_payment_session(order.order_number)
     now_str = datetime.datetime.now().strftime("%Y%m%d%H%M%S")
     ref = f"DEMO-BAKONG-{now_str}-{order.id}"
     settle_payment(db, order, ref)

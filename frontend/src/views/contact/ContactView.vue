@@ -58,7 +58,7 @@
                 </div>
                 <div class="channel-info">
                   <h4>Email Us</h4>
-                  <a href="mailto:support@lumea.com" class="channel-mail-link">support@lumea.com</a>
+                  <a :href="'mailto:' + (cartStore.storeEmail || 'support@lumea.com')" class="channel-mail-link">{{ cartStore.storeEmail || 'support@lumea.com' }}</a>
                   <p class="channel-hint">We usually respond within 24 hours.</p>
                 </div>
               </div>
@@ -69,7 +69,7 @@
                 </div>
                 <div class="channel-info">
                   <h4>Call Us</h4>
-                  <a href="tel:+85523900123" class="channel-phone-link">+855 23 900 123</a>
+                  <a :href="'tel:' + (cartStore.storePhone || '+855 12 345 678')" class="channel-phone-link">{{ cartStore.storePhone || '+855 12 345 678' }}</a>
                   <p class="channel-hint">Mon – Fri, 9AM – 6PM (ICT)</p>
                 </div>
               </div>
@@ -246,6 +246,9 @@
 <script setup>
 import axios from 'axios'
 import { ref, reactive } from 'vue'
+import { useCartStore } from '@/stores/cart'
+
+const cartStore = useCartStore()
 import {
   MessageSquare,
   Mail,

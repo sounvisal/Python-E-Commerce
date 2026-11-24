@@ -71,14 +71,14 @@
           </div>
           <div class="admin-entry-link">
             <span class="pulse-indicator"></span>
-            <span>Customer care: support@lumea.com</span>
+            <span>Customer care: {{ cartStore.storeEmail || 'support@lumea.com' }}</span>
           </div>
         </div>
       </div>
 
       <!-- Footer Bottom Row -->
       <div class="footer-bottom-bar">
-        <p class="copyright-text">&copy; {{ new Date().getFullYear() }} Luméa. All rights reserved.</p>
+        <p class="copyright-text">&copy; {{ new Date().getFullYear() }} {{ cartStore.storeName || 'Luméa' }}. All rights reserved.</p>
         <div class="legal-links">
           <router-link to="/privacy-policy">Privacy Policy</router-link>
           <router-link to="/terms-of-service">Terms of Service</router-link>
@@ -90,6 +90,9 @@
 
 <script setup>
 import { Facebook, Instagram, Leaf, Youtube } from 'lucide-vue-next'
+import { useCartStore } from '@/stores/cart'
+
+const cartStore = useCartStore()
 </script>
 
 <style scoped>

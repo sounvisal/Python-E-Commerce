@@ -14,6 +14,7 @@ from app.models.brand import Brand
 from app.models.review import Review
 from app.models.quiz import Quiz
 from app.models.return_request import ReturnRequest
+from app.api.contact import SupportMessage
 from app.core.security import get_password_hash
 
 SEED_FILE = os.path.join(os.path.dirname(__file__), "seed_data.json")
@@ -1459,6 +1460,59 @@ A morning routine should prioritize protection (antioxidants + SPF), while the e
         db.add_all(sample_returns)
         db.commit()
         print(f"[Seed] Created {len(sample_returns)} Return Requests in database.")
+
+    # 10.5 Seed Customer Support Inquiries
+    if db.query(SupportMessage).count() <= 1:
+        sample_inquiries = [
+            SupportMessage(
+                reference="SUP-7A19F2",
+                name="Sophea Vichea",
+                email="sophea.vichea@example.com",
+                subject="Skincare Routine Advice: Retinol + Vitamin C Layering",
+                message="Hello Luméa Atelier team! I recently ordered the Botanical Dew Elixir and the Vitamin C Illuminating Serum. Should I apply Vitamin C during my morning ritual and reserve Retinol for nighttime, or can I combine them?",
+                status="pending"
+            ),
+            SupportMessage(
+                reference="SUP-8C42E1",
+                name="Linda Meas",
+                email="linda.meas@example.com",
+                subject="Delivery Status for Express Phnom Penh Order #LM24081234",
+                message="Hi! I chose same-day concierge delivery for my order this morning to BKK1. Could you confirm if the courier will call 15 minutes before arrival at my residence?",
+                status="replied",
+                admin_reply="Warm greetings Linda! Yes, our Luméa Atelier courier will phone you approximately 15 minutes prior to arrival. Your package is currently out for delivery."
+            ),
+            SupportMessage(
+                reference="SUP-3D90B4",
+                name="David Heng",
+                email="david.heng@example.com",
+                subject="Wedding Atelier Gift Sets & Custom Silk Packaging",
+                message="We are planning our wedding favor boxes for next month and would love to prepare 20 bespoke discovery kits with luxury silk packaging and custom gift notes. Do you offer corporate / bridal party concierge packaging?",
+                status="pending"
+            ),
+            SupportMessage(
+                reference="SUP-5F11A9",
+                name="Thavy Sok",
+                email="thavy.sok@example.com",
+                subject="Stock Restock Timeline for SK-II Treatment Essence 230ml",
+                message="Good afternoon, I wanted to check when the 230ml SK-II Facial Treatment Essence will be replenished? I'm subscribed to the notification alert but wanted to verify if it will arrive before Friday.",
+                status="resolved",
+                admin_reply="Hello Thavy! Fresh batch stock has just cleared customs and is now available on our storefront with complimentary express delivery."
+            ),
+            SupportMessage(
+                reference="SUP-9B38D7",
+                name="Chantou Rath",
+                email="chantou.rath@example.com",
+                subject="Sensitive Skin Formulation & Fragrance Inquiry",
+                message="I have reactive rosacea skin and wanted to verify if your Centella Asiatica Calming Toner contains any artificial fragrance or essential oils before placing my first atelier order?",
+                status="pending"
+            )
+        ]
+        # Only add what doesn't already exist by reference
+        for item in sample_inquiries:
+            if not db.query(SupportMessage).filter(SupportMessage.reference == item.reference).first():
+                db.add(item)
+        db.commit()
+        print(f"[Seed] Created demo customer support inquiries in database.")
 
     # 11. Synchronize PostgreSQL Primary Key Sequences (Neon Serverless compatibility)
     try:
