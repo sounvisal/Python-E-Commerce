@@ -1395,8 +1395,8 @@ const deletePromo = async promo => {
   border-radius: 16px;
   width: 100%;
   max-width: 560px;
-  max-height: 90vh;
-  max-height: 90dvh;
+  max-height: 86vh;
+  max-height: 86dvh;
   display: flex;
   flex-direction: column;
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
@@ -1414,15 +1414,16 @@ const deletePromo = async promo => {
 
 .modal-title { font-size: 17px; font-weight: 700; color: #2D2621; }
 .modal-sub { font-size: 12px; color: #8C847E; margin-top: 2px; }
-.btn-close-modal { background: none; border: none; color: #8C847E; cursor: pointer; padding: 4px; }
-.btn-close-modal:hover { color: #84261B; }
+.btn-close-modal { background: none; border: none; color: #8C847E; cursor: pointer; padding: 4px; border-radius: 4px; }
+.btn-close-modal:hover { color: #84261B; background: #FAF5F2; }
 
 .modal-form-body {
   padding: 20px 24px;
   display: flex;
   flex-direction: column;
   gap: 16px;
-  flex: 1;
+  flex: 1 1 auto;
+  min-height: 0; /* CRITICAL: allows flex child to shrink and scroll inside flex column */
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
 }
@@ -1560,9 +1561,28 @@ const deletePromo = async promo => {
   padding: 7px 10px;
 }
 
-.toggle-texts { display: flex; flex-direction: column; }
-.toggle-texts strong { font-size: 12.5px; color: #2D2621; }
-.toggle-texts span { font-size: 11px; color: #8C847E; }
+.toggle-texts {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.toggle-title,
+.toggle-texts strong {
+  display: block;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: #2D2621;
+  line-height: 1.3;
+}
+
+.toggle-desc,
+.toggle-texts span {
+  display: block;
+  font-size: 11px;
+  color: #8C847E;
+  line-height: 1.35;
+}
 
 .modal-footer-clean {
   display: flex;
@@ -1572,6 +1592,21 @@ const deletePromo = async promo => {
   background: #FAF7F4;
   border-top: 1px solid #EFE7E0;
   flex-shrink: 0;
+}
+
+@media (max-height: 760px) {
+  .promo-modal-dialog {
+    max-height: 92vh;
+    max-height: 92dvh;
+  }
+  .modal-form-body {
+    padding: 14px 20px;
+    gap: 12px;
+  }
+  .modal-header-clean,
+  .modal-footer-clean {
+    padding: 12px 20px;
+  }
 }
 
 @media (max-width: 640px) {

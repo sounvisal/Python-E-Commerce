@@ -82,10 +82,6 @@ const bannerFileInput = ref(null)
 const isUploadingBanner = ref(false)
 
 function triggerBannerUpload() {
-  if (!canUploadMedia.value) {
-    adminStore.addToast('Hosted media upload is disabled on this server. Provide an image URL directly.', 'warning')
-    return
-  }
   if (bannerFileInput.value) {
     bannerFileInput.value.click()
   }
@@ -101,16 +97,29 @@ async function handleBannerUpload(e) {
     const res = await apiClient.post('/upload', formData, {
       headers: { 'Content-Type': 'multipart/form-data' }
     })
-    if (res.data?.status === 'success' && res.data.data?.url) {
-      bannerForm.image_url = res.data.data.url
+    const uploadedUrl = res.data?.data?.url || res.data?.url
+    if (uploadedUrl) {
+      bannerForm.image_url = uploadedUrl
       adminStore.addToast('Section banner image uploaded successfully!', 'success')
     }
   } catch (err) {
-    adminStore.addToast('Failed to upload banner image.', 'error')
+    adminStore.addToast(err.response?.data?.detail || 'Failed to upload banner image.', 'error')
   } finally {
     isUploadingBanner.value = false
     if (e.target) e.target.value = ''
   }
+}
+
+function openCreateSection() {
+  bannerForm.id = null
+  bannerForm.title = ''
+  bannerForm.subtitle = ''
+  bannerForm.badge = ''
+  bannerForm.image_url = ''
+  bannerForm.cta_text = 'Explore Atelier'
+  bannerForm.link = '/shop'
+  bannerForm.is_active = true
+  showEditModal.value = true
 }
 
 function openEditSection(sec) {
@@ -135,14 +144,38 @@ async function saveSection() {
   }
   isSubmitting.value = true
   try {
-    await apiClient.put(`/banners/${bannerForm.id}`, { title, subtitle: bannerForm.subtitle,
-      badge_text: bannerForm.badge, image_url: bannerForm.image_url, cta_text: bannerForm.cta_text.trim(),
-      cta_link: link, is_active: bannerForm.is_active })
+    if (bannerForm.id) {
+      await apiClient.put(`/banners/${bannerForm.id}`, {
+        title,
+        subtitle: bannerForm.subtitle,
+        badge_text: bannerForm.badge,
+        image_url: bannerForm.image_url,
+        cta_text: bannerForm.cta_text.trim(),
+        cta_link: link,
+        is_active: bannerForm.is_active
+      })
+    } else {
+      const pageSlug = `banner-${Date.now()}`
+      await apiClient.post('/banners', {
+        page: pageSlug,
+        title,
+        subtitle: bannerForm.subtitle,
+        badge_text: bannerForm.badge,
+        image_url: bannerForm.image_url,
+        cta_text: bannerForm.cta_text.trim() || 'Shop Now',
+        cta_link: link || '/shop',
+        display_order: sections.value.length + 1,
+        is_active: bannerForm.is_active
+      })
+    }
     await fetchBanners()
     showEditModal.value = false
     adminStore.addToast('Banner saved to the storefront.', 'success')
-  } catch (error) { adminStore.addToast(error.response?.data?.detail || 'Banner was not saved. Please retry.', 'error') }
-  finally { isSubmitting.value = false }
+  } catch (error) {
+    adminStore.addToast(error.response?.data?.detail || 'Banner was not saved. Please retry.', 'error')
+  } finally {
+    isSubmitting.value = false
+  }
 }
 async function toggleSection(sec) {
   try {
@@ -233,7 +266,7 @@ function applyTemplate(name) {
               <h3 class="panel-card-title">Homepage Sections</h3>
               <p class="panel-sub">Choose the Home banner to edit the first storefront slide.</p>
             </div>
-            <button disabled title="Custom sections are not available yet" class="btn-add-section opacity-60 cursor-not-allowed">
+            <button class="btn-add-section" @click="openCreateSection" title="Add a new banner or section">
               <Plus :size="14" />
               <span>Add Section</span>
             </button>
@@ -424,64 +457,79 @@ function applyTemplate(name) {
       </div>
     </div>
 
-    <!-- Edit Section Modal -->
+    <!-- Edit / Add Section Modal -->
     <div v-if="showEditModal" class="modal-backdrop" @click="showEditModal = false">
       <div class="section-modal-dialog" @click.stop>
         <div class="modal-header-clean">
           <div>
-            <h3 class="modal-title">Edit banner</h3>
+            <h3 class="modal-title">{{ bannerForm.id ? 'Edit banner' : 'Add new banner' }}</h3>
             <p class="modal-sub">Update section headline, layout description, and visual asset.</p>
           </div>
-          <button class="btn-close-modal" @click="showEditModal = false">
+          <button class="btn-close-modal" @click="showEditModal = false" aria-label="Close modal">
             <X :size="18" />
           </button>
         </div>
 
         <div class="modal-form-body">
           <div class="form-group-clean">
-            <label class="form-lbl" for="banner-title">Section Title</label>
-            <input id="banner-title" v-model="bannerForm.title" type="text" class="atelier-input" />
+            <label class="form-lbl" for="banner-title">Section Title <span class="req">*</span></label>
+            <input id="banner-title" v-model="bannerForm.title" type="text" class="atelier-input" placeholder="e.g. Where Beauty Lives" />
           </div>
 
           <div class="form-group-clean">
             <label class="form-lbl">Subtitle / Description</label>
-            <textarea v-model="bannerForm.subtitle" rows="3" class="atelier-textarea"></textarea>
-          </div>
-          <div class="form-group-clean">
-            <label class="form-lbl" for="banner-cta-text">Button label</label>
-            <input id="banner-cta-text" v-model="bannerForm.cta_text" type="text" class="atelier-input" />
-          </div>
-          <div class="form-group-clean">
-            <label class="form-lbl" for="banner-cta-link">Button destination</label>
-            <input id="banner-cta-link" v-model="bannerForm.link" type="text" class="atelier-input" placeholder="/shop" />
+            <textarea v-model="bannerForm.subtitle" rows="3" class="atelier-textarea" placeholder="Gentle, clinically-proven formulas crafted to nurture your skin barrier..."></textarea>
           </div>
 
-          <div class="form-group-clean">
-            <label class="form-lbl">Image URL or Asset Path</label>
-            <div v-if="!canUploadMedia" class="media-disabled-notice mb-2">
-              <AlertCircle :size="13" class="text-taupe" />
-              <span>Hosted media upload is disabled on this server. Provide an image URL directly.</span>
+          <div class="form-row-2">
+            <div class="form-group-clean">
+              <label class="form-lbl" for="banner-cta-text">Button label</label>
+              <input id="banner-cta-text" v-model="bannerForm.cta_text" type="text" class="atelier-input" placeholder="Explore Atelier" />
             </div>
-            <div class="input-with-upload-action">
-              <input v-model="bannerForm.image_url" type="text" class="atelier-input" placeholder="/images/... or https://..." />
-              <input
-                v-if="canUploadMedia"
-                type="file"
-                ref="bannerFileInput"
-                @change="handleBannerUpload"
-                accept="image/*"
-                style="display: none"
-              />
-              <button
-                v-if="canUploadMedia"
-                type="button"
-                class="btn-upload-trigger"
-                @click="triggerBannerUpload"
-                :disabled="isUploadingBanner"
-              >
-                <Upload :size="14" />
-                <span>{{ isUploadingBanner ? '...' : 'Upload Image' }}</span>
-              </button>
+            <div class="form-group-clean">
+              <label class="form-lbl" for="banner-cta-link">Button destination</label>
+              <input id="banner-cta-link" v-model="bannerForm.link" type="text" class="atelier-input" placeholder="/shop" />
+            </div>
+          </div>
+
+          <div class="form-group-clean banner-image-group">
+            <label class="form-lbl">Banner Image <span class="req">*</span></label>
+            <input
+              type="file"
+              ref="bannerFileInput"
+              @change="handleBannerUpload"
+              accept="image/*"
+              style="display: none"
+            />
+            
+            <!-- Visual Preview if image exists -->
+            <div v-if="bannerForm.image_url" class="banner-preview-box">
+              <img :src="bannerForm.image_url" alt="Banner Preview" class="banner-preview-img" @error="$event.target.src = '/images/admin-hero-bottles.jpg'" />
+              <div class="banner-preview-meta">
+                <span class="preview-url-text">{{ bannerForm.image_url }}</span>
+                <div class="preview-actions">
+                  <button type="button" class="btn-action-sm" @click="triggerBannerUpload" :disabled="isUploadingBanner">
+                    <Upload :size="12" />
+                    <span>{{ isUploadingBanner ? 'Uploading...' : 'Change Image' }}</span>
+                  </button>
+                  <button type="button" class="btn-action-sm danger" @click="bannerForm.image_url = ''">
+                    <Trash2 :size="12" />
+                    <span>Remove</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <!-- Upload Dropzone if no image -->
+            <div v-else class="banner-dropzone-box" @click="triggerBannerUpload">
+              <Upload :size="24" class="dropzone-icon" />
+              <strong class="dropzone-label">{{ isUploadingBanner ? 'Uploading image...' : 'Click to browse or drop banner image' }}</strong>
+              <span class="dropzone-sub">Supports PNG, JPG, WebP up to 10MB</span>
+            </div>
+
+            <!-- Direct URL Fallback -->
+            <div class="url-input-wrap">
+              <input v-model="bannerForm.image_url" type="text" class="atelier-input text-xs" placeholder="Or paste image URL: /images/banner-home.jpg or https://..." />
             </div>
           </div>
 
@@ -491,12 +539,13 @@ function applyTemplate(name) {
               class="atelier-toggle-switch"
               :class="{ active: bannerForm.is_active }"
               @click="bannerForm.is_active = !bannerForm.is_active"
+              aria-label="Toggle section visibility"
             >
               <span class="toggle-slider"></span>
             </button>
             <div class="toggle-texts">
-              <strong>Section Visibility</strong>
-              <span>Show this section on the storefront homepage.</span>
+              <strong class="toggle-title">Section Visibility</strong>
+              <span class="toggle-desc">Show this section on the storefront homepage.</span>
             </div>
           </div>
         </div>
@@ -505,7 +554,7 @@ function applyTemplate(name) {
           <button class="btn-cancel" @click="showEditModal = false">Cancel</button>
           <button class="btn-save-modal" :disabled="isSubmitting || isUploadingBanner" @click="saveSection">
             <Save :size="15" />
-            <span>Save Section</span>
+            <span>{{ isSubmitting ? 'Saving...' : 'Save Section' }}</span>
           </button>
         </div>
       </div>
@@ -1029,9 +1078,9 @@ function applyTemplate(name) {
   background: #FFFFFF;
   border-radius: 16px;
   width: 100%;
-  max-width: 540px;
-  max-height: 90vh;
-  max-height: 90dvh;
+  max-width: 560px;
+  max-height: 86vh;
+  max-height: 86dvh;
   display: flex;
   flex-direction: column;
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
@@ -1049,23 +1098,30 @@ function applyTemplate(name) {
 
 .modal-title { font-size: 17px; font-weight: 700; color: #2D2621; }
 .modal-sub { font-size: 12px; color: #8C847E; margin-top: 2px; }
-.btn-close-modal { background: none; border: none; color: #8C847E; cursor: pointer; padding: 4px; }
-.btn-close-modal:hover { color: #84261B; }
+.btn-close-modal { background: none; border: none; color: #8C847E; cursor: pointer; padding: 4px; border-radius: 4px; }
+.btn-close-modal:hover { color: #84261B; background: #FAF5F2; }
 
 .modal-form-body {
   padding: 20px 24px;
   display: flex;
   flex-direction: column;
   gap: 14px;
-  flex: 1;
+  flex: 1 1 auto;
+  min-height: 0; /* CRITICAL: ensures child can shrink and scroll inside flex column */
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
+}
+
+.form-row-2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
 }
 
 .featured-toggle-row {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 14px;
   padding: 12px 14px;
   background: #FAF7F4;
   border: 1px solid #EFE7E0;
@@ -1079,16 +1135,135 @@ function applyTemplate(name) {
   gap: 2px;
 }
 
+.toggle-title,
 .toggle-texts strong {
+  display: block;
   font-size: 13px;
+  font-weight: 600;
+  color: #2D2621;
+  line-height: 1.3;
+}
+
+.toggle-desc,
+.toggle-texts span {
+  display: block;
+  font-size: 11.5px;
+  color: #8C847E;
+  line-height: 1.35;
+}
+
+/* Banner Image Dropzone & Preview */
+.banner-image-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.banner-dropzone-box {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 20px 16px;
+  border: 2px dashed #E0D6CE;
+  border-radius: 10px;
+  background: #FAF7F4;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-align: center;
+}
+
+.banner-dropzone-box:hover {
+  border-color: #84261B;
+  background: #FAF5F2;
+}
+
+.dropzone-icon {
+  color: #84261B;
+}
+
+.dropzone-label {
+  font-size: 12.5px;
   font-weight: 600;
   color: #2D2621;
 }
 
-.toggle-texts span {
-  font-size: 11.5px;
+.dropzone-sub {
+  font-size: 11px;
   color: #8C847E;
-  line-height: 1.35;
+}
+
+.banner-preview-box {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 10px 12px;
+  background: #FAF7F4;
+  border: 1px solid #EFE7E0;
+  border-radius: 10px;
+}
+
+.banner-preview-img {
+  width: 100px;
+  height: 60px;
+  object-fit: cover;
+  border-radius: 6px;
+  border: 1px solid #E5DCD5;
+  background: #FFFFFF;
+}
+
+.banner-preview-meta {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+
+.preview-url-text {
+  font-size: 11px;
+  color: #7A726C;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.preview-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.btn-action-sm {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 10px;
+  background: #FFFFFF;
+  border: 1px solid #E0D6CE;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 500;
+  color: #3C3530;
+  cursor: pointer;
+}
+
+.btn-action-sm:hover {
+  border-color: #84261B;
+  color: #84261B;
+}
+
+.btn-action-sm.danger {
+  color: #B91C1C;
+}
+
+.btn-action-sm.danger:hover {
+  border-color: #B91C1C;
+  background: #FEF2F2;
+}
+
+.url-input-wrap {
+  margin-top: 2px;
 }
 
 .modal-footer-clean {
@@ -1154,6 +1329,21 @@ function applyTemplate(name) {
 .btn-upload-trigger:hover {
   background: #84261B;
   color: #FFFFFF;
+}
+
+@media (max-height: 760px) {
+  .section-modal-dialog {
+    max-height: 92vh;
+    max-height: 92dvh;
+  }
+  .modal-form-body {
+    padding: 14px 20px;
+    gap: 10px;
+  }
+  .modal-header-clean,
+  .modal-footer-clean {
+    padding: 12px 20px;
+  }
 }
 
 @media (max-width: 1100px) {

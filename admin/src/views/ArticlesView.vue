@@ -87,10 +87,6 @@ const articleFileInput = ref(null)
 const isUploadingImage = ref(false)
 
 function triggerArticleImageUpload() {
-  if (!canUploadMedia.value) {
-    adminStore.addToast('Hosted media upload is disabled on this server. Provide an image URL directly.', 'warning')
-    return
-  }
   if (articleFileInput.value) {
     articleFileInput.value.click()
   }
@@ -808,24 +804,19 @@ async function deleteArticle(art) {
             <div class="featured-img-preview-box">
               <img :src="articleForm.featured_image" class="featured-img" />
             </div>
-            <div v-if="!canUploadMedia" class="media-disabled-notice mb-2">
-              <AlertCircle :size="13" class="text-taupe" />
-              <span>Hosted media upload is disabled on this server. Provide an image URL directly.</span>
-            </div>
             <div class="form-group mb-2">
               <label for="featured-image-url" class="form-label">Image URL or Asset Path</label>
               <input id="featured-image-url" v-model.trim="articleForm.featured_image" type="text" class="atelier-input" placeholder="/images/... or https://..." />
             </div>
             <div class="featured-img-actions">
               <input
-                v-if="canUploadMedia"
                 type="file"
                 ref="articleFileInput"
                 @change="handleArticleImageUpload"
                 accept="image/*"
                 style="display: none"
               />
-              <button v-if="canUploadMedia" class="btn-img-action" @click="triggerArticleImageUpload" :disabled="isUploadingImage">
+              <button class="btn-img-action" @click="triggerArticleImageUpload" :disabled="isUploadingImage">
                 <Upload :size="13" />
                 <span>{{ isUploadingImage ? 'Uploading...' : 'Change Image' }}</span>
               </button>

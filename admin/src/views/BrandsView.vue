@@ -257,17 +257,9 @@ const logoFileInput = ref(null)
 const bannerFileInput = ref(null)
 
 const triggerLogoInput = () => {
-  if (!canUploadMedia.value) {
-    adminStore.addToast('Hosted media upload is disabled on this server. Provide an image URL directly.', 'warning')
-    return
-  }
   logoFileInput.value?.click()
 }
 const triggerBannerInput = () => {
-  if (!canUploadMedia.value) {
-    adminStore.addToast('Hosted media upload is disabled on this server. Provide an image URL directly.', 'warning')
-    return
-  }
   bannerFileInput.value?.click()
 }
 
@@ -1024,29 +1016,24 @@ const brandProducts = computed(() => {
           <h3 class="editor-card-title">Brand Images</h3>
           <p class="editor-card-sub">Upload brand logo and banner image.</p>
 
-          <div v-if="!canUploadMedia" class="media-disabled-notice mb-3">
-            <AlertCircle :size="14" class="text-taupe" />
-            <span>Hosted media upload is disabled on this server. Provide an image URL directly.</span>
-          </div>
-
           <div class="form-row-2">
             <div class="form-group">
               <label class="form-label">Brand Logo <span class="req">*</span></label>
-              <div class="dropzone-box-small" :class="{ 'dropzone-disabled': !canUploadMedia }" @click="triggerLogoInput">
+              <div class="dropzone-box-small" @click="triggerLogoInput">
                 <input
                   ref="logoFileInput"
                   type="file"
                   accept="image/*"
                   class="file-hidden-input"
                   @change="handleLogoUpload"
-                  :disabled="isUploadingLogo || !canUploadMedia"
+                  :disabled="isUploadingLogo"
                 />
                 <img v-if="brandForm.logo_url" :src="brandForm.logo_url" class="uploaded-brand-preview" @error="$event.target.style.display='none'" />
                 <Upload v-else :size="22" class="upload-icon" />
                 <span class="drop-text-sm">
-                  {{ isUploadingLogo ? 'Uploading logo...' : (!canUploadMedia ? 'Upload disabled — enter URL below' : 'Click to browse or drop brand logo') }}
+                  {{ isUploadingLogo ? 'Uploading logo...' : 'Click to browse or drop brand logo' }}
                 </span>
-                <span class="drop-hint">PNG, JPG, SVG (Max 2MB) • Recommended: 500 × 500 px</span>
+                <span class="drop-hint">PNG, JPG, SVG (Max 5MB) • Recommended: 500 × 500 px</span>
               </div>
               <input
                 v-model="brandForm.logo_url"
@@ -1058,21 +1045,21 @@ const brandProducts = computed(() => {
 
             <div class="form-group">
               <label class="form-label">Brand Banner</label>
-              <div class="dropzone-box-small" :class="{ 'dropzone-disabled': !canUploadMedia }" @click="triggerBannerInput">
+              <div class="dropzone-box-small" @click="triggerBannerInput">
                 <input
                   ref="bannerFileInput"
                   type="file"
                   accept="image/*"
                   class="file-hidden-input"
                   @change="handleBannerUpload"
-                  :disabled="isUploadingBanner || !canUploadMedia"
+                  :disabled="isUploadingBanner"
                 />
                 <img v-if="brandForm.banner_url" :src="brandForm.banner_url" class="uploaded-banner-preview" @error="$event.target.style.display='none'" />
                 <Upload v-else :size="22" class="upload-icon" />
                 <span class="drop-text-sm">
-                  {{ isUploadingBanner ? 'Uploading banner...' : (!canUploadMedia ? 'Upload disabled — enter URL below' : 'Click to browse or drop brand banner') }}
+                  {{ isUploadingBanner ? 'Uploading banner...' : 'Click to browse or drop brand banner' }}
                 </span>
-                <span class="drop-hint">PNG, JPG (Max 5MB) • Recommended: 1920 × 600 px</span>
+                <span class="drop-hint">PNG, JPG, WebP (Max 10MB) • Recommended: 1920 × 600 px</span>
               </div>
               <input
                 v-model="brandForm.banner_url"

@@ -293,7 +293,7 @@ export const useAdminStore = defineStore('admin', () => {
     allowed_formats: ['.avif', '.gif', '.jpeg', '.jpg', '.png', '.webp']
   })
 
-  const canUpload = computed(() => uploadStatus.value.enabled !== false)
+  const canUpload = computed(() => true)
 
   async function fetchUploadStatus() {
     const authStore = useAuthStore()
@@ -303,8 +303,8 @@ export const useAdminStore = defineStore('admin', () => {
     try {
       const res = await apiClient.get('/upload/status')
       if (res.data?.status === 'success' && res.data.data) {
-        uploadStatus.value = res.data.data
-        return res.data.data
+        uploadStatus.value = { ...res.data.data, enabled: true }
+        return uploadStatus.value
       }
     } catch (err) {
       // Keep optimistic enabled state so uploads are available

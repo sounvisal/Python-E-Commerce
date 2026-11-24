@@ -491,16 +491,12 @@ const moveOrder = (cat, direction) => {
 
           <div class="form-group">
             <label class="form-label">Category Image</label>
-            <div v-if="!canUploadMedia" class="media-disabled-notice mb-2">
-              <AlertCircle :size="13" class="text-taupe" />
-              <span>Hosted media upload is disabled on this server. Provide an image URL directly.</span>
-            </div>
             <div class="category-image-uploader-row">
               <div class="category-img-preview-box">
                 <img :src="categoryForm.image || '/images/cat-cleansers.jpg'" class="cat-preview-thumb" @error="$event.target.src = '/images/cat-cleansers.jpg'" />
               </div>
               <div class="category-img-inputs">
-                <label v-if="canUploadMedia" class="btn-upload-file-label">
+                <label class="btn-upload-file-label">
                   <Upload :size="13" />
                   <span>{{ isUploadingImage ? 'Uploading...' : 'Upload Image' }}</span>
                   <input type="file" accept="image/*" class="file-hidden-input" @change="handleCategoryImageUpload" :disabled="isUploadingImage" />
@@ -522,12 +518,13 @@ const moveOrder = (cat, direction) => {
                 class="atelier-toggle-switch"
                 :class="{ active: categoryForm.show_in_menu }"
                 @click="categoryForm.show_in_menu = !categoryForm.show_in_menu"
+                aria-label="Toggle show in navigation menu"
               >
                 <span class="toggle-slider"></span>
               </button>
               <div class="toggle-texts">
-                <strong>Show in Navigation Menu</strong>
-                <span>Display in storefront top bar.</span>
+                <strong class="toggle-title">Show in Navigation Menu</strong>
+                <span class="toggle-desc">Display in storefront top bar.</span>
               </div>
             </div>
 
@@ -1009,8 +1006,8 @@ const moveOrder = (cat, direction) => {
   border-radius: 16px;
   width: 100%;
   max-width: 540px;
-  max-height: 90vh;
-  max-height: 90dvh;
+  max-height: 86vh;
+  max-height: 86dvh;
   display: flex;
   flex-direction: column;
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
@@ -1043,6 +1040,12 @@ const moveOrder = (cat, direction) => {
   border: none;
   color: #8C847E;
   cursor: pointer;
+  padding: 4px;
+  border-radius: 4px;
+}
+.btn-close-modal:hover {
+  color: #84261B;
+  background: #FAF5F2;
 }
 
 .modal-form-body {
@@ -1050,7 +1053,8 @@ const moveOrder = (cat, direction) => {
   display: flex;
   flex-direction: column;
   gap: 16px;
-  flex: 1;
+  flex: 1 1 auto;
+  min-height: 0; /* CRITICAL: ensures child shrinks and scrolls properly inside flex container */
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
 }
@@ -1161,16 +1165,24 @@ const moveOrder = (cat, direction) => {
 .toggle-texts {
   display: flex;
   flex-direction: column;
+  gap: 2px;
 }
 
+.toggle-title,
 .toggle-texts strong {
+  display: block;
   font-size: 12.5px;
+  font-weight: 600;
   color: #2D2621;
+  line-height: 1.3;
 }
 
+.toggle-desc,
 .toggle-texts span {
+  display: block;
   font-size: 11px;
   color: #8C847E;
+  line-height: 1.35;
 }
 
 .modal-footer-clean {
@@ -1181,6 +1193,21 @@ const moveOrder = (cat, direction) => {
   background: #FAF7F4;
   border-top: 1px solid #EFE7E0;
   flex-shrink: 0;
+}
+
+@media (max-height: 760px) {
+  .category-modal-dialog {
+    max-height: 92vh;
+    max-height: 92dvh;
+  }
+  .modal-form-body {
+    padding: 14px 20px;
+    gap: 12px;
+  }
+  .modal-header-clean,
+  .modal-footer-clean {
+    padding: 12px 20px;
+  }
 }
 
 @media (max-width: 640px) {
