@@ -1,7 +1,7 @@
 <template>
   <div class="lumea-home-page">
     <!-- Luxury Stencil Skeleton Loader while initial data is arriving -->
-    <transition name="fade-stencil" mode="out-in">
+    <transition name="fade-stencil" mode="out-in" @after-enter="setupScrollObserver">
       <HomeSkeleton v-if="productStore.loading && !productStore.allCatalogProducts.length" key="home-skeleton" />
       <div v-else class="home-loaded-content" key="home-content">
         <!-- ================================================================= -->
@@ -671,11 +671,11 @@ function setupScrollObserver() {
     scrollObserver.disconnect()
   }
 
-  // Positive rootMargin (120px) triggers before elements enter the screen,
+  // Generous rootMargin (200px) triggers well before elements enter the screen,
   // completely eliminating blank white spaces or stuck/laggy scroll pauses!
   const options = {
-    threshold: 0.02,
-    rootMargin: '120px 0px -20px 0px',
+    threshold: 0.01,
+    rootMargin: '200px 0px 200px 0px',
   }
 
   scrollObserver = new IntersectionObserver((entries) => {
@@ -689,7 +689,15 @@ function setupScrollObserver() {
   }, options)
 
   const elements = document.querySelectorAll('.reveal-on-scroll')
-  elements.forEach((el) => scrollObserver.observe(el))
+  elements.forEach((el) => {
+    // If element is already within or near viewport, reveal immediately
+    const rect = el.getBoundingClientRect()
+    if (rect.top < window.innerHeight + 250) {
+      el.classList.add('is-visible')
+    } else {
+      scrollObserver.observe(el)
+    }
+  })
 }
 
 onMounted(() => {
@@ -700,6 +708,14 @@ onMounted(() => {
   nextTick(() => {
     setupScrollObserver()
   })
+  setTimeout(setupScrollObserver, 150)
+  setTimeout(setupScrollObserver, 450)
+  // Fail-safe: ensure all sections become visible even on edge cases or slow devices
+  setTimeout(() => {
+    document.querySelectorAll('.reveal-on-scroll:not(.is-visible)').forEach((el) => {
+      el.classList.add('is-visible')
+    })
+  }, 1000)
 })
 
 watch(
@@ -709,6 +725,8 @@ watch(
       nextTick(() => {
         setupScrollObserver()
       })
+      setTimeout(setupScrollObserver, 150)
+      setTimeout(setupScrollObserver, 400)
     }
   }
 )

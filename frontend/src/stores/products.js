@@ -815,15 +815,11 @@ export const useProductStore = defineStore('products', {
 
       try {
         const res = await axios.get(`${API_BASE}/products`, { params: { limit: 10000 } })
-        if (Array.isArray(res.data?.data) && res.data.data.length > 0) {
+        if (Array.isArray(res.data?.data)) {
           this.allCatalogProducts = res.data.data
           this.products = this.allCatalogProducts
           this.featuredProducts = this.products.filter(p => p.is_featured)
           this.isOffline = false
-        } else {
-          this.allCatalogProducts = FALLBACK_PRODUCTS
-          this.products = this.allCatalogProducts
-          this.featuredProducts = this.products.filter(p => p.is_featured)
         }
       } catch (err) {
         console.warn('[ProductStore] Backend offline, loaded curated fallback catalog.')
