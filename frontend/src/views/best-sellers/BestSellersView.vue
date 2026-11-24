@@ -133,7 +133,10 @@
           </div>
 
           <!-- Product Cards Grid with Rank Badges -->
-          <div class="bestsellers-grid" :class="{ 'is-list-view': viewMode === 'list' }">
+          <div v-if="productsStore.loading && filteredProducts.length === 0" class="bestsellers-grid">
+            <ProductCardSkeleton v-for="n in 6" :key="n" />
+          </div>
+          <div v-else class="bestsellers-grid" :class="{ 'is-list-view': viewMode === 'list' }">
             <div
               v-for="(product, index) in filteredProducts"
               :key="product.id"
@@ -222,6 +225,7 @@
 import { ref, computed } from 'vue'
 import { useProductStore } from '@/stores/products'
 import ProductCard from '@/components/ProductCard.vue'
+import ProductCardSkeleton from '@/components/common/ProductCardSkeleton.vue'
 import {
   ChevronRight,
   ShieldCheck,

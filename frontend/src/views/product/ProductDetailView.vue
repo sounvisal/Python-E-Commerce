@@ -995,9 +995,13 @@
       </div>
     </div>
   </div>
-  <section v-else class="container" role="status">
-    <p>{{ productStore.loading ? 'Loading product...' : (productStore.error || 'Product unavailable') }}</p>
-    <router-link to="/shop">Return to catalog</router-link>
+  <ProductDetailSkeleton v-else-if="productStore.loading && !product" />
+  <section v-else class="container product-not-found-state" role="status">
+    <div class="not-found-card">
+      <h2>Formulation Not Found</h2>
+      <p>{{ productStore.error || 'The requested product is currently resting in our formulation archives.' }}</p>
+      <router-link to="/shop" class="btn btn-pill-dark">Return to catalog</router-link>
+    </div>
   </section>
 </template>
 
@@ -1005,6 +1009,7 @@
 import { ref, reactive, computed, watch, onMounted, nextTick } from 'vue'
 import { useRoute } from 'vue-router'
 import axios from 'axios'
+import ProductDetailSkeleton from '@/components/common/ProductDetailSkeleton.vue'
 import {
   ChevronRight,
   ChevronDown,

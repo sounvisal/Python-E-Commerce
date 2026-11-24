@@ -1,9 +1,13 @@
 <template>
   <div class="lumea-home-page">
-    <!-- ================================================================= -->
-    <!-- 1. HERO SECTION                                                  -->
-    <!-- ================================================================= -->
-    <section v-if="homeBanner.is_active !== false" class="hero-section reveal-on-scroll is-visible">
+    <!-- Luxury Stencil Skeleton Loader while initial data is arriving -->
+    <transition name="fade-stencil" mode="out-in">
+      <HomeSkeleton v-if="productStore.loading && !productStore.allCatalogProducts.length" key="home-skeleton" />
+      <div v-else class="home-loaded-content" key="home-content">
+        <!-- ================================================================= -->
+        <!-- 1. HERO SECTION                                                  -->
+        <!-- ================================================================= -->
+        <section v-if="homeBanner.is_active !== false" class="hero-section reveal-on-scroll is-visible">
       <div class="container hero-container">
         <!-- Hero Left Column: Editorial Copy -->
         <div class="hero-text-col">
@@ -192,14 +196,7 @@
         </div>
 
         <div v-if="productStore.loading && bestSellersList.length === 0" class="products-carousel-grid">
-          <div v-for="n in 5" :key="n" class="skeleton-card">
-            <div class="skeleton-img-box shimmer"></div>
-            <div class="skeleton-info-box">
-              <div class="skeleton-line shimmer short"></div>
-              <div class="skeleton-line shimmer medium"></div>
-              <div class="skeleton-line shimmer price"></div>
-            </div>
-          </div>
+          <ProductCardSkeleton v-for="n in 5" :key="n" />
         </div>
         <div v-else class="products-carousel-grid">
           <ProductCard
@@ -415,6 +412,8 @@
         </div>
       </div>
     </section>
+    </div>
+    </transition>
 
     <!-- ================================================================= -->
     <!-- MODALS: Brand Story, Article Reader                               -->
@@ -470,6 +469,8 @@
 import axios from 'axios'
 import BrandLogo from '@/components/BrandLogo.vue'
 import ProductCard from '@/components/ProductCard.vue'
+import HomeSkeleton from '@/components/common/HomeSkeleton.vue'
+import ProductCardSkeleton from '@/components/common/ProductCardSkeleton.vue'
 import { useProductStore } from '@/stores/products'
 import { useCartStore } from '@/stores/cart'
 import { useBannerStore } from '@/stores/banners'
@@ -491,7 +492,7 @@ import {
   Truck,
   X
 } from 'lucide-vue-next'
-import { onMounted, onUnmounted, ref, computed } from 'vue'
+import { onMounted, onUnmounted, ref, computed, watch, nextTick } from 'vue'
 import { useRouter } from 'vue-router'
 
 const router = useRouter()
@@ -665,10 +666,9 @@ const articlesList = [
 // Apple-Inspired Fluid Scroll Animation Observer
 let scrollObserver = null
 
-onMounted(() => {
-  bannerStore.fetchBanners()
-  if (!productStore.allCatalogProducts.length) {
-    productStore.fetchProducts()
+function setupScrollObserver() {
+  if (scrollObserver) {
+    scrollObserver.disconnect()
   }
 
   // Positive rootMargin (120px) triggers before elements enter the screen,
@@ -690,7 +690,28 @@ onMounted(() => {
 
   const elements = document.querySelectorAll('.reveal-on-scroll')
   elements.forEach((el) => scrollObserver.observe(el))
+}
+
+onMounted(() => {
+  bannerStore.fetchBanners()
+  if (!productStore.allCatalogProducts.length) {
+    productStore.fetchProducts()
+  }
+  nextTick(() => {
+    setupScrollObserver()
+  })
 })
+
+watch(
+  () => productStore.loading,
+  (loading) => {
+    if (!loading) {
+      nextTick(() => {
+        setupScrollObserver()
+      })
+    }
+  }
+)
 
 onUnmounted(() => {
   if (scrollObserver) {
@@ -2388,5 +2409,16 @@ async function handleSubscribe() {
     transform: none !important;
     transition: none !important;
   }
+}
+
+/* Stencil Smooth Crossfade Transition */
+.fade-stencil-enter-active,
+.fade-stencil-leave-active {
+  transition: opacity 0.35s ease;
+}
+
+.fade-stencil-enter-from,
+.fade-stencil-leave-to {
+  opacity: 0;
 }
 </style>

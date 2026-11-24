@@ -22,7 +22,7 @@ export const useBannerStore = defineStore('banners', {
           is_active: true,
         }
       }
-      return banner ? { ...fallback, is_active: false } : fallback
+      return banner ? { ...fallback, is_active: false } : { is_active: true, ...fallback }
     },
   },
 

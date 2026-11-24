@@ -679,7 +679,8 @@ export const useProductStore = defineStore('products', {
     featuredProducts: [],
     currentProduct: null,
     relatedProducts: [],
-    loading: false,
+    loading: true,
+    isOffline: false,
     error: null,
     pagination: {
       currentPage: 1,
@@ -798,11 +799,13 @@ export const useProductStore = defineStore('products', {
     async fetchCategories() {
       try {
         const res = await axios.get(`${API_BASE}/categories`)
-        if (Array.isArray(res.data?.data)) {
+        if (Array.isArray(res.data?.data) && res.data.data.length > 0) {
           this.categories = res.data.data
+        } else {
+          this.categories = FALLBACK_CATEGORIES
         }
       } catch (err) {
-        // Fallback already assigned in state
+        this.categories = FALLBACK_CATEGORIES
       }
     },
 
@@ -812,11 +815,26 @@ export const useProductStore = defineStore('products', {
 
       try {
         const res = await axios.get(`${API_BASE}/products`, { params: { limit: 10000 } })
-        this.allCatalogProducts = res.data?.data || []
-        this.products = this.allCatalogProducts
-        this.featuredProducts = this.products.filter(p => p.is_featured)
+        if (Array.isArray(res.data?.data) && res.data.data.length > 0) {
+          this.allCatalogProducts = res.data.data
+          this.products = this.allCatalogProducts
+          this.featuredProducts = this.products.filter(p => p.is_featured)
+          this.isOffline = false
+        } else {
+          this.allCatalogProducts = FALLBACK_PRODUCTS
+          this.products = this.allCatalogProducts
+          this.featuredProducts = this.products.filter(p => p.is_featured)
+        }
       } catch (err) {
-        this.error = 'The catalog is temporarily unavailable. Please try again.'
+        console.warn('[ProductStore] Backend offline, loaded curated fallback catalog.')
+        this.allCatalogProducts = FALLBACK_PRODUCTS
+        this.products = this.allCatalogProducts
+        if (!this.categories.length) {
+          this.categories = FALLBACK_CATEGORIES
+        }
+        this.featuredProducts = this.products.filter(p => p.is_featured)
+        this.isOffline = true
+        this.error = null
       } finally {
         this.loading = false
       }
@@ -831,9 +849,19 @@ export const useProductStore = defineStore('products', {
         if (res.data?.data) {
           this.currentProduct = res.data.data
           this.relatedProducts = res.data.related || []
+          this.isOffline = false
           return
         }
       } catch (err) {
+        // Graceful fallback lookup when backend is offline
+        const fallback = FALLBACK_PRODUCTS.find(p => p.slug === slug || String(p.id) === String(slug))
+        if (fallback) {
+          this.currentProduct = fallback
+          this.relatedProducts = FALLBACK_PRODUCTS.filter(p => p.category === fallback.category && p.id !== fallback.id).slice(0, 4)
+          this.isOffline = true
+          this.error = null
+          return
+        }
         this.currentProduct = null
         this.relatedProducts = []
         this.error = err.response?.status === 404 ? 'Product not found' : 'Product temporarily unavailable'

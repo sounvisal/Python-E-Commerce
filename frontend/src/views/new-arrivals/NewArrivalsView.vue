@@ -208,7 +208,10 @@
           </div>
 
           <!-- Products Grid -->
-          <div class="products-grid" :class="{ 'is-list-view': viewMode === 'list' }">
+          <div v-if="productsStore.loading && filteredProducts.length === 0" class="products-grid">
+            <ProductCardSkeleton v-for="n in 6" :key="n" />
+          </div>
+          <div v-else class="products-grid" :class="{ 'is-list-view': viewMode === 'list' }">
             <ProductCard
               v-for="product in filteredProducts"
               :key="product.id"
@@ -272,6 +275,7 @@
 import { ref, computed } from 'vue'
 import { useProductStore } from '@/stores/products'
 import ProductCard from '@/components/ProductCard.vue'
+import ProductCardSkeleton from '@/components/common/ProductCardSkeleton.vue'
 import {
   ChevronRight,
   Sparkles,

@@ -1,8 +1,11 @@
 <template>
   <div class="shop-view">
-    <div class="container">
-      <!-- 1. Breadcrumbs -->
-      <nav class="breadcrumb-nav" aria-label="Breadcrumb">
+    <!-- Stencil Skeleton Loader while initial data is arriving -->
+    <transition name="fade-stencil" mode="out-in">
+      <ShopSkeleton v-if="productStore.loading && !productStore.allCatalogProducts.length" key="shop-skeleton" />
+      <div v-else class="container" key="shop-content">
+        <!-- 1. Breadcrumbs -->
+        <nav class="breadcrumb-nav" aria-label="Breadcrumb">
         <router-link to="/">Home</router-link>
         <span class="sep">&gt;</span>
         <span class="current">Shop</span>
@@ -425,12 +428,7 @@
 
           <!-- Loading Skeleton Grid -->
           <div v-if="productStore.loading && displayProducts.length === 0" class="shop-products-grid">
-            <div v-for="n in 8" :key="n" class="skeleton-card">
-              <div class="skeleton-img"></div>
-              <div class="skeleton-line skeleton-brand"></div>
-              <div class="skeleton-line skeleton-title"></div>
-              <div class="skeleton-line skeleton-price"></div>
-            </div>
+            <ProductCardSkeleton v-for="n in 8" :key="n" />
           </div>
 
           <!-- Empty State -->
@@ -515,6 +513,7 @@
         </main>
       </div>
     </div>
+    </transition>
   </div>
 </template>
 
@@ -524,6 +523,8 @@ import { useRoute, useRouter } from 'vue-router'
 import { useProductStore } from '@/stores/products'
 import { useNotificationStore } from '@/stores/notification'
 import ProductCard from '@/components/ProductCard.vue'
+import ProductCardSkeleton from '@/components/common/ProductCardSkeleton.vue'
+import ShopSkeleton from '@/components/common/ShopSkeleton.vue'
 import BrandLogo from '@/components/BrandLogo.vue'
 import {
   ShieldCheck,
@@ -1912,5 +1913,16 @@ watch(
   .newsletter-card {
     padding: 1.75rem;
   }
+}
+
+/* Stencil Smooth Crossfade Transition */
+.fade-stencil-enter-active,
+.fade-stencil-leave-active {
+  transition: opacity 0.35s ease;
+}
+
+.fade-stencil-enter-from,
+.fade-stencil-leave-to {
+  opacity: 0;
 }
 </style>

@@ -316,6 +316,11 @@
             </div>
           </div>
 
+          <!-- Loading Skeleton Grid -->
+          <div v-if="productStore.loading && paginatedProducts.length === 0" class="category-products-grid">
+            <ProductCardSkeleton v-for="n in 8" :key="n" />
+          </div>
+
           <!-- 5-Column Product Grid -->
           <div
             v-else
@@ -388,6 +393,7 @@ import { ref, computed, reactive, onMounted, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { useProductStore } from '@/stores/products'
 import ProductCard from '@/components/ProductCard.vue'
+import ProductCardSkeleton from '@/components/common/ProductCardSkeleton.vue'
 import {
   Sparkles,
   Leaf,
