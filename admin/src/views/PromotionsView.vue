@@ -26,7 +26,9 @@ import {
   CheckCircle2,
   X,
   Save,
-  ArrowUpRight
+  ArrowUpRight,
+  Upload,
+  UploadCloud
 } from 'lucide-vue-next'
 
 const adminStore = useAdminStore()
@@ -63,8 +65,39 @@ const promoForm = reactive({
   end_date: '2025-12-31',
   status: 'Active',
   is_featured: false,
+  image_url: '',
   badge_color: '#84261B'
 })
+
+const promoFileInput = ref(null)
+const isUploadingPromoImage = ref(false)
+
+function triggerPromoImageUpload() {
+  if (promoFileInput.value) promoFileInput.value.click()
+}
+
+async function handlePromoImageUpload(e) {
+  const file = e.target.files?.[0]
+  if (!file) return
+  isUploadingPromoImage.value = true
+  try {
+    const formData = new FormData()
+    formData.append('file', file)
+    const res = await apiClient.post('/upload', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' }
+    })
+    const uploadedUrl = res.data?.data?.url || res.data?.url
+    if (uploadedUrl) {
+      promoForm.image_url = uploadedUrl
+      adminStore.addToast('Promotion image uploaded successfully!', 'success')
+    }
+  } catch (err) {
+    adminStore.addToast(err.response?.data?.detail || 'Failed to upload promotion image.', 'error')
+  } finally {
+    isUploadingPromoImage.value = false
+    if (e.target) e.target.value = ''
+  }
+}
 
 // 4 Top KPI Cards
 const promotionsList = ref([])
@@ -75,9 +108,15 @@ const promoKpis = computed(() => [
 ])
 async function fetchPromotions() {
   try {
-    promotionsList.value = (await apiClient.get('/promotions')).data.map(p => ({ ...p, type: 'Discount Code',
-      type_badge: 'badge-discount', value: `${p.percent}% OFF`, limit: p.max_uses,
-      thumb: `${p.percent}% OFF`, thumb_type: 'badge-text' }))
+    promotionsList.value = (await apiClient.get('/promotions')).data.map(p => ({
+      ...p,
+      type: 'Discount Code',
+      type_badge: 'badge-discount',
+      value: `${p.percent}% OFF`,
+      limit: p.max_uses,
+      thumb: p.image_url || `${p.percent}% OFF`,
+      thumb_type: p.image_url ? 'image' : 'badge-text'
+    }))
   } catch { adminStore.addToast('Unable to load promotions.', 'error') }
 }
 onMounted(fetchPromotions)
@@ -167,10 +206,19 @@ const toggleSelectAll = () => {
 
 const toggleFeatured = async promo => {
   try {
-    await apiClient.put(`/promotions/${promo.id}`, { name: promo.name, code: promo.code, percent: promo.percent,
-      max_uses: promo.limit, start_date: promo.start_date, end_date: promo.end_date,
-      status: promo.status, is_featured: !promo.is_featured })
+    await apiClient.put(`/promotions/${promo.id}`, {
+      name: promo.name,
+      code: promo.code,
+      percent: promo.percent,
+      max_uses: promo.limit || promo.max_uses,
+      start_date: promo.start_date,
+      end_date: promo.end_date,
+      status: promo.status,
+      is_featured: !promo.is_featured,
+      image_url: promo.image_url || null
+    })
     await fetchPromotions()
+    adminStore.addToast(`Promotion is now ${!promo.is_featured ? 'featured on storefront Hero' : 'unfeatured'}.`, 'success')
   } catch { adminStore.addToast('Unable to update promotion.', 'error') }
 }
 
@@ -188,6 +236,7 @@ const openCreatePromo = () => {
   promoForm.end_date = ''
   promoForm.status = 'Active'
   promoForm.is_featured = false
+  promoForm.image_url = ''
   showPromoModal.value = true
 }
 
@@ -198,28 +247,61 @@ const openEditPromo = (promo) => {
   promoForm.code = promo.code
   promoForm.type = promo.type
   promoForm.discount_value = promo.value
-  promoForm.max_uses = promo.limit
+  promoForm.max_uses = promo.limit || promo.max_uses
   promoForm.current_uses = promo.used
   promoForm.start_date = promo.start_date || ''
   promoForm.end_date = promo.end_date || ''
   promoForm.status = promo.status
-  promoForm.is_featured = promo.is_featured
+  promoForm.is_featured = !!promo.is_featured
+  promoForm.image_url = promo.image_url || ''
   showPromoModal.value = true
 }
 
 const savePromotion = async () => {
+  if (!promoForm.name || !promoForm.name.trim()) {
+    return adminStore.addToast('Please enter a promotion name.', 'error')
+  }
+  if (!promoForm.code || !promoForm.code.trim()) {
+    return adminStore.addToast('Please enter a coupon code.', 'error')
+  }
+  const cleanedCode = promoForm.code.trim().replace(/\s+/g, '_').toUpperCase()
   const percent = Number(String(promoForm.discount_value).replace(/[^0-9.]/g, ''))
-  const payload = { name: promoForm.name, code: promoForm.code.toUpperCase(), percent,
-    max_uses: Number(promoForm.max_uses), start_date: promoForm.start_date || null,
-    end_date: promoForm.end_date || null, status: promoForm.status === 'Active' ? 'Active' : 'Paused', is_featured: promoForm.is_featured }
+  if (isNaN(percent) || percent <= 0 || percent > 100) {
+    return adminStore.addToast('Please enter a valid discount percentage between 1% and 100%.', 'error')
+  }
+  const payload = {
+    name: promoForm.name.trim(),
+    code: cleanedCode,
+    percent,
+    max_uses: Number(promoForm.max_uses) || 1000,
+    start_date: promoForm.start_date || null,
+    end_date: promoForm.end_date || null,
+    status: promoForm.status === 'Active' ? 'Active' : 'Paused',
+    is_featured: !!promoForm.is_featured,
+    image_url: promoForm.image_url || null
+  }
   if (promoForm.type !== 'Discount Code') return adminStore.addToast('Only percentage discount codes are currently supported.', 'error')
   try {
     if (modalMode.value === 'create') await apiClient.post('/promotions', payload)
     else await apiClient.put(`/promotions/${promoForm.id}`, payload)
     await fetchPromotions()
     showPromoModal.value = false
-    adminStore.addToast('Promotion saved. Checkout now uses these rules.', 'success')
-  } catch (error) { adminStore.addToast(typeof error.response?.data?.detail === 'string' ? error.response.data.detail : 'Check the promotion fields and retry.', 'error') }
+    adminStore.addToast(
+      modalMode.value === 'create'
+        ? `Promotion "${payload.name}" created successfully!`
+        : `Promotion "${payload.name}" updated successfully!`,
+      'success'
+    )
+  } catch (error) {
+    let msg = 'Failed to save promotion. Check fields and retry.'
+    const detail = error.response?.data?.detail
+    if (typeof detail === 'string') {
+      msg = detail
+    } else if (Array.isArray(detail)) {
+      msg = detail.map(d => d.msg || d.detail).join('; ')
+    }
+    adminStore.addToast(msg, 'error')
+  }
 }
 const deletePromo = async promo => {
   if (!confirm(`Pause promotion "${promo.name}"? Existing redemptions will be retained.`)) return
@@ -629,6 +711,43 @@ const deletePromo = async promo => {
                 v-model="promoForm.end_date"
                 type="date"
                 class="atelier-input"
+              />
+            </div>
+          </div>
+
+          <div class="form-group promo-image-field">
+            <label class="form-label">Promotion Image / Coupon Banner</label>
+            <input
+              ref="promoFileInput"
+              type="file"
+              accept="image/png,image/jpeg,image/webp,image/gif"
+              style="display: none;"
+              @change="handlePromoImageUpload"
+            />
+            <div v-if="promoForm.image_url" class="promo-image-preview-box">
+              <img :src="promoForm.image_url" alt="Promotion Preview" class="promo-preview-thumb" />
+              <div class="promo-preview-actions">
+                <button type="button" class="btn-img-action" @click="triggerPromoImageUpload" :disabled="isUploadingPromoImage">
+                  <Upload :size="13" />
+                  <span>Change Image</span>
+                </button>
+                <button type="button" class="btn-img-action danger" @click="promoForm.image_url = ''">
+                  <Trash2 :size="13" />
+                  <span>Remove</span>
+                </button>
+              </div>
+            </div>
+            <div v-else class="promo-dropzone-box" @click="triggerPromoImageUpload">
+              <UploadCloud :size="22" class="text-terracotta mb-1" />
+              <span class="drop-primary">{{ isUploadingPromoImage ? 'Uploading image...' : 'Click to browse or drop promotion image' }}</span>
+              <span class="drop-hint">PNG, JPG, or WebP up to 10MB</span>
+            </div>
+            <div class="url-fallback-row">
+              <input
+                v-model="promoForm.image_url"
+                type="text"
+                placeholder="Or paste an image URL directly: https://... or /images/..."
+                class="atelier-input text-xs"
               />
             </div>
           </div>
@@ -1339,6 +1458,106 @@ const deletePromo = async promo => {
   display: flex;
   align-items: center;
   gap: 12px;
+  padding: 12px 14px;
+  background: #FAF7F4;
+  border: 1px solid #EFE7E0;
+  border-radius: 10px;
+}
+
+/* Promo Image Upload */
+.promo-image-field {
+  margin-top: 4px;
+}
+
+.promo-dropzone-box {
+  border: 1.5px dashed #D6CCC2;
+  border-radius: 10px;
+  padding: 18px 16px;
+  background: #FCFAF8;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-align: center;
+}
+
+.promo-dropzone-box:hover {
+  border-color: #84261B;
+  background: #FAF5F2;
+}
+
+.drop-primary {
+  font-size: 12px;
+  font-weight: 600;
+  color: #3C3530;
+  margin-top: 2px;
+}
+
+.drop-hint {
+  font-size: 11px;
+  color: #8C847E;
+}
+
+.promo-image-preview-box {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 10px 12px;
+  background: #FAF7F4;
+  border: 1px solid #EFE7E0;
+  border-radius: 10px;
+}
+
+.promo-preview-thumb {
+  width: 90px;
+  height: 60px;
+  object-fit: cover;
+  border-radius: 6px;
+  border: 1px solid #E5DCD5;
+}
+
+.promo-preview-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.btn-img-action {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 6px 12px;
+  background: #FFFFFF;
+  border: 1px solid #E0D6CE;
+  border-radius: 6px;
+  font-size: 11.5px;
+  font-weight: 500;
+  color: #3C3530;
+  cursor: pointer;
+}
+
+.btn-img-action:hover {
+  border-color: #84261B;
+  color: #84261B;
+}
+
+.btn-img-action.danger {
+  color: #B91C1C;
+}
+
+.btn-img-action.danger:hover {
+  border-color: #B91C1C;
+  background: #FEF2F2;
+}
+
+.url-fallback-row {
+  margin-top: 6px;
+}
+
+.url-fallback-row .atelier-input {
+  font-size: 11.5px;
+  padding: 7px 10px;
 }
 
 .toggle-texts { display: flex; flex-direction: column; }

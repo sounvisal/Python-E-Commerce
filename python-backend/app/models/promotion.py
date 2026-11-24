@@ -13,3 +13,4 @@ class Promotion(Base):
     end_date = Column(Date, nullable=True)
     status = Column(String(20), default="Active", nullable=False)
     is_featured = Column(Boolean, default=False, nullable=False)
+    image_url = Column(String(500), nullable=True)

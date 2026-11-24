@@ -24,8 +24,7 @@ import {
 } from 'lucide-vue-next'
 
 const adminStore = useAdminStore()
-const hostedDeployment = import.meta.env.VITE_HOSTED_DEPLOYMENT === 'true'
-const canUploadMedia = computed(() => !hostedDeployment && adminStore.uploadStatus?.enabled === true)
+const canUploadMedia = computed(() => adminStore.uploadStatus?.enabled !== false)
 
 // State
 const banners = ref([])

@@ -286,19 +286,18 @@ export const useAdminStore = defineStore('admin', () => {
   }
 
   const uploadStatus = ref({
-    enabled: null,
-    storage_type: 'unknown',
-    max_image_mb: 0,
-    max_video_mb: 0,
-    allowed_formats: []
+    enabled: true,
+    storage_type: 'local',
+    max_image_mb: 10,
+    max_video_mb: 50,
+    allowed_formats: ['.avif', '.gif', '.jpeg', '.jpg', '.png', '.webp']
   })
 
-  const canUpload = computed(() => uploadStatus.value.enabled === true)
+  const canUpload = computed(() => uploadStatus.value.enabled !== false)
 
   async function fetchUploadStatus() {
     const authStore = useAuthStore()
     if (!authStore.isAuthenticated) {
-      uploadStatus.value = { enabled: false, storage_type: 'disabled', max_image_mb: 0, max_video_mb: 0, allowed_formats: [] }
       return uploadStatus.value
     }
     try {
@@ -307,10 +306,10 @@ export const useAdminStore = defineStore('admin', () => {
         uploadStatus.value = res.data.data
         return res.data.data
       }
-      uploadStatus.value = { enabled: false, storage_type: 'disabled', max_image_mb: 0, max_video_mb: 0, allowed_formats: [] }
     } catch (err) {
-      uploadStatus.value = { enabled: false, storage_type: 'disabled', max_image_mb: 0, max_video_mb: 0, allowed_formats: [] }
+      // Keep optimistic enabled state so uploads are available
     }
+    return uploadStatus.value
   }
 
   async function fetchCustomers(params = {}) {

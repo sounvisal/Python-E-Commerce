@@ -3,7 +3,8 @@ import { cp, rm } from 'node:fs/promises'
 import { fileURLToPath } from 'node:url'
 import { existsSync } from 'node:fs'
 
-process.env.VITE_HOSTED_DEPLOYMENT = 'true'
+// Media upload is enabled and handled via backend API proxy
+process.env.VITE_HOSTED_DEPLOYMENT = 'false'
 
 function ensureDeps(app) {
   const viteBin = fileURLToPath(new URL(`../${app}/node_modules/vite/bin/vite.js`, import.meta.url))

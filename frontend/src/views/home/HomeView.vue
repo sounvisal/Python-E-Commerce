@@ -27,7 +27,14 @@
               <ArrowRight :size="16" />
             </router-link>
 
-            <button class="btn btn-pill-outline" @click="showStoryModal = true">
+            <button
+              v-if="currentSlide.isPromo && currentSlide.promoCode"
+              class="btn btn-pill-outline copy-promo-hero-btn"
+              @click="copyPromoCode(currentSlide.promoCode)"
+            >
+              <span>Copy Code: <strong>{{ currentSlide.promoCode }}</strong></span>
+            </button>
+            <button v-else class="btn btn-pill-outline" @click="showStoryModal = true">
               <Play :size="14" class="play-icon" />
               <span>Watch Our Story</span>
             </button>
@@ -36,13 +43,19 @@
           <!-- Hero Slider Controls -->
           <div class="hero-slider-bar animate-fade-in-up delay-3">
             <div class="slider-progress-track">
-              <div class="slider-progress-fill" :style="{ width: `${(activeSlide / 3) * 100}%` }"></div>
+              <div class="slider-progress-fill" :style="{ width: `${(activeSlide / (slides.length || 1)) * 100}%` }"></div>
             </div>
 
             <div class="slider-counter">
-              <span class="slide-num" :class="{ 'is-active': activeSlide === 1 }" @click="activeSlide = 1">01</span>
-              <span class="slide-num" :class="{ 'is-active': activeSlide === 2 }" @click="activeSlide = 2">02</span>
-              <span class="slide-num" :class="{ 'is-active': activeSlide === 3 }" @click="activeSlide = 3">03</span>
+              <span
+                v-for="(slide, sIdx) in slides"
+                :key="slide.id"
+                class="slide-num"
+                :class="{ 'is-active': activeSlide === (sIdx + 1) }"
+                @click="activeSlide = sIdx + 1"
+              >
+                {{ String(sIdx + 1).padStart(2, '0') }}
+              </span>
             </div>
 
             <div class="slider-arrows">
@@ -151,11 +164,11 @@
         <div class="special-offer-card">
           <!-- Left Text Content -->
           <div class="offer-text-block">
-            <span class="offer-eyebrow">SPECIAL OFFER</span>
-            <h2 class="offer-title">Glow More<br>Spend Less.</h2>
-            <p class="offer-desc">Up to 30% off on selected brands.</p>
-            <router-link to="/shop?deals=true" class="btn btn-pill-dark offer-btn">
-              <span>Shop Deals</span>
+            <span class="offer-eyebrow">{{ featuredPromotions[0] ? `PROMOTION • CODE: ${featuredPromotions[0].code}` : 'SPECIAL OFFER' }}</span>
+            <h2 class="offer-title">{{ featuredPromotions[0] ? featuredPromotions[0].name : 'Glow More\nSpend Less.' }}</h2>
+            <p class="offer-desc">{{ featuredPromotions[0] ? `Enjoy ${featuredPromotions[0].discount_value || `${featuredPromotions[0].percent}% OFF`} with code ${featuredPromotions[0].code}.` : 'Up to 30% off on selected brands.' }}</p>
+            <router-link to="/deals" class="btn btn-pill-dark offer-btn">
+              <span>{{ featuredPromotions[0] ? 'Claim Promo' : 'Shop Deals' }}</span>
               <ArrowRight :size="16" />
             </router-link>
           </div>
@@ -163,18 +176,18 @@
           <!-- Right Visual with Caudalie bottles on stone & 30% badge -->
           <div class="offer-visual-block">
             <div class="offer-badge-circle">
-              <span class="badge-sub">UP TO</span>
-              <span class="badge-percent">30%</span>
+              <span class="badge-sub">{{ featuredPromotions[0] ? 'SAVE' : 'UP TO' }}</span>
+              <span class="badge-percent">{{ featuredPromotions[0] ? `${Math.round(featuredPromotions[0].percent)}%` : '30%' }}</span>
               <span class="badge-off">OFF</span>
             </div>
 
             <div class="offer-script-tag">
-              <span>Good Skin<br>Good Days</span>
+              <span>{{ featuredPromotions[0] ? `CODE:\n${featuredPromotions[0].code}` : 'Good Skin\nGood Days' }}</span>
             </div>
 
             <img
-              src="/images/special-offer.jpg"
-              alt="Caudalie Skincare Offer on Stone Pedestal"
+              :src="featuredPromotions[0]?.image_url || '/images/special-offer.jpg'"
+              alt="Promotion Offer Visual"
               class="offer-hero-bottles"
             />
           </div>
@@ -474,6 +487,7 @@ import ProductCardSkeleton from '@/components/common/ProductCardSkeleton.vue'
 import { useProductStore } from '@/stores/products'
 import { useCartStore } from '@/stores/cart'
 import { useBannerStore } from '@/stores/banners'
+import { useNotificationStore } from '@/stores/notification'
 import {
   ArrowRight,
   CheckCircle2,
@@ -499,6 +513,27 @@ const router = useRouter()
 const cartStore = useCartStore()
 const bannerStore = useBannerStore()
 const productStore = useProductStore()
+const notificationStore = useNotificationStore()
+
+const featuredPromotions = ref([])
+
+async function fetchFeaturedPromotions() {
+  try {
+    const res = await axios.get('/api/promotions/featured')
+    if (res.data?.status === 'success' && Array.isArray(res.data.data)) {
+      featuredPromotions.value = res.data.data
+    }
+  } catch (err) {
+    // Non-blocking fallback
+  }
+}
+
+function copyPromoCode(code) {
+  if (navigator.clipboard) {
+    navigator.clipboard.writeText(code)
+  }
+  notificationStore.addToast(`Promo code "${code}" copied! Apply at checkout for discount.`, 'success')
+}
 
 const homeBanner = computed(() =>
   bannerStore.getBanner('home', {
@@ -511,38 +546,62 @@ const homeBannerLink = computed(() => {
   return /^\/(?![\/\\])[^\\\s]*$/.test(path) ? path : '/shop'
 })
 
-const slides = computed(() => [
-  {
-    id: 1,
-    eyebrow: homeBanner.value.badge_text || 'DISCOVER A BRIGHTER YOU',
-    headline: homeBanner.value.title || 'Your Skincare\nDestination.',
-    description: homeBanner.value.subtitle || 'Explore 100+ trusted skincare brands in one place. Real products. Real results. A healthier, happier you.',
-    image: homeBanner.value.image_url || '/images/banner-home.jpg',
-    script: homeBanner.value.script_text || 'More Brands.\nHealthier Skin.',
-    cta: homeBanner.value.cta_text || 'Shop Now',
-    link: homeBannerLink.value,
-  },
-  {
-    id: 2,
-    eyebrow: 'BARRIER SCIENCE & BOTANICALS',
-    headline: 'Nurture Your\nNatural Glow.',
-    description: 'Clean, clinically-proven botanical actives formulated to repair lipid barriers and restore lasting skin balance.',
-    image: '/images/banner-shop-all.jpg',
-    script: 'Clean Actives.\nRadiant Life.',
-    cta: 'Explore Serums',
-    link: '/shop?category=serums',
-  },
-  {
-    id: 3,
-    eyebrow: 'PERSONALIZED DIAGNOSTIC',
-    headline: 'Formulated for\nYour Skin Profile.',
-    description: 'Take our interactive dermatological diagnostic to receive an evidence-based morning and evening regimen.',
-    image: '/images/cat-masks.jpg',
-    script: 'Custom Routine.\nProven Results.',
-    cta: 'Take Skin Quiz',
-    link: '/quiz',
-  },
-])
+const slides = computed(() => {
+  const list = [
+    {
+      id: 1,
+      eyebrow: homeBanner.value.badge_text || 'DISCOVER A BRIGHTER YOU',
+      headline: homeBanner.value.title || 'Your Skincare\nDestination.',
+      description: homeBanner.value.subtitle || 'Explore 100+ trusted skincare brands in one place. Real products. Real results. A healthier, happier you.',
+      image: homeBanner.value.image_url || '/images/banner-home.jpg',
+      script: homeBanner.value.script_text || 'More Brands.\nHealthier Skin.',
+      cta: homeBanner.value.cta_text || 'Shop Now',
+      link: homeBannerLink.value,
+    }
+  ]
+
+  // Add any active promotions that the admin marked as "Feature on Homepage Banner"
+  featuredPromotions.value.forEach(promo => {
+    list.push({
+      id: `promo-${promo.id}`,
+      eyebrow: `SPECIAL PROMOTION • CODE: ${promo.code}`,
+      headline: promo.name,
+      description: `Unlock ${promo.discount_value || `${promo.percent}% OFF`} with exclusive coupon code ${promo.code}. Limited time atelier campaign.`,
+      image: promo.image_url || '/images/banners/banner-deals-clean.jpg',
+      script: `${promo.discount_value || `${promo.percent}% OFF`}\nCode: ${promo.code}`,
+      cta: `Shop with ${promo.discount_value || `${promo.percent}% OFF`}`,
+      link: '/deals',
+      isPromo: true,
+      promoCode: promo.code
+    })
+  })
+
+  // Additional standard curated brand editorial slides
+  list.push(
+    {
+      id: 2,
+      eyebrow: 'BARRIER SCIENCE & BOTANICALS',
+      headline: 'Nurture Your\nNatural Glow.',
+      description: 'Clean, clinically-proven botanical actives formulated to repair lipid barriers and restore lasting skin balance.',
+      image: '/images/banner-shop-all.jpg',
+      script: 'Clean Actives.\nRadiant Life.',
+      cta: 'Explore Serums',
+      link: '/shop?category=serums',
+    },
+    {
+      id: 3,
+      eyebrow: 'PERSONALIZED DIAGNOSTIC',
+      headline: 'Formulated for\nYour Skin Profile.',
+      description: 'Take our interactive dermatological diagnostic to receive an evidence-based morning and evening regimen.',
+      image: '/images/cat-masks.jpg',
+      script: 'Custom Routine.\nProven Results.',
+      cta: 'Take Skin Quiz',
+      link: '/quiz',
+    }
+  )
+
+  return list
+})
 
 const currentSlide = computed(() => slides.value[activeSlide.value - 1] || slides.value[0])
 
@@ -706,6 +765,7 @@ function setupScrollObserver() {
 
 onMounted(() => {
   bannerStore.fetchBanners()
+  fetchFeaturedPromotions()
   if (!productStore.allCatalogProducts.length) {
     productStore.fetchProducts()
   }
@@ -743,11 +803,13 @@ onUnmounted(() => {
 
 // Slider Controls
 function nextSlide() {
-  activeSlide.value = activeSlide.value === 3 ? 1 : activeSlide.value + 1
+  const max = slides.value.length || 1
+  activeSlide.value = activeSlide.value >= max ? 1 : activeSlide.value + 1
 }
 
 function prevSlide() {
-  activeSlide.value = activeSlide.value === 1 ? 3 : activeSlide.value - 1
+  const max = slides.value.length || 1
+  activeSlide.value = activeSlide.value <= 1 ? max : activeSlide.value - 1
 }
 
 // Navigation & Actions

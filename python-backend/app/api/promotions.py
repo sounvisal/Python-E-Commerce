@@ -19,11 +19,12 @@ class PromotionPayload(BaseModel):
     end_date: Optional[date] = None
     status: Literal['Active', 'Paused'] = 'Active'
     is_featured: bool = False
+    image_url: Optional[str] = None
 
     @field_validator('code')
     @classmethod
     def normalize_code(cls, value):
-        return value.upper()
+        return value.strip().replace(' ', '_').upper()
 
 def active_promotion(db, code):
     promo = db.query(Promotion).filter(Promotion.code == code.strip().upper()).first()
@@ -31,6 +32,33 @@ def active_promotion(db, code):
     if not promo or promo.status != 'Active' or (promo.start_date and today < promo.start_date) or (promo.end_date and today > promo.end_date) or promo.used >= promo.max_uses:
         raise HTTPException(400, 'This promotion is invalid, inactive, expired, or fully redeemed')
     return promo
+
+@router.get('/featured')
+def list_featured_promotions(db: Session = Depends(get_db)):
+    """Public endpoint to fetch active, featured promotions for storefront hero / deals display."""
+    today = date.today()
+    promos = db.query(Promotion).filter(
+        Promotion.status == 'Active',
+        Promotion.is_featured == True
+    ).order_by(Promotion.id.desc()).all()
+    results = []
+    for promo in promos:
+        if (promo.start_date and today < promo.start_date) or (promo.end_date and today > promo.end_date) or promo.used >= promo.max_uses:
+            continue
+        results.append({
+            "id": promo.id,
+            "name": promo.name,
+            "code": promo.code,
+            "percent": promo.percent,
+            "discount_value": f"{int(promo.percent) if promo.percent.is_integer() else promo.percent}% OFF",
+            "image_url": promo.image_url,
+            "is_featured": promo.is_featured,
+            "max_uses": promo.max_uses,
+            "used": promo.used,
+            "start_date": promo.start_date.isoformat() if promo.start_date else None,
+            "end_date": promo.end_date.isoformat() if promo.end_date else None,
+        })
+    return {"status": "success", "data": results}
 
 @router.get('/validate/{code}')
 def validate_promotion(code: str, db: Session = Depends(get_db)):

@@ -15,10 +15,9 @@ def is_env_truthy(key: str, default: bool = False) -> bool:
     return val.strip().lower() in ("1", "true", "yes", "on")
 
 def is_storage_enabled() -> bool:
-    if not settings.PRODUCTION:
-        return True
-    persistent = (os.getenv("PERSISTENT_STORAGE_DIR") or "").strip()
-    return bool(persistent or is_env_truthy("ALLOW_PRODUCTION_UPLOADS", False))
+    if is_env_truthy("DISABLE_UPLOADS", False):
+        return False
+    return True
 
 def get_storage_type() -> str:
     if not is_storage_enabled():

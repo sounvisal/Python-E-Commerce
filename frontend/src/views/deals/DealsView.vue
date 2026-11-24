@@ -225,6 +225,24 @@
           </div>
         </div>
 
+        <!-- Dynamic Featured Promotions Cards -->
+        <div v-for="promo in featuredPromos" :key="promo.id" class="bottom-perk-card">
+          <div class="perk-card-content">
+            <div class="perk-icon-square">
+              <Sparkles :size="24" />
+            </div>
+            <h3 class="perk-card-title">{{ promo.name }}</h3>
+            <p class="perk-card-highlight">{{ promo.discount_value }}</p>
+            <p class="perk-card-desc">Use code at checkout: {{ promo.code }}</p>
+            <button class="perk-card-btn" @click="copyCode(promo.code)">
+              Copy Code ({{ promo.code }}) &rarr;
+            </button>
+          </div>
+          <div class="perk-card-visual">
+            <img :src="promo.image_url || '/images/banner-newsletter.jpg'" :alt="promo.name" class="perk-img" />
+          </div>
+        </div>
+
         <!-- 2. New to Luméa -->
         <div class="bottom-perk-card">
           <div class="perk-card-content">
@@ -287,11 +305,23 @@ import {
 } from 'lucide-vue-next'
 import { useProductStore } from '@/stores/products'
 import { onMounted, onUnmounted, ref, computed } from 'vue'
+import axios from 'axios'
 
 const cartStore = useCartStore()
 const wishlistStore = useWishlistStore()
 const notificationStore = useNotificationStore()
 const productStore = useProductStore()
+
+const featuredPromos = ref([])
+
+onMounted(async () => {
+  try {
+    const res = await axios.get('/api/promotions/featured')
+    if (res.data?.status === 'success' && Array.isArray(res.data.data)) {
+      featuredPromos.value = res.data.data
+    }
+  } catch (err) {}
+})
 
 const selectedFilter = ref('all')
 

@@ -26,7 +26,7 @@ import {
 } from 'lucide-vue-next'
 
 const adminStore = useAdminStore()
-const canUploadMedia = computed(() => adminStore.uploadStatus?.enabled === true)
+const canUploadMedia = computed(() => adminStore.uploadStatus?.enabled !== false)
 
 // State
 const searchQuery = ref('')

@@ -30,6 +30,7 @@ ADDITIONS = {
     "articles": {"tags": "JSON", "status": "VARCHAR(30) NOT NULL DEFAULT 'Published'"},
     "return_requests": {"order_item_id": "INTEGER", "refund_reference": "VARCHAR(150)"},
     "order_items": {"returned_quantity": "INTEGER NOT NULL DEFAULT 0"},
+    "promotions": {"image_url": "VARCHAR(500)"},
 }
 
 def migrate_schema(engine, *, seed_demo_promotions=True):
