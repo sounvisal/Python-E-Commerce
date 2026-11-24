@@ -8,7 +8,7 @@ from app.core.database import get_db
 from app.models.review import Review, ReviewVote
 from app.models.order import Order, OrderItem
 from app.models.user import User
-from app.api.deps import get_current_user
+from app.api.deps import get_current_user, get_optional_user
 from sqlalchemy import update
 from sqlalchemy.exc import IntegrityError
 from app.models.product import Product
@@ -35,13 +35,19 @@ def get_public_reviews(
     has_video: Optional[bool] = Query(None, description="Filter reviews that have video review"),
     limit: int = Query(20, ge=1, le=100),
     page: int = Query(1, ge=1),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: Optional[User] = Depends(get_optional_user)
 ):
     """
-    Public endpoint: Get approved customer reviews with star breakdowns.
-    Used by Storefront Product Details page and Reviews widgets.
+    Public endpoint: Get customer reviews with star breakdowns.
+    Shows approved reviews as well as customer-submitted reviews (pending atelier verification).
     """
-    query = db.query(Review).filter(Review.status == "approved")
+    if current_user:
+        status_filter = (Review.status == "approved") | (Review.customer_email == current_user.email)
+    else:
+        status_filter = Review.status.in_(["approved", "pending"])
+
+    query = db.query(Review).filter(status_filter)
 
     if product_id is not None:
         query = query.filter(Review.product_id == product_id)
@@ -57,12 +63,12 @@ def get_public_reviews(
     reviews = query.order_by(desc(Review.created_at)).offset(skip).limit(limit).all()
 
     # Calculate metrics for the target product (or overall)
-    all_approved = db.query(Review).filter(Review.status == "approved")
+    all_visible = db.query(Review).filter(status_filter)
     if product_id is not None:
-        all_approved = all_approved.filter(Review.product_id == product_id)
+        all_visible = all_visible.filter(Review.product_id == product_id)
     
-    total_approved = all_approved.count()
-    avg_rating = db.query(func.avg(Review.rating)).filter(Review.status == "approved")
+    total_visible = all_visible.count()
+    avg_rating = db.query(func.avg(Review.rating)).filter(status_filter)
     if product_id is not None:
         avg_rating = avg_rating.filter(Review.product_id == product_id)
     avg_rating_val = round(float(avg_rating.scalar() or 0.0), 1)
@@ -70,15 +76,15 @@ def get_public_reviews(
     # 5-star distribution breakdown
     distribution = {}
     for star in range(5, 0, -1):
-        star_count = all_approved.filter(Review.rating == star).count()
-        pct = round((star_count / total_approved * 100), 1) if total_approved > 0 else 0
+        star_count = all_visible.filter(Review.rating == star).count()
+        pct = round((star_count / total_visible * 100), 1) if total_visible > 0 else 0
         distribution[str(star)] = {"count": star_count, "percentage": pct}
 
     return {
         "status": "success",
         "data": [{key: value for key, value in r.__dict__.items() if key not in ("_sa_instance_state", "customer_email")} for r in reviews],
         "metrics": {
-            "total_reviews": total_approved,
+            "total_reviews": total_visible,
             "average_rating": avg_rating_val,
             "distribution": distribution
         },

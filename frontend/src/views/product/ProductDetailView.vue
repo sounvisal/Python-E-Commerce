@@ -660,6 +660,9 @@
                         <Check :size="12" />
                         Verified Purchase
                       </span>
+                      <span v-if="rev.status === 'pending'" class="badge-pending-status">
+                        Pending Moderation
+                      </span>
                     </div>
                     <span class="review-date">
                       {{ rev.created_at ? new Date(rev.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'Aug 24, 2025' }}
@@ -766,105 +769,107 @@
             <h3 class="modal-title">Write a Customer Review</h3>
             <p class="modal-subtitle">Reviewing: {{ product.name }}</p>
           </div>
-          <button class="btn-close-modal" @click="showReviewModal = false">
+          <button class="btn-close-modal" @click="showReviewModal = false" aria-label="Close review dialog">
             <X :size="18" />
           </button>
         </div>
 
         <form @submit.prevent="submitReview" class="review-modal-form">
-          <!-- Star Rating Selector -->
-          <div class="form-group">
-            <label class="form-label">Overall Rating *</label>
-            <div class="star-rating-selector">
-              <button
-                v-for="s in 5"
-                :key="s"
-                type="button"
-                class="star-pick-btn"
-                :aria-label="`${s} out of 5 stars`"
-                :aria-pressed="reviewForm.rating === s"
-                @mouseenter="hoverStar = s"
-                @mouseleave="hoverStar = 0"
-                @click="reviewForm.rating = s"
-              >
-                <Star
-                  :size="26"
-                  :class="(hoverStar || reviewForm.rating) >= s ? 'star-gold-active' : 'star-inactive'"
-                />
-              </button>
-              <span class="star-rating-label">
-                {{ ['Poor', 'Fair', 'Good', 'Very Good', 'Exceptional'][reviewForm.rating - 1] }}
-              </span>
-            </div>
-          </div>
-
-          <div class="form-group">
-            <label class="form-label" for="revTitle">Review Headline / Title *</label>
-            <input
-              id="revTitle"
-              v-model="reviewForm.title"
-              type="text"
-              placeholder="e.g. Visible glow within two weeks"
-              class="form-input"
-              required
-            />
-          </div>
-
-          <div class="form-group">
-            <label class="form-label" for="revComment">Your Experience / Review *</label>
-            <textarea
-              id="revComment"
-              v-model="reviewForm.comment"
-              rows="4"
-              placeholder="Tell others how this product worked with your skin, the texture, and any tips..."
-              class="form-textarea"
-              required
-            ></textarea>
-          </div>
-
-          <!-- Skin Type Selector -->
-          <div class="form-group">
-            <label class="form-label">Your Skin Profile (Helps other patrons)</label>
-            <div class="skin-types-chips">
-              <button
-                v-for="st in ['Combination', 'Dry', 'Oily', 'Normal', 'Sensitive']"
-                :key="st"
-                type="button"
-                class="skin-chip-btn"
-                :class="{ active: reviewForm.skin_type === st }"
-                @click="reviewForm.skin_type = st"
-              >
-                {{ st }}
-              </button>
-            </div>
-          </div>
-
-          <!-- Video Review Upload Option -->
-          <div v-if="!hostedDeployment" class="form-group">
-            <label class="form-label">Attach Texture / Video Review (Optional)</label>
-            <div class="video-upload-area">
-              <div v-if="!reviewForm.video_url" class="video-drop-zone">
-                <input
-                  type="file"
-                  id="reviewVideoInput"
-                  accept="video/mp4,video/webm,video/quicktime"
-                  class="hidden-file-input"
-                  @change="handleVideoFileSelect"
-                />
-                <label for="reviewVideoInput" class="video-upload-label">
-                  <Video :size="22" class="text-terracotta" />
-                  <span class="upload-title">{{ isUploadingVideo ? 'Uploading clip to atelier storage...' : 'Click to Upload Video Review (MP4, max 50MB)' }}</span>
-                  <span class="upload-sub">Share texture viscosity, droplet absorption, and routine finish</span>
-                </label>
-              </div>
-              <div v-else class="video-preview-badge">
-                <div class="preview-left">
-                  <Film :size="18" class="text-terracotta" />
-                  <span class="video-file-name">Video attached: {{ reviewForm.video_url }}</span>
-                </div>
-                <button type="button" class="btn-remove-video" @click="reviewForm.video_url = ''">
-                  <X :size="14" />
+          <div class="review-modal-body">
+            <!-- Star Rating Selector -->
+            <div class="form-group">
+              <label class="form-label">Overall Rating *</label>
+              <div class="star-rating-selector">
+                <button
+                  v-for="s in 5"
+                  :key="s"
+                  type="button"
+                  class="star-pick-btn"
+                  :aria-label="`${s} out of 5 stars`"
+                  :aria-pressed="reviewForm.rating === s"
+                  @mouseenter="hoverStar = s"
+                  @mouseleave="hoverStar = 0"
+                  @click="reviewForm.rating = s"
+                >
+                  <Star
+                    :size="26"
+                    :class="(hoverStar || reviewForm.rating) >= s ? 'star-gold-active' : 'star-inactive'"
+                  />
                 </button>
+                <span class="star-rating-label">
+                  {{ ['Poor', 'Fair', 'Good', 'Very Good', 'Exceptional'][reviewForm.rating - 1] }}
+                </span>
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label" for="revTitle">Review Headline / Title *</label>
+              <input
+                id="revTitle"
+                v-model="reviewForm.title"
+                type="text"
+                placeholder="e.g. Visible glow within two weeks"
+                class="form-input"
+                required
+              />
+            </div>
+
+            <div class="form-group">
+              <label class="form-label" for="revComment">Your Experience / Review *</label>
+              <textarea
+                id="revComment"
+                v-model="reviewForm.comment"
+                rows="4"
+                placeholder="Tell others how this product worked with your skin, the texture, and any tips..."
+                class="form-textarea"
+                required
+              ></textarea>
+            </div>
+
+            <!-- Skin Type Selector -->
+            <div class="form-group">
+              <label class="form-label">Your Skin Profile (Helps other patrons)</label>
+              <div class="skin-types-chips">
+                <button
+                  v-for="st in ['Combination', 'Dry', 'Oily', 'Normal', 'Sensitive']"
+                  :key="st"
+                  type="button"
+                  class="skin-chip-btn"
+                  :class="{ active: reviewForm.skin_type === st }"
+                  @click="reviewForm.skin_type = st"
+                >
+                  {{ st }}
+                </button>
+              </div>
+            </div>
+
+            <!-- Video Review Upload Option -->
+            <div class="form-group">
+              <label class="form-label">Attach Texture / Video Review (Optional)</label>
+              <div class="video-upload-area">
+                <div v-if="!reviewForm.video_url" class="video-drop-zone">
+                  <input
+                    type="file"
+                    id="reviewVideoInput"
+                    accept="video/mp4,video/webm,video/quicktime"
+                    class="hidden-file-input"
+                    @change="handleVideoFileSelect"
+                  />
+                  <label for="reviewVideoInput" class="video-upload-label">
+                    <Video :size="22" class="text-terracotta" />
+                    <span class="upload-title">{{ isUploadingVideo ? 'Uploading clip to atelier storage...' : 'Click to Upload Video Review (MP4, max 50MB)' }}</span>
+                    <span class="upload-sub">Share texture viscosity, droplet absorption, and routine finish</span>
+                  </label>
+                </div>
+                <div v-else class="video-preview-badge">
+                  <div class="preview-left">
+                    <Film :size="18" class="text-terracotta" />
+                    <span class="video-file-name">Video attached: {{ reviewForm.video_url }}</span>
+                  </div>
+                  <button type="button" class="btn-remove-video" @click="reviewForm.video_url = ''">
+                    <X :size="14" />
+                  </button>
+                </div>
               </div>
             </div>
           </div>
@@ -1289,7 +1294,17 @@ async function fetchReviews(productId) {
   try {
     const res = await axios.get('/api/reviews', { params: { product_id: productId } })
     if (product.value?.id === productId && res.data?.status === 'success') {
-      productReviews.value = res.data.data || []
+      const serverReviews = res.data.data || []
+      try {
+        const cacheKey = `lumea_my_reviews_${productId}`
+        const cached = JSON.parse(localStorage.getItem(cacheKey) || '[]')
+        for (const c of cached) {
+          if (!serverReviews.some(r => r.id === c.id || (r.title === c.title && r.comment === c.comment))) {
+            serverReviews.unshift(c)
+          }
+        }
+      } catch (_) {}
+      productReviews.value = serverReviews
       reviewMetrics.value = res.data.metrics || null
     }
   } catch (err) {
@@ -1426,7 +1441,10 @@ function handleAddToCart() {
 
 
 async function submitReview() {
-  if (!product.value || !authStore.user) return
+  if (!product.value || !authStore.user) {
+    notificationStore.addToast('Please sign in to share a review.', 'warning')
+    return
+  }
   if (!reviewForm.title || !reviewForm.comment) {
     notificationStore.addToast('Please enter both a title and review comment.', 'error')
     return
@@ -1445,21 +1463,36 @@ async function submitReview() {
     }
     const res = await axios.post('/api/reviews', payload)
     if (res.data?.status === 'success') {
-      notificationStore.addToast('Thank you! Your review is awaiting moderation.', 'success')
+      notificationStore.addToast('Thank you! Your review has been recorded.', 'success')
       showReviewModal.value = false
+
+      const createdReview = res.data.data
+      if (createdReview) {
+        if (!productReviews.value.some(r => r.id === createdReview.id)) {
+          productReviews.value.unshift(createdReview)
+        }
+        try {
+          const cacheKey = `lumea_my_reviews_${product.value.id}`
+          const list = JSON.parse(localStorage.getItem(cacheKey) || '[]')
+          list.unshift(createdReview)
+          localStorage.setItem(cacheKey, JSON.stringify(list.slice(0, 10)))
+        } catch (_) {}
+      }
+
       reviewForm.title = ''
       reviewForm.comment = ''
       reviewForm.rating = 5
       reviewForm.skin_type = ''
       reviewForm.video_url = ''
       reviewForm.video_duration = ''
+
       if (product.value?.id) {
         await fetchReviews(product.value.id)
       }
       await fetchGlobalVideoReviews()
     }
   } catch (err) {
-    notificationStore.addToast('Failed to submit review. Please try again.', 'error')
+    notificationStore.addToast(err.response?.data?.detail || 'Failed to submit review. Please try again.', 'error')
   } finally {
     submittingReview.value = false
   }
@@ -3137,7 +3170,7 @@ function toggleItemWishlist(id) {
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 1rem;
+  padding: 16px;
 }
 
 .review-modal-card {
@@ -3145,17 +3178,21 @@ function toggleItemWishlist(id) {
   border-radius: 16px;
   width: 100%;
   max-width: 540px;
-  padding: 2rem;
+  max-height: 86vh;
+  max-height: 86dvh;
   box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
   display: flex;
   flex-direction: column;
-  gap: 1.5rem;
+  overflow: hidden; /* Ensure rounded corners clip header and footer cleanly */
 }
 
 .modal-header {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
+  padding: 1.25rem 1.5rem;
+  border-bottom: 1px solid #EAE5DF;
+  flex-shrink: 0;
 }
 
 .modal-title {
@@ -3188,7 +3225,20 @@ function toggleItemWishlist(id) {
 .review-modal-form {
   display: flex;
   flex-direction: column;
+  flex: 1 1 auto;
+  min-height: 0; /* CRITICAL for flex child shrinking */
+  overflow: hidden;
+}
+
+.review-modal-body {
+  padding: 1.25rem 1.5rem;
+  display: flex;
+  flex-direction: column;
   gap: 1.15rem;
+  flex: 1 1 auto;
+  min-height: 0; /* CRITICAL for scrolling */
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
 }
 
 .form-group {
@@ -3257,7 +3307,11 @@ function toggleItemWishlist(id) {
   align-items: center;
   justify-content: flex-end;
   gap: 0.75rem;
-  margin-top: 0.5rem;
+  padding: 1rem 1.5rem;
+  background: #FAF8F5;
+  border-top: 1px solid #EAE5DF;
+  flex-shrink: 0;
+  margin-top: 0;
 }
 
 .btn-cancel {
@@ -3285,6 +3339,51 @@ function toggleItemWishlist(id) {
 
 .btn-submit-review:hover {
   background: #73382E;
+}
+
+.badge-pending-status {
+  display: inline-flex;
+  align-items: center;
+  font-size: 0.68rem;
+  font-weight: 600;
+  color: #B45309;
+  background: #FEF3C7;
+  padding: 0.15rem 0.5rem;
+  border-radius: 9999px;
+  border: 1px solid #FDE68A;
+}
+
+@media (max-height: 750px) {
+  .review-modal-card {
+    max-height: 94vh;
+    max-height: 94dvh;
+  }
+  .modal-header {
+    padding: 1rem 1.25rem;
+  }
+  .review-modal-body {
+    padding: 1rem 1.25rem;
+    gap: 0.85rem;
+  }
+  .modal-actions {
+    padding: 0.75rem 1.25rem;
+  }
+}
+
+@media (max-width: 640px) {
+  .modal-backdrop {
+    padding: 8px;
+  }
+  .review-modal-card {
+    max-height: 96vh;
+    max-height: 96dvh;
+    border-radius: 12px;
+  }
+  .modal-header,
+  .review-modal-body,
+  .modal-actions {
+    padding: 1rem;
+  }
 }
 
 /* ========================================================
