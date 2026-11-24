@@ -28,10 +28,10 @@ jobs:
 
       - name: Run API and commerce regression tests
         env:
-          PYTHONPATH: python-backend
           DATABASE_URL: sqlite:///${{ runner.temp }}/lumea-tests.sqlite
         run: |
-          python -m pytest -v --tb=short python-backend/tests test_flow_regressions.py test_security_transactions.py
+          cd python-backend
+          python -m pytest -v --tb=short tests
 
   frontend-build:
     name: Storefront Vite Build
@@ -58,7 +58,9 @@ jobs:
           npm run build
 
       - name: Run storefront regression tests
-        run: node --test frontend/tests/flows.test.mjs test_recommendations.mjs
+        run: |
+          cd frontend
+          node --test tests/flows.test.mjs tests/recommendations.test.mjs
 
   admin-build:
     name: Admin Console Vite Build

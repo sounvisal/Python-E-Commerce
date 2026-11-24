@@ -202,7 +202,7 @@ node --test tests/flows.test.mjs tests/recommendations.test.mjs
 ### 4. Run Concurrency Load Testing (100 Simultaneous Shoppers)
 Simulates realistic human browsing, category filtering, cart operations, and checkout:
 ```powershell
-k6 run tests/load/k6_load_test.js
+k6 run scripts/k6_load_test.js
 ```
 
 ---

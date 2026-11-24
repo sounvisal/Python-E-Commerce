@@ -44,6 +44,10 @@ Thumbs.db
 .vscode/
 .idea/
 .agents/
+AGENTS.md
+GEMINI.md
+agent.md
+gemini.md
 *.suo
 *.ntvs*
 *.njsproj
@@ -52,6 +56,7 @@ Thumbs.db
 
 # Test uploads & temp test artifacts
 /.browser-qa/
+/test-assets/
 /FLOW_AUDIT_PROBE_RESULTS.json
 /python-backend/lumea.db
 *test_upload*
