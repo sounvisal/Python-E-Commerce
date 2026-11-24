@@ -5,7 +5,7 @@ import json
 import threading
 import time
 from datetime import timedelta
-from sqlalchemy import update, or_
+from sqlalchemy import update, or_, func
 from sqlalchemy.exc import IntegrityError
 from fastapi import Header, Request
 from app.api.deps import get_optional_user, get_current_user, require_admin
@@ -262,7 +262,12 @@ def calculate_quote(order_in: OrderCreate, db: Session):
                           price=money(prod.price), quantity=item.quantity, total=money(prod.price * item.quantity)))
     subtotal = money(sum(line["total"] for line in lines))
     code = (order_in.discount_code or "").strip().upper()
-    promotion = active_promotion(db, code) if code else None
+    promotion = active_promotion(
+        db,
+        code,
+        customer_email=getattr(order_in, "customer_email", None),
+        exclude_checkout_key=getattr(order_in, "checkout_key", None)
+    ) if code else None
     discount = money(subtotal * (promotion.percent / 100 if promotion else 0))
     settings_data = load_settings()
     
@@ -482,6 +487,28 @@ def place_order(order_in: OrderCreate, db: Session = Depends(get_db), current_us
             pass
 
         if new_order.discount_code:
+            promo_obj = db.query(Promotion).filter(Promotion.code == new_order.discount_code).first()
+            if getattr(promo_obj, "once_per_customer", True):
+                cust_email = (new_order.customer_email or "").strip().lower()
+                u_id = new_order.user_id
+                q_dup = db.query(Order).filter(
+                    Order.discount_code == new_order.discount_code,
+                    Order.status.notin_(['Cancelled', 'Expired']),
+                    Order.id != new_order.id
+                )
+                if new_order.checkout_key:
+                    q_dup = q_dup.filter(Order.checkout_key != new_order.checkout_key)
+
+                if u_id and cust_email:
+                    q_dup = q_dup.filter((Order.user_id == u_id) | (func.lower(Order.customer_email) == cust_email))
+                elif u_id:
+                    q_dup = q_dup.filter(Order.user_id == u_id)
+                elif cust_email:
+                    q_dup = q_dup.filter(func.lower(Order.customer_email) == cust_email)
+
+                if q_dup.first():
+                    raise HTTPException(400, f"Promo code '{new_order.discount_code}' can only be used once per customer.")
+
             count = db.execute(update(Promotion).where(Promotion.code == new_order.discount_code, Promotion.used < Promotion.max_uses)
                                .values(used=Promotion.used + 1)).rowcount
             if count != 1:

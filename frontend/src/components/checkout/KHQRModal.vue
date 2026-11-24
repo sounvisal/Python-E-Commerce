@@ -95,19 +95,6 @@
           {{ reviewRequired ? 'Close' : closing ? 'Cancelling…' : 'Cancel' }}
         </button>
       </div>
-
-      <!-- Demo / Local Simulation -->
-      <button
-        v-if="!paymentApproved && !loadingQr"
-        type="button"
-        class="btn-demo-sim"
-        :disabled="simulating || closing"
-        @click="simulatePayment"
-      >
-        <span class="demo-btn-inner">
-          ⚡ {{ simulating ? 'Simulating…' : 'Simulate Bank Clearance (Local Test)' }}
-        </span>
-      </button>
     </div>
   </div>
 </template>
@@ -118,8 +105,6 @@ import QRCode from 'qrcode'
 import axios from 'axios'
 import { orderRequest } from '@/utils/orderAccess'
 import { Copy, Check } from 'lucide-vue-next'
-
-const simulating = ref(false)
 
 const props = defineProps({
   orderNumber: { type: String, required: true },
@@ -311,21 +296,6 @@ function onSuccess() {
   successTimeout = setTimeout(() => {
     emit('approved', { orderNumber: props.orderNumber, amount: props.amount, paid: true })
   }, 1000)
-}
-
-async function simulatePayment() {
-  if (simulating.value || paymentApproved.value || closing.value) return
-  simulating.value = true
-  try {
-    await axios.post('/api/payments/khqr/simulate-approve', {
-      order_number: props.orderNumber
-    }, request)
-    onSuccess()
-  } catch (error) {
-    qrError.value = message(error, 'Simulation was not accepted. Please retry.')
-  } finally {
-    simulating.value = false
-  }
 }
 
 function openAbaLink() {

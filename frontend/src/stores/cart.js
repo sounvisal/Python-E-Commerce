@@ -266,11 +266,12 @@ export const useCartStore = defineStore('cart', {
       this.saveToStorage()
     },
 
-    async applyPromoCode(code) {
+    async applyPromoCode(code, email = null) {
       const cleanCode = (code || '').trim().toUpperCase()
       if (!cleanCode) return { success: false, message: 'Enter a promotion code.' }
       try {
-        const { data } = await axios.get(`/api/promotions/validate/${encodeURIComponent(cleanCode)}`)
+        const params = email ? { email } : {}
+        const { data } = await axios.get(`/api/promotions/validate/${encodeURIComponent(cleanCode)}`, { params })
         this.discountCode = data.code
         this.discountRate = data.rate
         this.saveToStorage()

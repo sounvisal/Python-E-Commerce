@@ -60,6 +60,7 @@ const promoForm = reactive({
   type: 'Discount Code',
   discount_value: '15% OFF',
   max_uses: 1000,
+  once_per_customer: true,
   current_uses: 0,
   start_date: '2025-08-01',
   end_date: '2025-12-31',
@@ -114,6 +115,7 @@ async function fetchPromotions() {
       type_badge: 'badge-discount',
       value: `${p.percent}% OFF`,
       limit: p.max_uses,
+      once_per_customer: p.once_per_customer !== undefined ? p.once_per_customer : true,
       thumb: p.image_url || `${p.percent}% OFF`,
       thumb_type: p.image_url ? 'image' : 'badge-text'
     }))
@@ -211,6 +213,7 @@ const toggleFeatured = async promo => {
       code: promo.code,
       percent: promo.percent,
       max_uses: promo.limit || promo.max_uses,
+      once_per_customer: promo.once_per_customer !== undefined ? !!promo.once_per_customer : true,
       start_date: promo.start_date,
       end_date: promo.end_date,
       status: promo.status,
@@ -231,6 +234,7 @@ const openCreatePromo = () => {
   promoForm.type = 'Discount Code'
   promoForm.discount_value = '15% OFF'
   promoForm.max_uses = 1000
+  promoForm.once_per_customer = true
   promoForm.current_uses = 0
   promoForm.start_date = new Date().toISOString().slice(0, 10)
   promoForm.end_date = ''
@@ -248,6 +252,7 @@ const openEditPromo = (promo) => {
   promoForm.type = promo.type
   promoForm.discount_value = promo.value
   promoForm.max_uses = promo.limit || promo.max_uses
+  promoForm.once_per_customer = promo.once_per_customer !== undefined ? !!promo.once_per_customer : true
   promoForm.current_uses = promo.used
   promoForm.start_date = promo.start_date || ''
   promoForm.end_date = promo.end_date || ''
@@ -274,6 +279,7 @@ const savePromotion = async () => {
     code: cleanedCode,
     percent,
     max_uses: Number(promoForm.max_uses) || 1000,
+    once_per_customer: !!promoForm.once_per_customer,
     start_date: promoForm.start_date || null,
     end_date: promoForm.end_date || null,
     status: promoForm.status === 'Active' ? 'Active' : 'Paused',
@@ -546,6 +552,7 @@ const deletePromo = async promo => {
                     :style="{ width: `${Math.min(100, (promo.used / promo.limit) * 100)}%` }"
                   ></div>
                 </div>
+                <span v-if="promo.once_per_customer" class="usage-single-tag">1x per patron</span>
               </div>
             </td>
             <td>
@@ -749,6 +756,21 @@ const deletePromo = async promo => {
                 placeholder="Or paste an image URL directly: https://... or /images/..."
                 class="atelier-input text-xs"
               />
+            </div>
+          </div>
+
+          <div class="featured-toggle-row">
+            <button
+              type="button"
+              class="atelier-toggle-switch"
+              :class="{ active: promoForm.once_per_customer }"
+              @click="promoForm.once_per_customer = !promoForm.once_per_customer"
+            >
+              <span class="toggle-slider"></span>
+            </button>
+            <div class="toggle-texts">
+              <strong>Single Use Per Customer (One-Time Purchase)</strong>
+              <span>Restricts coupon usage to 1 purchase per customer account &amp; email address.</span>
             </div>
           </div>
 
@@ -1259,6 +1281,18 @@ const deletePromo = async promo => {
 .usage-counts-txt {
   font-size: 11px;
   color: #5C544E;
+}
+
+.usage-single-tag {
+  display: inline-block;
+  font-size: 10px;
+  font-weight: 600;
+  color: #84261B;
+  background: #FDF2F0;
+  border: 1px solid #F5C6C2;
+  border-radius: 4px;
+  padding: 1px 5px;
+  width: fit-content;
 }
 
 .usage-bar-track {

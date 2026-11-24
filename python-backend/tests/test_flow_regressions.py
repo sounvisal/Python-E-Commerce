@@ -13,6 +13,7 @@ from pydantic import ValidationError
 from app.core.database import Base
 from app.models import Category, Product, Order, OrderItem, User
 from app.models.promotion import Promotion
+from app.api.promotions import validate_promotion
 from app.api.orders import place_order, calculate_quote
 from app.schemas.order import OrderCreate
 from app.schemas.return_request import ReturnRequestCreate
@@ -64,6 +65,33 @@ class CommerceFlows(unittest.TestCase):
         q,_=calculate_quote(self.payload(discount_code='LUMEA20'),self.db)
         self.assertEqual(q['total'],40)
         self.assertEqual(q['shipping_fee'],0)
+    def test_coupon_single_use_per_customer(self):
+        # 1. Customer successfully places first order with coupon
+        order1 = self.place(self.payload(discount_code='LUMEA20', expected_total=40))
+        self.assertEqual(order1.discount_code, 'LUMEA20')
+        self.assertEqual(order1.total, 40)
+
+        # 2. Same customer attempts second purchase with same coupon -> rejected
+        with self.assertRaises(HTTPException) as ctx:
+            calculate_quote(self.payload(discount_code='LUMEA20'), self.db)
+        self.assertEqual(ctx.exception.status_code, 400)
+        self.assertIn("can only be used once per customer", ctx.exception.detail)
+
+        with self.assertRaises(HTTPException) as ctx2:
+            place_order(self.payload(discount_code='LUMEA20', expected_total=40), self.db, self.user)
+        self.assertEqual(ctx2.exception.status_code, 400)
+        self.assertIn("can only be used once per customer", ctx2.exception.detail)
+
+        # 3. Validate endpoint also catches it for this customer
+        with self.assertRaises(HTTPException) as ctx3:
+            validate_promotion('LUMEA20', db=self.db, current_user=self.user)
+        self.assertEqual(ctx3.exception.status_code, 400)
+
+        # 4. If the order is cancelled, the coupon becomes available again
+        order1.status = 'Cancelled'
+        self.db.commit()
+        q, _ = calculate_quote(self.payload(discount_code='LUMEA20'), self.db)
+        self.assertEqual(q['total'], 40)
     def test_invented_coupon_rejected(self):
         with self.assertRaises(HTTPException): calculate_quote(self.payload(discount_code='NOTREAL20'),self.db)
     def test_total_change_requires_review(self):

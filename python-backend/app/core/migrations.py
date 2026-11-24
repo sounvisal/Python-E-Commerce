@@ -30,7 +30,10 @@ ADDITIONS = {
     "articles": {"tags": "JSON", "status": "VARCHAR(30) NOT NULL DEFAULT 'Published'"},
     "return_requests": {"order_item_id": "INTEGER", "refund_reference": "VARCHAR(150)"},
     "order_items": {"returned_quantity": "INTEGER NOT NULL DEFAULT 0"},
-    "promotions": {"image_url": "VARCHAR(500)"},
+    "promotions": {
+        "image_url": "VARCHAR(500)",
+        "once_per_customer": "BOOLEAN NOT NULL DEFAULT 1"
+    },
 }
 
 def migrate_schema(engine, *, seed_demo_promotions=True):
@@ -43,7 +46,11 @@ def migrate_schema(engine, *, seed_demo_promotions=True):
             for name, sql_type in columns.items():
                 if name not in existing:
                     if connection.dialect.name == "postgresql":
-                        sql_type = {"DATETIME": "TIMESTAMP", "BOOLEAN NOT NULL DEFAULT 0": "BOOLEAN NOT NULL DEFAULT FALSE"}.get(sql_type, sql_type)
+                        sql_type = {
+                            "DATETIME": "TIMESTAMP",
+                            "BOOLEAN NOT NULL DEFAULT 0": "BOOLEAN NOT NULL DEFAULT FALSE",
+                            "BOOLEAN NOT NULL DEFAULT 1": "BOOLEAN NOT NULL DEFAULT TRUE"
+                        }.get(sql_type, sql_type)
                     connection.execute(text(f'ALTER TABLE "{table}" ADD COLUMN "{name}" {sql_type}'))
         if inspector.has_table("orders"):
             order_cols = {c["name"] for c in inspector.get_columns("orders")}
@@ -94,9 +101,10 @@ def migrate_schema(engine, *, seed_demo_promotions=True):
                     connection.execute(text(f'ALTER TABLE products ADD CONSTRAINT "{conname}" FOREIGN KEY (category_id) REFERENCES categories(id) ON DELETE RESTRICT'))
         connection.execute(text('CREATE TABLE IF NOT EXISTS flow_migrations (name VARCHAR(100) PRIMARY KEY)'))
         if seed_demo_promotions and inspector.has_table('promotions') and not connection.execute(text("SELECT name FROM flow_migrations WHERE name='initial_promotions'")).first():
+            once_col = True if connection.dialect.name == "postgresql" else 1
             for code, percent in [('LUMEA10', 10), ('ATELIER15', 15), ('LUMEA20', 20)]:
                 connection.execute(text(
-                    'INSERT INTO promotions (name, code, percent, max_uses, used, status, is_featured) '
-                    'VALUES (:code, :code, :percent, 1000, 0, :status, FALSE) ON CONFLICT (code) DO NOTHING'
-                ), {'code': code, 'percent': percent, 'status': 'Active'})
+                    'INSERT INTO promotions (name, code, percent, max_uses, used, status, is_featured, once_per_customer) '
+                    'VALUES (:code, :code, :percent, 1000, 0, :status, FALSE, :once_per_customer) ON CONFLICT (code) DO NOTHING'
+                ), {'code': code, 'percent': percent, 'status': 'Active', 'once_per_customer': once_col})
             connection.execute(text("INSERT INTO flow_migrations (name) VALUES ('initial_promotions')"))

@@ -1,12 +1,15 @@
 from datetime import date
 from typing import Optional, Literal
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, Field, field_validator
+from sqlalchemy import func
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
-from app.api.deps import require_admin
+from app.api.deps import require_admin, get_optional_user
 from app.core.database import get_db
 from app.models.promotion import Promotion
+from app.models.user import User
+from app.models.order import Order
 
 router = APIRouter(prefix="/promotions", tags=["Promotions"])
 
@@ -15,6 +18,7 @@ class PromotionPayload(BaseModel):
     code: str = Field(min_length=2, max_length=64, pattern=r"^[A-Za-z0-9_-]+$")
     percent: float = Field(gt=0, le=100)
     max_uses: int = Field(ge=1, default=1000)
+    once_per_customer: bool = True
     start_date: Optional[date] = None
     end_date: Optional[date] = None
     status: Literal['Active', 'Paused'] = 'Active'
@@ -26,11 +30,37 @@ class PromotionPayload(BaseModel):
     def normalize_code(cls, value):
         return value.strip().replace(' ', '_').upper()
 
-def active_promotion(db, code):
-    promo = db.query(Promotion).filter(Promotion.code == code.strip().upper()).first()
+def active_promotion(db, code, current_user=None, customer_email=None, exclude_checkout_key=None):
+    if not code:
+        return None
+    clean_code = code.strip().upper()
+    promo = db.query(Promotion).filter(Promotion.code == clean_code).first()
     today = date.today()
     if not promo or promo.status != 'Active' or (promo.start_date and today < promo.start_date) or (promo.end_date and today > promo.end_date) or promo.used >= promo.max_uses:
         raise HTTPException(400, 'This promotion is invalid, inactive, expired, or fully redeemed')
+
+    if getattr(promo, "once_per_customer", True):
+        user_id = current_user.id if current_user else None
+        email_cand = customer_email if isinstance(customer_email, str) else (getattr(current_user, "email", None) if current_user else "")
+        email = (email_cand or "").strip().lower()
+        if user_id or email:
+            query = db.query(Order).filter(
+                Order.discount_code == promo.code,
+                Order.status.notin_(['Cancelled', 'Expired'])
+            )
+            if exclude_checkout_key:
+                query = query.filter(Order.checkout_key != exclude_checkout_key)
+
+            if user_id and email:
+                query = query.filter((Order.user_id == user_id) | (func.lower(Order.customer_email) == email))
+            elif user_id:
+                query = query.filter(Order.user_id == user_id)
+            elif email:
+                query = query.filter(func.lower(Order.customer_email) == email)
+
+            if query.first():
+                raise HTTPException(400, f"Promo code '{promo.code}' can only be used once per customer.")
+
     return promo
 
 @router.get('/featured')
@@ -55,14 +85,22 @@ def list_featured_promotions(db: Session = Depends(get_db)):
             "is_featured": promo.is_featured,
             "max_uses": promo.max_uses,
             "used": promo.used,
+            "once_per_customer": getattr(promo, "once_per_customer", True),
             "start_date": promo.start_date.isoformat() if promo.start_date else None,
             "end_date": promo.end_date.isoformat() if promo.end_date else None,
         })
     return {"status": "success", "data": results}
 
 @router.get('/validate/{code}')
-def validate_promotion(code: str, db: Session = Depends(get_db)):
-    promo = active_promotion(db, code)
+def validate_promotion(
+    code: str,
+    db: Session = Depends(get_db),
+    current_user: Optional[User] = Depends(get_optional_user),
+    email: Optional[str] = Query(None)
+):
+    email_val = email if isinstance(email, str) else None
+    user_val = current_user if isinstance(current_user, User) else None
+    promo = active_promotion(db, code, current_user=user_val, customer_email=email_val)
     return {'code': promo.code, 'rate': promo.percent / 100}
 
 @router.get('', dependencies=[Depends(require_admin)])
