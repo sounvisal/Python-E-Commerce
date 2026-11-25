@@ -68,9 +68,10 @@
 }
 
 .shimmer {
-  background: linear-gradient(90deg, #F3ECE6 0%, #FAF6F2 50%, #F3ECE6 100%);
+  background: linear-gradient(90deg, #E8DFD7 0%, #FAF8F5 50%, #E8DFD7 100%);
   background-size: 200% 100%;
-  animation: lumeaShimmer 1.6s ease-in-out infinite;
+  animation: lumeaShimmer 1.5s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  box-shadow: inset 0 0 0 1px rgba(28, 25, 23, 0.07);
 }
 
 @keyframes lumeaShimmer {

@@ -2,7 +2,7 @@
   <div class="shop-view">
     <!-- Stencil Skeleton Loader while initial data is arriving -->
     <transition name="fade-stencil" mode="out-in">
-      <ShopSkeleton v-if="productStore.loading && !productStore.allCatalogProducts.length" key="shop-skeleton" />
+      <ShopSkeleton v-if="productStore.loading && (!productStore.allCatalogProducts.length || productStore.isOffline)" key="shop-skeleton" />
       <div v-else class="container" key="shop-content">
         <!-- 1. Breadcrumbs -->
         <nav class="breadcrumb-nav" aria-label="Breadcrumb">

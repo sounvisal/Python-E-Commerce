@@ -42,8 +42,8 @@ def get_public_reviews(
     Public endpoint: Get customer reviews with star breakdowns.
     Shows approved reviews as well as customer-submitted reviews (pending atelier verification).
     """
-    if current_user:
-        status_filter = (Review.status == "approved") | (Review.customer_email == current_user.email)
+    if current_user and current_user.email:
+        status_filter = (Review.status == "approved") | (func.lower(Review.customer_email) == func.lower(current_user.email))
     else:
         status_filter = Review.status.in_(["approved", "pending"])
 

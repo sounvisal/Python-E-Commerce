@@ -98,9 +98,10 @@ import ProductCardSkeleton from './ProductCardSkeleton.vue'
 
 /* Universal Shimmer Effect with Luméa Bisque Palette */
 .shimmer {
-  background: linear-gradient(90deg, #F3ECE6 0%, #FAF6F2 50%, #F3ECE6 100%);
+  background: linear-gradient(90deg, #E8DFD7 0%, #FAF8F5 50%, #E8DFD7 100%);
   background-size: 200% 100%;
-  animation: lumeaShimmer 1.6s ease-in-out infinite;
+  animation: lumeaShimmer 1.5s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  box-shadow: inset 0 0 0 1px rgba(28, 25, 23, 0.07);
 }
 
 @keyframes lumeaShimmer {
@@ -226,6 +227,8 @@ import ProductCardSkeleton from './ProductCardSkeleton.vue'
   display: flex;
   align-items: center;
   justify-content: center;
+  border: 1px solid rgba(28, 25, 23, 0.08);
+  box-shadow: 0 12px 32px -8px rgba(28, 25, 23, 0.08);
 }
 
 .stencil-callout-pill {
@@ -235,14 +238,16 @@ import ProductCardSkeleton from './ProductCardSkeleton.vue'
   width: 110px;
   height: 26px;
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.85);
+  background: #FAF8F5;
+  box-shadow: 0 4px 12px rgba(28, 25, 23, 0.08), inset 0 0 0 1px rgba(28, 25, 23, 0.05);
 }
 
 .stencil-bottle-silhouette {
   width: 140px;
   height: 260px;
-  background: rgba(255, 255, 255, 0.65);
+  background: linear-gradient(180deg, #DFD6CD 0%, #E8DFD7 100%);
   border-radius: 40px 40px 18px 18px;
+  box-shadow: 0 8px 24px -4px rgba(28, 25, 23, 0.12), inset 0 0 0 1px rgba(28, 25, 23, 0.06);
 }
 
 /* 2. Brand Horizon Marquee Stencil */

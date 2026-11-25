@@ -1490,6 +1490,7 @@ async function submitReview() {
         await fetchReviews(product.value.id)
       }
       await fetchGlobalVideoReviews()
+      openReviewsTab()
     }
   } catch (err) {
     notificationStore.addToast(err.response?.data?.detail || 'Failed to submit review. Please try again.', 'error')
@@ -3164,13 +3165,16 @@ function toggleItemWishlist(id) {
 .modal-backdrop {
   position: fixed;
   inset: 0;
-  background: rgba(28, 25, 23, 0.6);
-  backdrop-filter: blur(4px);
-  z-index: 1000;
+  background: rgba(28, 25, 23, 0.65);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  z-index: 1100;
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 16px;
+  padding: 1.25rem;
+  overflow-y: auto;
+  box-sizing: border-box;
 }
 
 .review-modal-card {
@@ -3178,12 +3182,13 @@ function toggleItemWishlist(id) {
   border-radius: 16px;
   width: 100%;
   max-width: 540px;
-  max-height: 86vh;
-  max-height: 86dvh;
-  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
+  max-height: min(88vh, 88dvh, 760px);
+  margin: auto;
+  box-shadow: 0 24px 48px -12px rgba(28, 25, 23, 0.25), 0 0 0 1px rgba(28, 25, 23, 0.08);
   display: flex;
   flex-direction: column;
   overflow: hidden; /* Ensure rounded corners clip header and footer cleanly */
+  position: relative;
 }
 
 .modal-header {
@@ -3192,6 +3197,7 @@ function toggleItemWishlist(id) {
   justify-content: space-between;
   padding: 1.25rem 1.5rem;
   border-bottom: 1px solid #EAE5DF;
+  background: #FFFFFF;
   flex-shrink: 0;
 }
 
@@ -3354,16 +3360,22 @@ function toggleItemWishlist(id) {
 }
 
 @media (max-height: 750px) {
+  .modal-backdrop {
+    padding: 0.75rem;
+  }
   .review-modal-card {
-    max-height: 94vh;
-    max-height: 94dvh;
+    max-height: calc(100vh - 1.5rem);
+    max-height: calc(100dvh - 1.5rem);
   }
   .modal-header {
-    padding: 1rem 1.25rem;
+    padding: 0.85rem 1.25rem;
+  }
+  .modal-title {
+    font-size: 1.18rem;
   }
   .review-modal-body {
-    padding: 1rem 1.25rem;
-    gap: 0.85rem;
+    padding: 0.85rem 1.25rem;
+    gap: 0.75rem;
   }
   .modal-actions {
     padding: 0.75rem 1.25rem;
@@ -3372,17 +3384,19 @@ function toggleItemWishlist(id) {
 
 @media (max-width: 640px) {
   .modal-backdrop {
-    padding: 8px;
+    padding: 0;
+    align-items: flex-end;
   }
   .review-modal-card {
-    max-height: 96vh;
-    max-height: 96dvh;
-    border-radius: 12px;
+    max-height: 92vh;
+    max-height: 92dvh;
+    border-radius: 20px 20px 0 0;
+    margin-bottom: 0;
   }
   .modal-header,
   .review-modal-body,
   .modal-actions {
-    padding: 1rem;
+    padding: 1rem 1.25rem;
   }
 }
 

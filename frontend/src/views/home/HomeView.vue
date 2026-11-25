@@ -2,7 +2,7 @@
   <div class="lumea-home-page">
     <!-- Luxury Stencil Skeleton Loader while initial data is arriving -->
     <transition name="fade-stencil" mode="out-in" @after-enter="setupScrollObserver">
-      <HomeSkeleton v-if="productStore.loading && !productStore.allCatalogProducts.length" key="home-skeleton" />
+      <HomeSkeleton v-if="productStore.loading && (!productStore.allCatalogProducts.length || productStore.isOffline)" key="home-skeleton" />
       <div v-else class="home-loaded-content" key="home-content">
         <!-- ================================================================= -->
         <!-- 1. HERO SECTION                                                  -->

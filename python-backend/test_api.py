@@ -97,6 +97,17 @@ def run_tests():
     print(f"[PASS] 8. GET /api/auth/me -> Verified user profile: {res.json()['tier']}")
 
     # 9. Orders: Place new order
+    import uuid
+    test_discount_code = f"DISC_{uuid.uuid4().hex[:6].upper()}"
+    promo_create_res = client.post("/api/promotions", headers=admin_headers, json={
+        "name": "Test Single Use Promo",
+        "code": test_discount_code,
+        "percent": 10.0,
+        "status": "Active",
+        "once_per_customer": True
+    })
+    assert promo_create_res.status_code == 201, f"Failed to create test promo: {promo_create_res.text}"
+
     order_payload = {
         "customer_name": "Sreynich Chan",
         "customer_email": "sreynich.chan@example.com",
@@ -105,7 +116,7 @@ def run_tests():
         "shipping_city": "Krong Kampot (Kampot Town)",
         "shipping_postal_code": "12000",
         "payment_method": "cod",
-        "discount_code": "LUMEA10",
+        "discount_code": test_discount_code,
         "items": [
             {
                 "product_id": 201,
