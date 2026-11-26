@@ -2,6 +2,7 @@ from app.api.deps import require_admin
 from app.services.order_lifecycle import transition_order
 from app.services.review_metrics import refresh_rating
 import math
+import re
 from datetime import datetime, timedelta, timezone
 from typing import Optional, List, Dict, Any
 from fastapi import APIRouter, Depends, HTTPException, Query, status
@@ -119,6 +120,17 @@ class ReviewCreatePayload(BaseModel):
     status: Optional[str] = "approved"
 
 # --- Helpers ---
+
+def _unique_slug(db: Session, model, raw_slug: Optional[str], raw_name: Optional[str], fallback: str = "item") -> str:
+    """Generate a URL-safe slug and append a numeric suffix if already taken."""
+    source = (raw_slug or raw_name or "").strip().lower().replace("'", "")
+    base_slug = re.sub(r"[^a-z0-9-]+", "-", source).strip("-") or fallback
+    slug = base_slug
+    counter = 2
+    while db.query(model.id).filter(model.slug == slug).first() is not None:
+        slug = f"{base_slug}-{counter}"
+        counter += 1
+    return slug
 
 def format_order(order: Order) -> dict:
     return {
@@ -397,7 +409,7 @@ def admin_create_product(
     """
     Create a new product in the database.
     """
-    slug = payload.slug or payload.name.lower().replace(" ", "-").replace("'", "")
+    slug = _unique_slug(db, Product, payload.slug, payload.name, fallback="product")
     
     # Resolve category info
     cat = db.query(Category).filter(Category.id == payload.category_id).first()
@@ -509,7 +521,7 @@ def admin_create_category(
     """
     Create a new skincare category.
     """
-    slug = payload.slug or payload.name.lower().replace(" ", "-").replace("'", "")
+    slug = _unique_slug(db, Category, payload.slug, payload.name, fallback="category")
     new_cat = Category(
         name=payload.name,
         slug=slug,
@@ -786,7 +798,7 @@ def admin_create_brand(payload: BrandAdminPayload, db: Session = Depends(get_db)
     """
     Create a new brand in the database.
     """
-    slug = payload.slug or payload.name.lower().replace(" ", "-").replace("'", "")
+    slug = _unique_slug(db, Brand, payload.slug, payload.name, fallback="brand")
     new_b = Brand(
         name=payload.name,
         slug=slug,

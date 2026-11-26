@@ -32,6 +32,7 @@ import {
 } from 'lucide-vue-next'
 
 const adminStore = useAdminStore()
+const hostedDeployment = import.meta.env.VITE_HOSTED_DEPLOYMENT === 'true'
 const canUploadMedia = computed(() => adminStore.uploadStatus?.enabled !== false)
 const productImageUrl = ref('')
 
@@ -102,7 +103,8 @@ onMounted(async () => {
   }
   await Promise.all([
     adminStore.fetchProducts(),
-    adminStore.fetchCategories()
+    adminStore.fetchCategories(),
+    adminStore.fetchBrands()
   ])
 })
 
@@ -128,6 +130,13 @@ const brandOptions = [
   'COSRX',
   'Luméa Atelier'
 ]
+
+const availableBrands = computed(() => {
+  const fromStore = (adminStore.brands || []).map(b => b.name).filter(Boolean)
+  const fromProducts = (adminStore.products || []).map(p => p.brand).filter(Boolean)
+  const current = productForm.brand ? [productForm.brand] : []
+  return [...new Set([...brandOptions.slice(1), ...fromStore, ...fromProducts, ...current])]
+})
 
 // Skin options
 const skinTypesList = ['Normal', 'Oily', 'Dry', 'Combination', 'Sensitive']
@@ -337,12 +346,12 @@ const saveProduct = async () => {
   }
 
   try {
-    if (editorMode.value === 'add') {
-      await adminStore.createProduct(payload)
-    } else {
-      await adminStore.updateProduct(productForm.id, payload)
+    const res = editorMode.value === 'add'
+      ? await adminStore.createProduct(payload)
+      : await adminStore.updateProduct(productForm.id, payload)
+    if (res?.success) {
+      currentView.value = 'list'
     }
-    currentView.value = 'list'
   } catch (err) {
     console.error('Failed to save product:', err)
     adminStore.addToast('Failed to save product. Please try again.', 'error')
@@ -918,7 +927,7 @@ const toggleSkinConcern = (concern) => {
               <div class="form-group">
                 <label class="form-label">Brand <span class="req">*</span></label>
                 <select v-model="productForm.brand" class="atelier-input">
-                  <option v-for="b in brandOptions.slice(1)" :key="b" :value="b">{{ b }}</option>
+                  <option v-for="b in availableBrands" :key="b" :value="b">{{ b }}</option>
                 </select>
               </div>
 
