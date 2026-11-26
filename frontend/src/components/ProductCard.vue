@@ -296,14 +296,21 @@ const handleAddToCart = () => {
   position: absolute;
   top: 0.75rem;
   left: 0.75rem;
+  right: 3rem;
   z-index: 5;
   display: flex;
   flex-direction: column;
+  align-items: flex-start;
   gap: 4px;
+  pointer-events: none;
 }
 
 .badge {
   display: inline-block;
+  max-width: 100%;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
   font-size: 0.68rem;
   font-weight: 600;
   padding: 0.2rem 0.6rem;

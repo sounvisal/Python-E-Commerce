@@ -370,6 +370,7 @@ function copyCode(code) {
   background-color: #FAF8F5;
   min-height: 100vh;
   padding-bottom: 5rem;
+  overflow-x: clip;
 }
 
 /* Breadcrumbs */
@@ -417,13 +418,15 @@ function copyCode(code) {
   display: flex;
   align-items: stretch;
   justify-content: space-between;
+  gap: 2rem;
   overflow: hidden;
   min-height: 275px;
-  padding: 1.75rem 2.5rem;
+  padding: 1.75rem 2.25rem;
 }
 
 .hero-left-content {
   flex: 1;
+  min-width: 0;
   max-width: 620px;
   display: flex;
   flex-direction: column;
@@ -498,7 +501,8 @@ function copyCode(code) {
 
 /* Hero Right Stage */
 .hero-right-visual {
-  width: 480px;
+  width: clamp(300px, 36%, 460px);
+  max-width: 100%;
   flex-shrink: 0;
   position: relative;
   display: flex;
@@ -568,36 +572,49 @@ function copyCode(code) {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 1rem;
+  flex-wrap: wrap;
+  gap: 0.75rem 1rem;
 }
 
 .flash-pills-left {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: 0.4rem;
+  min-width: 0;
+  max-width: 100%;
   overflow-x: auto;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+}
+
+.flash-pills-left::-webkit-scrollbar {
+  display: none;
 }
 
 .deal-tab-pill {
   display: inline-flex;
   align-items: center;
   gap: 0.4rem;
-  padding: 0.55rem 1.15rem;
+  padding: 0.52rem 1rem;
   background: transparent;
   border: none;
   border-radius: 9999px;
   font-family: var(--font-sans);
-  font-size: 0.86rem;
+  font-size: 0.84rem;
   font-weight: 500;
   color: #44403C;
   cursor: pointer;
   white-space: nowrap;
+  touch-action: manipulation;
+  user-select: none;
   transition: all 0.2s ease;
 }
 
-.deal-tab-pill:hover {
-  color: #8E4A3E;
-  background: #FAF8F5;
+@media (hover: hover) and (pointer: fine) {
+  .deal-tab-pill:hover {
+    color: #8E4A3E;
+    background: #FAF8F5;
+  }
 }
 
 .deal-tab-pill.active {
@@ -611,6 +628,22 @@ function copyCode(code) {
 
 .pill-icon {
   color: #8E4A3E;
+}
+
+.atelier-deals-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: #57534E;
+  min-width: 0;
+  line-height: 1.35;
+}
+
+.status-sparkle {
+  color: #8E4A3E;
+  flex-shrink: 0;
 }
 
 .flash-countdown-right {
@@ -668,8 +701,8 @@ function copyCode(code) {
 
 .promo-showcase-grid {
   display: grid;
-  grid-template-columns: 2fr 1fr;
-  gap: 1.5rem;
+  grid-template-columns: minmax(0, 1.85fr) minmax(320px, 1fr);
+  gap: 1.35rem;
 }
 
 /* 2/3 Left Wide Banner */
@@ -677,25 +710,29 @@ function copyCode(code) {
   background: linear-gradient(135deg, #FBF2EE 0%, #F7EAE5 50%, #F0DFD8 100%);
   border-radius: 16px;
   border: 1px solid rgba(142, 74, 62, 0.15);
-  padding: 2.2rem 2.25rem;
+  padding: 2rem 2rem;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 1.5rem;
+  gap: 1.25rem;
   cursor: pointer;
+  min-width: 0;
   transition: transform 0.28s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.28s ease;
   position: relative;
   overflow: hidden;
 }
 
-.promo-banner-wide:hover {
-  transform: translateY(-3px);
-  box-shadow: 0 14px 32px rgba(142, 74, 62, 0.12);
+@media (hover: hover) and (pointer: fine) {
+  .promo-banner-wide:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 14px 32px rgba(142, 74, 62, 0.12);
+  }
 }
 
 .promo-wide-content {
-  flex: 0 0 230px;
-  max-width: 240px;
+  flex: 1 1 200px;
+  min-width: 0;
+  max-width: 245px;
   z-index: 2;
 }
 
@@ -756,7 +793,7 @@ function copyCode(code) {
 }
 
 .promo-wide-center-visual {
-  flex: 1;
+  flex: 1.15 1 220px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -774,12 +811,14 @@ function copyCode(code) {
   transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-.promo-banner-wide:hover .wide-promo-bottles-img {
-  transform: scale(1.03);
+@media (hover: hover) and (pointer: fine) {
+  .promo-banner-wide:hover .wide-promo-bottles-img {
+    transform: scale(1.03);
+  }
 }
 
 .promo-wide-right-editorial {
-  flex: 0 0 110px;
+  flex: 0 0 auto;
   text-align: right;
   display: flex;
   flex-direction: column;
@@ -816,25 +855,34 @@ function copyCode(code) {
   display: flex;
   flex-direction: column;
   gap: 1.25rem;
+  min-width: 0;
 }
 
 .promo-stack-card {
   background: #FFFFFF;
   border: 1px solid rgba(28, 25, 23, 0.08);
   border-radius: 14px;
-  padding: 1.35rem 1.5rem;
+  padding: 1.25rem 1.35rem;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 1rem;
+  gap: 0.9rem;
+  min-width: 0;
   cursor: pointer;
   transition: all 0.22s ease;
   overflow: hidden;
 }
 
-.promo-stack-card:hover {
-  transform: translateY(-3px);
-  box-shadow: 0 10px 24px rgba(70, 40, 30, 0.08);
+.stack-content {
+  min-width: 0;
+  flex: 1;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .promo-stack-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 10px 24px rgba(70, 40, 30, 0.08);
+  }
 }
 
 .stack-bundle {
@@ -923,6 +971,8 @@ function copyCode(code) {
   display: flex;
   align-items: flex-end;
   justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.75rem 1rem;
   margin-bottom: 1.75rem;
 }
 
@@ -943,6 +993,7 @@ function copyCode(code) {
   font-weight: 600;
   color: #8E4A3E;
   text-decoration: none;
+  white-space: nowrap;
 }
 
 .view-all-deals-link:hover {
@@ -951,8 +1002,12 @@ function copyCode(code) {
 
 .featured-deals-grid {
   display: grid;
-  grid-template-columns: repeat(6, 1fr);
+  grid-template-columns: repeat(5, minmax(0, 1fr));
   gap: 1.15rem;
+}
+
+.deal-card-stagger-item {
+  min-width: 0;
 }
 
 .format-deal-card {
@@ -1131,24 +1186,27 @@ function copyCode(code) {
 
 .bottom-perks-grid {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 1.5rem;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr));
+  gap: 1.35rem;
 }
 
 .bottom-perk-card {
   background: #FAF4F0;
   border: 1px solid rgba(28, 25, 23, 0.08);
   border-radius: 12px;
-  padding: 1.75rem;
+  padding: 1.5rem;
   display: flex;
   justify-content: space-between;
   align-items: center;
   gap: 1rem;
+  min-width: 0;
 }
 
 .perk-card-content {
   display: flex;
   flex-direction: column;
+  min-width: 0;
+  flex: 1;
 }
 
 .perk-icon-square {
@@ -1208,31 +1266,204 @@ function copyCode(code) {
   object-fit: cover;
 }
 
-/* Responsive */
-@media (max-width: 1200px) {
+/* Responsive (Desktop/PC -> Tablet -> Mobile) */
+@media (max-width: 1280px) {
+  .deals-hero-card {
+    padding: 1.5rem 1.75rem;
+    gap: 1.5rem;
+  }
+  .hero-right-visual {
+    width: clamp(270px, 34%, 370px);
+  }
+  .hero-trust-row {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.75rem 1rem;
+  }
+  .flash-deals-bar {
+    border-radius: 16px;
+    padding: 0.75rem 1rem;
+  }
+  .atelier-deals-status {
+    width: 100%;
+    padding-top: 0.55rem;
+    border-top: 1px solid rgba(28, 25, 23, 0.06);
+  }
+  .promo-showcase-grid {
+    grid-template-columns: minmax(0, 1.55fr) minmax(290px, 1fr);
+    gap: 1.15rem;
+  }
+  .promo-banner-wide {
+    padding: 1.65rem;
+    gap: 1rem;
+  }
+  .stack-visual {
+    flex: 0 0 96px;
+    width: 96px;
+    height: 96px;
+  }
   .featured-deals-grid {
-    grid-template-columns: repeat(3, 1fr);
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 1080px) {
+  .promo-showcase-grid {
+    grid-template-columns: 1fr;
+  }
+  .promo-stacked-col {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 1.15rem;
+  }
+  .featured-deals-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 }
 
 @media (max-width: 900px) {
-  .promo-showcase-grid {
-    grid-template-columns: 1fr;
-  }
-  .bottom-perks-grid {
-    grid-template-columns: 1fr;
-  }
   .deals-hero-card {
+    flex-direction: column;
+    min-height: auto;
+    padding: 1.5rem;
+    gap: 1.25rem;
+  }
+  .hero-left-content {
+    max-width: 100%;
+  }
+  .hero-desc {
+    max-width: 100%;
+  }
+  .hero-right-visual {
+    width: 100%;
+    justify-content: center;
+  }
+  .hero-stage-wrap {
+    min-height: 210px;
+    max-height: 260px;
+  }
+  .hero-packshot-img {
+    mask-image: none;
+    -webkit-mask-image: none;
+    max-height: 260px;
+  }
+}
+
+@media (max-width: 768px) {
+  .promo-banner-wide {
+    flex-direction: column;
+    align-items: flex-start;
+    padding: 1.4rem;
+    gap: 1.15rem;
+  }
+  .promo-wide-content {
+    flex: none;
+    width: 100%;
+    max-width: 100%;
+  }
+  .promo-wide-center-visual {
+    width: 100%;
+  }
+  .wide-promo-bottles-img {
+    max-width: 100%;
+    height: 200px;
+  }
+  .promo-wide-right-editorial {
+    flex: none;
+    width: 100%;
+    align-items: flex-start;
+    text-align: left;
+  }
+  .wide-callout-script {
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 0.35rem;
+    align-items: center;
+    font-size: 1.15rem;
+  }
+  .script-divider {
+    display: none;
+  }
+  .promo-stacked-col {
     grid-template-columns: 1fr;
   }
-  .hero-trust-row {
-    grid-template-columns: repeat(2, 1fr);
+  .featured-deals-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.85rem;
   }
 }
 
 @media (max-width: 600px) {
+  .deals-hero-card {
+    padding: 1.25rem;
+    border-radius: 14px;
+  }
+  .hero-title {
+    font-size: 2rem;
+  }
+  .hero-tagline {
+    font-size: 1.05rem;
+  }
+  .hero-desc {
+    font-size: 0.86rem;
+  }
+  .hero-stage-wrap {
+    min-height: 185px;
+    max-height: 220px;
+  }
+  .hero-callout-oval {
+    width: 82px;
+    height: 82px;
+    top: 10px;
+    right: 10px;
+  }
+  .callout-text {
+    font-size: 0.76rem;
+  }
+  .flash-deals-bar {
+    padding: 0.65rem 0.75rem;
+    border-radius: 14px;
+  }
+  .deal-tab-pill {
+    padding: 0.45rem 0.9rem;
+    font-size: 0.8rem;
+  }
+  .atelier-deals-status {
+    font-size: 0.75rem;
+  }
+  .promo-wide-title {
+    font-size: 1.8rem;
+  }
+  .highlight-discount {
+    font-size: 2.3rem;
+  }
+  .wide-promo-bottles-img {
+    height: 180px;
+  }
+  .promo-stack-card {
+    padding: 1.15rem;
+  }
+  .stack-title {
+    font-size: 1.12rem;
+  }
+  .bottom-perk-card {
+    padding: 1.2rem;
+    gap: 0.85rem;
+  }
+  .perk-card-visual {
+    width: 78px;
+    height: 78px;
+  }
   .featured-deals-grid {
-    grid-template-columns: repeat(2, 1fr);
+    gap: 0.75rem;
+  }
+}
+
+@media (max-width: 380px) {
+  .hero-trust-row {
+    grid-template-columns: 1fr;
+  }
+  .featured-deals-grid {
+    grid-template-columns: 1fr;
   }
 }
 </style>
